@@ -33,7 +33,7 @@ function newPlayer(cls=DEFAULT_CLASS) {
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
     active: cls.active||null, activeCd: 0,
-    beamDps: cls.beamDps||0, beamWidth: 11, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
+    beamDps: cls.beamDps||0, beamWidth: 6, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
     heat: 0, overheated: false, beam: null,
   };
   if (cls.stats) Object.assign(p, cls.stats); // class profile overrides base
