@@ -42,7 +42,7 @@ export const CLASSES = [
     desc: 'Continuous piercing beam. Mind the heat.',
     hue: 190,
     weapon: 'laser',
-    beamDps: 150,   // damage/sec dealt to EVERY enemy the beam line crosses
+    beamDps: 75,    // damage/sec dealt to EVERY enemy the beam line crosses
     stats: { maxhp: 90, hp: 90, speed: 4.2, dmg: 15 }, // dmg shown on card = indicative
     active: null,
   },

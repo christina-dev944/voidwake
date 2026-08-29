@@ -33,14 +33,16 @@ function newPlayer(cls=DEFAULT_CLASS) {
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
     active: cls.active||null, activeCd: 0,
-    beamDps: cls.beamDps||0, heat: 0, overheated: false, beam: null,
+    beamDps: cls.beamDps||0, beamWidth: 11, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
+    heat: 0, overheated: false, beam: null,
   };
   if (cls.stats) Object.assign(p, cls.stats); // class profile overrides base
   return p;
 }
 
 function rollUpgrades() {
-  const pool = UPGRADES.slice();
+  const w = game.player.weapon;                     // only offer boons valid for this weapon
+  const pool = UPGRADES.filter(u => u.for==='all' || u.for===w);
   const out = [];
   for (let i=0;i<3 && pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   game.upgradeChoices = out;
@@ -91,11 +93,11 @@ function updateLaser(p){
   const target = nearestEnemy(p.x,p.y);
   const firing = !!target && !p.overheated;
   if(firing){
-    p.heat = Math.min(100, p.heat + 1.2);
-    if(p.heat>=100) p.overheated = true;
+    p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
+    if(p.heat>=p.heatMax) p.overheated = true;
     const ang = Math.atan2(target.y-p.y, target.x-p.x);
     p.beam = { ang, active:true };
-    const dx=Math.cos(ang), dy=Math.sin(ang), width=11, perTick=p.beamDps/60;
+    const dx=Math.cos(ang), dy=Math.sin(ang), width=p.beamWidth, perTick=p.beamDps/60;
     for(const e of game.enemies){                 // damage all enemies on the ray (death handled in enemy loop)
       const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
       const px=p.x+dx*t, py=p.y+dy*t;
@@ -106,7 +108,7 @@ function updateLaser(p){
     }
   } else {
     p.beam = { active:false };
-    p.heat = Math.max(0, p.heat - 1.6);
+    p.heat = Math.max(0, p.heat - p.coolRate);
     if(p.overheated && p.heat<=0) p.overheated = false;
   }
 }
@@ -351,8 +353,8 @@ function draw(){
     if(p.weapon==='laser' && (game.state==='playing'||game.state==='upgrade')){
       const bw=140, bh=7, bx=W/2-bw/2, by=H-30;
       ctx.fillStyle='#26264a'; ctx.fillRect(bx,by,bw,bh);
-      ctx.fillStyle = p.overheated ? '#ff4d6d' : `hsl(${190-p.heat*0.4},85%,58%)`;
-      ctx.fillRect(bx,by,bw*clamp(p.heat/100,0,1),bh);
+      ctx.fillStyle = p.overheated ? '#ff4d6d' : `hsl(${190-(p.heat/p.heatMax)*40},85%,58%)`;
+      ctx.fillRect(bx,by,bw*clamp(p.heat/p.heatMax,0,1),bh);
       ctx.textAlign='center'; ctx.font='10px ui-monospace,monospace';
       ctx.fillStyle=p.overheated?'#ff4d6d':'#8a8aa6';
       ctx.fillText(p.overheated?'OVERHEATED':'HEAT', W/2, by-4); ctx.textAlign='left';
@@ -399,7 +401,7 @@ function drawUpgrade(){
 // ---- class select ----
 // Carousel: fixed-width cards; the selected index sits centered, others flank it.
 // `classScroll` eases toward `classIdx` (in drawClassSelect) for a smooth slide.
-const CARD_W=236, CARD_GAP=22, CARD_H=340;
+const CARD_W=296, CARD_GAP=22, CARD_H=340;
 function classCardRect(i){
   return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-170, w:CARD_W, h:CARD_H };
 }
