@@ -116,7 +116,7 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
   if(pt.life<=0)game.particles.splice(i,1); } }
 
 // ---- flow ----
-function reset(cls=game.cls){ game.cls=cls; game.paused=false;
+function reset(cls=game.cls){ game.cls=cls; game.paused=false; cv.style.cursor='default';
   game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
@@ -154,13 +154,23 @@ addEventListener('keydown', e=>{
   }
   if(game.state==='playing' && k===' ') useActive(game.player);
 });
+function canvasXY(e){ const rect=cv.getBoundingClientRect();
+  return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
+function classAt(mx,my){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
+  if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
+
+// hover highlights the card under the cursor (moves the selection to it)
+cv.addEventListener('pointermove', e=>{
+  if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
+  const over=classAt(...canvasXY(e));
+  if(over>=0){ game.classIdx=over; cv.style.cursor='pointer'; }
+  else cv.style.cursor='default';
+});
 cv.addEventListener('pointerdown', e=>{
-  const rect=cv.getBoundingClientRect();
-  const mx=(e.clientX-rect.left)*(W/rect.width), my=(e.clientY-rect.top)*(H/rect.height);
+  const [mx,my]=canvasXY(e);
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
-    for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
-      if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h){ reset(CLASSES[i]); return; } }
+    const i=classAt(mx,my); if(i>=0) reset(CLASSES[i]); // click a card → lock in + launch
     return;
   }
   if(game.state==='upgrade'){
@@ -343,9 +353,20 @@ function drawClassSelect(){
   center('← → or 1-'+CLASSES.length+' to pick  ·  SPACE / click to descend', 14, '#7a7a98', 158);
   CLASSES.forEach((cls,i)=>{
     const r=classCardRect(i), sel=i===game.classIdx, hue=cls.hue;
-    ctx.fillStyle = sel?'#1b1533':'#101022';
-    ctx.strokeStyle=`hsl(${hue},70%,60%)`; ctx.lineWidth=sel?3:1.5;
-    roundRect(r.x,r.y,r.w,r.h,12); ctx.fill(); ctx.stroke();
+    if(sel){
+      ctx.save();
+      ctx.shadowBlur=30; ctx.shadowColor=`hsl(${hue},85%,62%)`;      // strong outer glow
+      ctx.fillStyle=`hsl(${hue},48%,17%)`;                            // bright tinted fill
+      roundRect(r.x,r.y,r.w,r.h,12); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle=`hsl(${hue},92%,70%)`; ctx.lineWidth=4;         // bright thick border
+      roundRect(r.x,r.y,r.w,r.h,12); ctx.stroke();
+    } else {
+      ctx.fillStyle='#0d0d1c';
+      roundRect(r.x,r.y,r.w,r.h,12); ctx.fill();
+      ctx.strokeStyle=`hsl(${hue},38%,40%)`; ctx.lineWidth=1.5;       // dim when not hovered
+      roundRect(r.x,r.y,r.w,r.h,12); ctx.stroke();
+    }
     // ship glyph
     const cx=r.x+r.w/2, cy=r.y+62;
     ctx.fillStyle=`hsl(${hue},70%,62%)`; ctx.shadowBlur=sel?18:6; ctx.shadowColor=ctx.fillStyle;
