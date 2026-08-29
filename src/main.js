@@ -1,6 +1,6 @@
 import { TAU, rand, clamp, dist2, DANGER_HUE } from './util.js';
 import { UPGRADES } from './upgrades.js';
-import { CLASSES, DEFAULT_CLASS, BASE, classStats } from './classes.js';
+import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from './classes.js';
 import * as D from './difficulty.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -335,7 +335,7 @@ function classCardRect(i){
   const n=CLASSES.length, gap=20, margin=40;
   const cw=Math.min(300,(W-2*margin-(n-1)*gap)/n);
   const tot=n*cw+(n-1)*gap;
-  return { x:(W-tot)/2 + i*(cw+gap), y:H/2-150, w:cw, h:300 };
+  return { x:(W-tot)/2 + i*(cw+gap), y:H/2-170, w:cw, h:340 };
 }
 function drawClassSelect(){
   ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
@@ -353,17 +353,25 @@ function drawClassSelect(){
     ctx.shadowBlur=0;
     // name — centered within THIS card (not the screen)
     ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 20px ui-monospace,monospace';
-    ctx.fillText((i+1)+'. '+cls.name, cx, r.y+112);
+    ctx.fillText((i+1)+'. '+cls.name, cx, r.y+108);
     // description — LEFT-aligned inside the card padding
-    wrapText(cls.desc, r.x+18, r.y+140, r.w-36, 17, '#b4b4d0', 13);
-    // stats — fixed rows, label left / value right; rows align across all cards
-    let sy=r.y+180;
-    ctx.font='12px ui-monospace,monospace';
-    for(const [label,val] of classStats(cls)){
-      ctx.textAlign='left';  ctx.fillStyle='#7a7a98'; ctx.fillText(label, r.x+18, sy);
-      ctx.textAlign='right'; ctx.fillStyle='#c8c8e0'; ctx.fillText(val, r.x+r.w-18, sy);
-      sy+=15;
+    wrapText(cls.desc, r.x+18, r.y+134, r.w-36, 16, '#b4b4d0', 12);
+    // stats — horizontal bar charts; fixed rows, aligned across all cards
+    const padL=r.x+16, labelW=52, valW=44, barX=padL+labelW, barW=r.w-16*2-labelW-valW, barH=8;
+    let sy=r.y+168;
+    for(const b of classStatBars(cls)){
+      ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace';
+      ctx.fillStyle='#8a8aa6'; ctx.fillText(b.label, padL, sy+8);
+      ctx.fillStyle='#26264a'; ctx.fillRect(barX, sy+1, barW, barH);                 // track
+      ctx.fillStyle=`hsl(${hue},70%,58%)`; ctx.fillRect(barX, sy+1, barW*b.frac, barH); // fill
+      ctx.textAlign='right'; ctx.fillStyle='#c8c8e0'; ctx.font='10px ui-monospace,monospace';
+      ctx.fillText(b.display, r.x+r.w-14, sy+8);
+      sy+=20;
     }
+    // active ability (non-numeric) as a text line under the bars
+    ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace';
+    ctx.fillStyle='#8a8aa6'; ctx.fillText('ACTIVE', padL, sy+8);
+    ctx.textAlign='right'; ctx.fillStyle='#c8c8e0'; ctx.fillText(classActiveLabel(cls), r.x+r.w-14, sy+8);
     ctx.textAlign='left';
   });
   frameFooter();

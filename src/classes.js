@@ -41,17 +41,30 @@ export const CLASSES = [
 export const DEFAULT_CLASS = CLASSES[0];
 export const classById = id => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;
 
-// Fixed-order stat rows for the class-select cards. Same rows for every class so
-// they line up column-wise for at-a-glance comparison. [label, value] pairs.
-export function classStats(cls){
-  const s = Object.assign({}, BASE, cls.stats || {});
-  return [
-    ['DMG',    String(s.dmg)],
-    ['FIRE',   (60 / s.fireRate).toFixed(1) + '/s'],
-    ['BULLET', String(s.bulletSpeed)],
-    ['HP',     String(s.maxhp)],
-    ['MOVE',   String(s.speed)],
-    ['RANGE',  cls.range ? String(cls.range) : '∞'],
-    ['ACTIVE', cls.active ? cls.active.name : '—'],
-  ];
+// Numeric stats shown as horizontal bars on the class-select cards. Fixed order
+// so rows line up across cards for comparison; each bar is normalized against the
+// max value across all classes, so the bars stay meaningful as classes are added.
+const RANGE_CAP = 720; // unlimited range renders as a full bar; finite is a fraction
+const effective = cls => Object.assign({}, BASE, cls.stats || {});
+const STAT_DEFS = [
+  { label:'DMG',    get:(s)   => s.dmg },
+  { label:'FIRE',   get:(s)   => 60 / s.fireRate },   // shots/sec — higher is faster
+  { label:'BULLET', get:(s)   => s.bulletSpeed },
+  { label:'HP',     get:(s)   => s.maxhp },
+  { label:'MOVE',   get:(s)   => s.speed },
+  { label:'RANGE',  get:(s,c) => c.range || RANGE_CAP },
+];
+
+export function classStatBars(cls){
+  return STAT_DEFS.map(def=>{
+    const val = def.get(effective(cls), cls);
+    const max = Math.max(...CLASSES.map(c => def.get(effective(c), c)), 1);
+    const display = def.label==='FIRE'  ? val.toFixed(1)+'/s'
+                  : def.label==='RANGE' ? (cls.range ? String(cls.range) : '∞')
+                  : String(Math.round(val*10)/10);
+    return { label:def.label, frac: Math.max(0.04, Math.min(1, val/max)), display };
+  });
 }
+
+// Non-numeric extras rendered as a text line under the bars.
+export const classActiveLabel = cls => cls.active ? cls.active.name : '—';
