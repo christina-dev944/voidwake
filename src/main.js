@@ -87,7 +87,7 @@ function playerShoot(p) {
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
-      homing: p.weapon==='homing' });
+      homing: p.weapon==='homing', homeDelay: p.weapon==='homing'?6:0 });
   }
 }
 
@@ -100,19 +100,21 @@ function updateLaser(p){
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
     if(p.heat>=p.heatMax) p.overheated = true;
-    const ang = Math.atan2(target.y-p.y, target.x-p.x);
-    p.beam = { ang, active:true };
-    const dx=Math.cos(ang), dy=Math.sin(ang), width=p.beamWidth, perTick=p.beamDps/60;
-    for(const e of game.enemies){                 // damage all enemies on the ray (death handled in enemy loop)
-      const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
-      const px=p.x+dx*t, py=p.y+dy*t;
-      if(dist2(px,py,e.x,e.y) <= (e.r+width)**2){
-        e.hp -= perTick;
-        if(Math.random()<0.25) burst(e.x,e.y,190,1,1.4);
+    const base = Math.atan2(target.y-p.y, target.x-p.x);
+    const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
+    const angs=[];
+    for(let s=0;s<n;s++){
+      const ang = base + (s-(n-1)/2)*spr; angs.push(ang);
+      const dx=Math.cos(ang), dy=Math.sin(ang);
+      for(const e of game.enemies){               // damage enemies on this ray (death handled in enemy loop)
+        const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
+        const px=p.x+dx*t, py=p.y+dy*t;
+        if(dist2(px,py,e.x,e.y) <= (e.r+width)**2){ e.hp-=perTick; if(Math.random()<0.2) burst(e.x,e.y,190,1,1.4); }
       }
     }
+    p.beam = { angs, active:true };
   } else {
-    p.beam = { active:false };
+    p.beam = { active:false, angs:[] };
     p.heat = Math.max(0, p.heat - p.coolRate);
     if(p.overheated && p.heat<=0) p.overheated = false;
   }
@@ -256,11 +258,13 @@ function update(){
 
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
-    if(b.homing){ const t=nearestEnemy(b.x,b.y);            // steer toward nearest enemy
-      if(t){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(t.y-b.y,t.x-b.x);
-        let d=want-cur; while(d>Math.PI)d-=TAU; while(d<-Math.PI)d+=TAU;
-        const a=cur+clamp(d,-0.13,0.13), sp=Math.hypot(b.vx,b.vy);
-        b.vx=Math.cos(a)*sp; b.vy=Math.sin(a)*sp; } }
+    if(b.homing){
+      if(b.homeDelay>0){ b.homeDelay--; }                  // fly straight briefly so split shots fan out first
+      else { const t=nearestEnemy(b.x,b.y);                 // then steer toward nearest enemy
+        if(t){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(t.y-b.y,t.x-b.x);
+          let d=want-cur; while(d>Math.PI)d-=TAU; while(d<-Math.PI)d+=TAU;
+          const a=cur+clamp(d,-0.13,0.13), sp=Math.hypot(b.vx,b.vy);
+          b.vx=Math.cos(a)*sp; b.vy=Math.sin(a)*sp; } } }
     b.x+=b.vx;b.y+=b.vy;
     if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
@@ -357,13 +361,16 @@ function draw(){
   // laser beam (drawn under the ship)
   const pl=game.player;
   if(pl && pl.weapon==='laser' && pl.beam && pl.beam.active){
-    const ang=pl.beam.ang, len=Math.hypot(W,H), ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
-    const glowW=pl.beamWidth*1.4, coreW=Math.max(2, pl.beamWidth*0.5); // beam thickens with Wide Lens
+    const len=Math.hypot(W,H), glowW=pl.beamWidth*1.4, coreW=Math.max(2, pl.beamWidth*0.5); // thickens with Wide Lens
     ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
-    ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=0.8;
-    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
-    ctx.globalAlpha=1; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
-    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke(); ctx.restore();
+    for(const ang of pl.beam.angs){
+      const ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
+      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=0.8;
+      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
+      ctx.globalAlpha=1; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
+      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // player

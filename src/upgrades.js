@@ -5,7 +5,7 @@
 export const UPGRADES = [
   // --- bullet weapons ---
   { id:'rapid',  for:'bullet', name:'Rapid Fire',   desc:'+30% fire rate',          apply:p=>p.fireRate=Math.max(3,p.fireRate*0.77) },
-  { id:'multi',  for:'bullet', name:'Split Shot',   desc:'+1 projectile',           apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);} },
+  { id:'multi',  for:'all',    name:'Split Shot',   desc:'+1 projectile / beam',    apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);} },
   { id:'heavy',  for:'bullet', name:'Heavy Rounds', desc:'+40% bullet damage',      apply:p=>p.dmg*=1.4 },
   { id:'pierce', for:'bullet', name:'Piercing',     desc:'bullets pierce +1 enemy', apply:p=>p.pierce++ },
   { id:'crit',   for:'bullet', name:'Deadeye',      desc:'+12% crit chance (x2)',   apply:p=>p.crit+=0.12 },

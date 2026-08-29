@@ -54,7 +54,7 @@ export const CLASSES = [
     weapon: 'homing',
     // active `effect` is resolved to a function in main.js (applyActive) to avoid a
     // circular import; cooldown is in sim ticks (60/s). 480 = 8s.
-    active: { name: 'Nova', cooldown: 480, effect: 'nova', radius: 160, dmg: 120 },
+    active: { name: 'Nova', cooldown: 480, effect: 'nova', radius: 160, dmg: 45 },
     stats: { dmg: 8, fireRate: 11, bulletSpeed: 4.5, maxhp: 85, hp: 85, speed: 4.2, pierce: 1 },
   },
 ];
