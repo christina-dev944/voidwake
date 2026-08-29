@@ -36,6 +36,16 @@ export const CLASSES = [
     stats: { dmg: 24, fireRate: 12, bulletSpeed: 7, maxhp: 70, hp: 70, speed: 4.0, focusSpeed: 1.8 },
     active: null,
   },
+  {
+    id: 'lancer',
+    name: 'Lancer',
+    desc: 'Continuous piercing beam. Mind the heat.',
+    hue: 190,
+    weapon: 'laser',
+    beamDps: 150,   // damage/sec dealt to EVERY enemy the beam line crosses
+    stats: { maxhp: 90, hp: 90, speed: 4.2, dmg: 15 }, // dmg shown on card = indicative
+    active: null,
+  },
 ];
 
 export const DEFAULT_CLASS = CLASSES[0];
@@ -56,7 +66,15 @@ const STAT_DEFS = [
 ];
 
 export function classStatBars(cls){
+  const laser = cls.weapon === 'laser';
   return STAT_DEFS.map(def=>{
+    // laser has no discrete shots/bullet-speed — show beam-appropriate readouts
+    if(laser && def.label==='FIRE')   return { label:'FIRE',   frac:1,    display:'beam' };
+    if(laser && def.label==='BULLET') return { label:'BULLET', frac:1,    display:'hitscan' };
+    if(laser && def.label==='DMG'){
+      const dps=cls.beamDps||0, max=Math.max(dps,1);
+      return { label:'DMG', frac:1, display:dps+' dps' };
+    }
     const val = def.get(effective(cls), cls);
     const max = Math.max(...CLASSES.map(c => def.get(effective(c), c)), 1);
     const display = def.label==='FIRE'  ? val.toFixed(1)+'/s'

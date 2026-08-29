@@ -33,6 +33,7 @@ function newPlayer(cls=DEFAULT_CLASS) {
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
     active: cls.active||null, activeCd: 0,
+    beamDps: cls.beamDps||0, heat: 0, overheated: false, beam: null,
   };
   if (cls.stats) Object.assign(p, cls.stats); // class profile overrides base
   return p;
@@ -80,6 +81,33 @@ function playerShoot(p) {
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0 });
+  }
+}
+
+// Lancer beam: auto-aims the nearest enemy and damages EVERY enemy along the ray
+// each tick (piercing). A heat gauge throttles it — sustained fire overheats and
+// forces a cooldown, so it can't just be held forever.
+function updateLaser(p){
+  const target = nearestEnemy(p.x,p.y);
+  const firing = !!target && !p.overheated;
+  if(firing){
+    p.heat = Math.min(100, p.heat + 1.2);
+    if(p.heat>=100) p.overheated = true;
+    const ang = Math.atan2(target.y-p.y, target.x-p.x);
+    p.beam = { ang, active:true };
+    const dx=Math.cos(ang), dy=Math.sin(ang), width=11, perTick=p.beamDps/60;
+    for(const e of game.enemies){                 // damage all enemies on the ray (death handled in enemy loop)
+      const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
+      const px=p.x+dx*t, py=p.y+dy*t;
+      if(dist2(px,py,e.x,e.y) <= (e.r+width)**2){
+        e.hp -= perTick;
+        if(Math.random()<0.25) burst(e.x,e.y,190,1,1.4);
+      }
+    }
+  } else {
+    p.beam = { active:false };
+    p.heat = Math.max(0, p.heat - 1.6);
+    if(p.overheated && p.heat<=0) p.overheated = false;
   }
 }
 
@@ -196,8 +224,9 @@ function update(){
   p.x=clamp(p.x+dx*sp,p.r,W-p.r); p.y=clamp(p.y+dy*sp,p.r,H-p.r);
   const hitR = focus? p.hitR : p.hitR+3;
 
-  // fire
-  p.fireCd--; if(p.fireCd<=0 && game.enemies.length){ playerShoot(p); p.fireCd=p.fireRate; }
+  // fire — laser is a continuous beam, everything else fires discrete bullets
+  if(p.weapon==='laser'){ updateLaser(p); }
+  else { p.fireCd--; if(p.fireCd<=0 && game.enemies.length){ playerShoot(p); p.fireCd=p.fireRate; } }
 
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
@@ -286,6 +315,17 @@ function draw(){
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
   ctx.shadowBlur=0;
 
+  // laser beam (drawn under the ship)
+  const pl=game.player;
+  if(pl && pl.weapon==='laser' && pl.beam && pl.beam.active){
+    const ang=pl.beam.ang, len=Math.hypot(W,H), ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
+    ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
+    ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=7; ctx.globalAlpha=0.85;
+    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.globalAlpha=1; ctx.lineWidth=2; ctx.strokeStyle='#eaffff';
+    ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke(); ctx.restore();
+  }
+
   // player
   const p=game.player;
   if(p){
@@ -301,6 +341,16 @@ function draw(){
     // hitbox dot when focusing
     if(keys['shift']){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
+    // heat gauge (laser only)
+    if(p.weapon==='laser' && (game.state==='playing'||game.state==='upgrade')){
+      const bw=140, bh=7, bx=W/2-bw/2, by=H-30;
+      ctx.fillStyle='#26264a'; ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle = p.overheated ? '#ff4d6d' : `hsl(${190-p.heat*0.4},85%,58%)`;
+      ctx.fillRect(bx,by,bw*clamp(p.heat/100,0,1),bh);
+      ctx.textAlign='center'; ctx.font='10px ui-monospace,monospace';
+      ctx.fillStyle=p.overheated?'#ff4d6d':'#8a8aa6';
+      ctx.fillText(p.overheated?'OVERHEATED':'HEAT', W/2, by-4); ctx.textAlign='left';
+    }
     // active-ability indicator (only if this class has one)
     if(p.active && (game.state==='playing'||game.state==='upgrade')){
       const ready=p.activeCd<=0;
