@@ -104,6 +104,9 @@ function nearestEnemy(x,y) {
 // ---- particles ----
 function burst(x,y,hue,n=10,sp=3){ for(let i=0;i<n;i++){ const a=rand(0,TAU),s=rand(0.5,sp);
   game.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(14,30),hue}); } }
+function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const pt=game.particles[i];
+  pt.x+=pt.vx;pt.y+=pt.vy;pt.vx*=0.94;pt.vy*=0.94;pt.life--;
+  if(pt.life<=0)game.particles.splice(i,1); } }
 
 // ---- flow ----
 function reset(){ game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];
@@ -187,9 +190,7 @@ function update(){
   }
 
   // particles
-  for(let i=game.particles.length-1;i>=0;i--){ const pt=game.particles[i];
-    pt.x+=pt.vx;pt.y+=pt.vy;pt.vx*=0.94;pt.vy*=0.94;pt.life--;
-    if(pt.life<=0)game.particles.splice(i,1); }
+  animateParticles();
 
   // wave clear
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
@@ -290,13 +291,26 @@ function center(t,size,color,y){ ctx.textAlign='center'; ctx.fillStyle=color;
 function frameFooter(){ center('v0.2', 12, '#3a3a55', H-24); }
 
 // ---- loop ----
-function loop(){
-  if(!game.paused){
-    if(game.state==='playing') update();
-    else if(game.state==='upgrade'){ /* frozen; still animate particles */
-      for(let i=game.particles.length-1;i>=0;i--){const pt=game.particles[i];pt.x+=pt.vx;pt.y+=pt.vy;pt.vx*=0.94;pt.vy*=0.94;pt.life--;if(pt.life<=0)game.particles.splice(i,1);} }
-  }
+// Fixed timestep: sim runs at a constant 60 ticks/sec regardless of the display's
+// refresh rate, so the game feels identical on 60/120/144/240Hz panels. (Before this,
+// update() ran once per rAF frame with per-frame constants → 2-4x too fast on high-Hz
+// displays, and a speed spike whenever the tab/pause backlog fast-forwarded.)
+const STEP = 1000/60;   // ms per simulation tick — all tuning constants are per-tick
+const MAX_STEPS = 5;    // cap catch-up per frame; prevents post-pause/tab-switch spikes
+let acc = 0, last = performance.now();
+function tick(){
+  if(game.paused) return;
+  if(game.state==='playing') update();
+  else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
+}
+function loop(now){
+  let frame = now - last; last = now;
+  if(frame > 250) frame = STEP;   // tab was hidden / long stall → resume, don't fast-forward
+  acc += frame;
+  let steps = 0;
+  while(acc >= STEP && steps < MAX_STEPS){ tick(); acc -= STEP; steps++; }
+  if(steps === MAX_STEPS) acc = 0; // drop leftover backlog instead of spiraling
   draw();
   requestAnimationFrame(loop);
 }
-loop();
+requestAnimationFrame(loop);
