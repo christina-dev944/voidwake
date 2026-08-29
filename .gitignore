@@ -1,0 +1,15 @@
+# deps + build output
+node_modules/
+dist/
+
+# agent-operational files — kept workspace-local, NEVER published (contain
+# internal workflow + the director's Discord id). The daily cron reads these
+# off disk; they are intentionally untracked.
+HANDOFF.md
+DEV-PROTOCOL.md
+FEEDBACK.md
+.devstate.json
+
+# local dev cruft
+*.log
+.DS_Store
