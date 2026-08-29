@@ -35,7 +35,8 @@ function newPlayer(cls=DEFAULT_CLASS) {
     fireRate: BASE.fireRate, fireCd: 0, dmg: BASE.dmg, bulletSpeed: BASE.bulletSpeed, shots: 1, spread: 0,
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
-    active: cls.active||null, activeCd: 0,
+    active: cls.active ? {...cls.active} : null, activeCd: 0, // clone so upgrades don't mutate the class def
+
     beamDps: cls.beamDps||0, beamWidth: 6, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
     heat: 0, overheated: false, beam: null,
   };
@@ -45,7 +46,7 @@ function newPlayer(cls=DEFAULT_CLASS) {
 
 function rollUpgrades() {
   const cats = WEAPON_UPGRADES[game.player.weapon] || []; // boons valid for this weapon
-  const pool = UPGRADES.filter(u => u.for==='all' || cats.includes(u.for));
+  const pool = UPGRADES.filter(u => (u.for==='all' || cats.includes(u.for)) && (!u.req || u.req(game.player)));
   const out = [];
   for (let i=0;i<3 && pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   game.upgradeChoices = out;
@@ -418,13 +419,25 @@ function drawUpgrade(){
   center('choose a boon  (1 / 2 / 3 or click)', 14, '#7a7a98', 190);
   game.upgradeChoices.forEach((u,i)=>{
     const y=220+i*150, x=W/2-260, w=520, h=120;
-    ctx.fillStyle='#14142a'; ctx.strokeStyle='#8a5cff'; ctx.lineWidth=2;
-    roundRect(x,y,w,h,10); ctx.fill(); ctx.stroke();
+    // class-exclusive boons get a class-tinted, glowing card + a badge
+    const exHue = u.tag ? (CLASSES.find(c=>c.name.toUpperCase()===u.tag)?.hue ?? 45) : null;
+    const accent = exHue!=null ? `hsl(${exHue},85%,64%)` : '#8a5cff';
+    ctx.fillStyle = exHue!=null ? `hsl(${exHue},42%,13%)` : '#14142a';
+    if(exHue!=null){ ctx.save(); ctx.shadowBlur=18; ctx.shadowColor=accent; }
+    roundRect(x,y,w,h,10); ctx.fill();
+    if(exHue!=null) ctx.restore();
+    ctx.strokeStyle=accent; ctx.lineWidth=exHue!=null?3:2; roundRect(x,y,w,h,10); ctx.stroke();
     ctx.textAlign='left';
-    ctx.fillStyle='#8a5cff'; ctx.font='bold 22px ui-monospace,monospace';
+    ctx.fillStyle=accent; ctx.font='bold 22px ui-monospace,monospace';
     ctx.fillText((i+1)+'.  '+u.name, x+24, y+48);
     ctx.fillStyle='#c8c8e0'; ctx.font='16px ui-monospace,monospace';
     ctx.fillText(u.desc, x+50, y+82);
+    if(u.tag){
+      const label=u.tag+' EXCLUSIVE'; ctx.font='bold 11px ui-monospace,monospace';
+      const bw=ctx.measureText(label).width+20, bx=x+w-bw-16, by=y+14, bh=20;
+      ctx.fillStyle=accent; roundRect(bx,by,bw,bh,10); ctx.fill();
+      ctx.fillStyle='#0a0a12'; ctx.textAlign='center'; ctx.fillText(label, bx+bw/2, by+14); ctx.textAlign='left';
+    }
   });
   ctx.textAlign='left';
 }
