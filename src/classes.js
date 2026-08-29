@@ -12,11 +12,15 @@
 //             the cooldown gate + HUD. No active-bearing class ships yet — Mage
 //             (#24) and Time-stop (#25) are the first to use it.
 
+// Base player loadout — single source of truth, shared by newPlayer() (main.js)
+// and the class-select stat readout so displayed numbers can never drift.
+export const BASE = { dmg: 10, fireRate: 10, bulletSpeed: 9, maxhp: 100, speed: 4.4, focusSpeed: 2.0, range: 0 };
+
 export const CLASSES = [
   {
     id: 'vanguard',
     name: 'Vanguard',
-    desc: 'Balanced auto-fire. The standard descent — no tricks, no weaknesses.',
+    desc: 'Balanced auto-fire. No weaknesses, no tricks.',
     hue: 265,
     weapon: 'bullet',
     stats: {},
@@ -25,7 +29,7 @@ export const CLASSES = [
   {
     id: 'glass',
     name: 'Glass Cannon',
-    desc: 'Short range, brutal damage. Bullets fizzle at distance — get close and delete things.',
+    desc: 'Short range, brutal damage, fragile.',
     hue: 18,
     weapon: 'bullet',
     range: 300,
@@ -36,3 +40,18 @@ export const CLASSES = [
 
 export const DEFAULT_CLASS = CLASSES[0];
 export const classById = id => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;
+
+// Fixed-order stat rows for the class-select cards. Same rows for every class so
+// they line up column-wise for at-a-glance comparison. [label, value] pairs.
+export function classStats(cls){
+  const s = Object.assign({}, BASE, cls.stats || {});
+  return [
+    ['DMG',    String(s.dmg)],
+    ['FIRE',   (60 / s.fireRate).toFixed(1) + '/s'],
+    ['BULLET', String(s.bulletSpeed)],
+    ['HP',     String(s.maxhp)],
+    ['MOVE',   String(s.speed)],
+    ['RANGE',  cls.range ? String(cls.range) : '∞'],
+    ['ACTIVE', cls.active ? cls.active.name : '—'],
+  ];
+}

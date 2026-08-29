@@ -1,6 +1,6 @@
 import { TAU, rand, clamp, dist2, DANGER_HUE } from './util.js';
 import { UPGRADES } from './upgrades.js';
-import { CLASSES, DEFAULT_CLASS } from './classes.js';
+import { CLASSES, DEFAULT_CLASS, BASE, classStats } from './classes.js';
 import * as D from './difficulty.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -27,9 +27,9 @@ const game = {
 function newPlayer(cls=DEFAULT_CLASS) {
   const p = {
     x: W/2, y: H*0.75, r: 12, hitR: 4,
-    hp: 100, maxhp: 100, speed: 4.4, focusSpeed: 2.0,
+    hp: BASE.maxhp, maxhp: BASE.maxhp, speed: BASE.speed, focusSpeed: BASE.focusSpeed,
     lvl: 1, xp: 0, xpNext: 8,
-    fireRate: 10, fireCd: 0, dmg: 10, bulletSpeed: 9, shots: 1, spread: 0,
+    fireRate: BASE.fireRate, fireCd: 0, dmg: BASE.dmg, bulletSpeed: BASE.bulletSpeed, shots: 1, spread: 0,
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
     active: cls.active||null, activeCd: 0,
@@ -353,17 +353,17 @@ function drawClassSelect(){
     ctx.shadowBlur=0;
     // name — centered within THIS card (not the screen)
     ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 20px ui-monospace,monospace';
-    ctx.fillText((i+1)+'. '+cls.name, cx, r.y+120);
+    ctx.fillText((i+1)+'. '+cls.name, cx, r.y+112);
     // description — LEFT-aligned inside the card padding
-    wrapText(cls.desc, r.x+18, r.y+150, r.w-36, 18, '#b4b4d0', 13);
-    // stat line
-    const s=cls.stats||{}, bits=[];
-    if(s.dmg) bits.push('DMG '+s.dmg);
-    if(cls.range) bits.push('RANGE '+cls.range);
-    if(s.maxhp) bits.push('HP '+s.maxhp);
-    if(cls.active) bits.push('ACTIVE '+cls.active.name);
-    ctx.fillStyle='#7a7a98'; ctx.font='12px ui-monospace,monospace'; ctx.textAlign='center';
-    ctx.fillText(bits.join('  ·  ')||'balanced loadout', cx, r.y+r.h-22);
+    wrapText(cls.desc, r.x+18, r.y+140, r.w-36, 17, '#b4b4d0', 13);
+    // stats — fixed rows, label left / value right; rows align across all cards
+    let sy=r.y+180;
+    ctx.font='12px ui-monospace,monospace';
+    for(const [label,val] of classStats(cls)){
+      ctx.textAlign='left';  ctx.fillStyle='#7a7a98'; ctx.fillText(label, r.x+18, sy);
+      ctx.textAlign='right'; ctx.fillStyle='#c8c8e0'; ctx.fillText(val, r.x+r.w-18, sy);
+      sy+=15;
+    }
     ctx.textAlign='left';
   });
   frameFooter();
