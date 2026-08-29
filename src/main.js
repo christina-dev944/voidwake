@@ -124,6 +124,10 @@ function reset(cls=game.cls){ game.cls=cls; game.paused=false;
 function useActive(p){ if(!p||!p.active||p.activeCd>0) return;
   p.active.trigger(game,p); p.activeCd=p.active.cooldown; }
 
+// abandon the current run and return to the title screen (pause-menu quit, #27).
+function quitRun(){ game.paused=false; game.state='title'; game.player=null;
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[]; }
+
 function gainXp(p, amt){
   p.xp+=amt;
   while(p.xp>=p.xpNext){ p.xp-=p.xpNext; p.lvl++; p.xpNext=Math.floor(p.xpNext*1.35+3);
@@ -138,6 +142,7 @@ function pickUpgrade(i){
 
 addEventListener('keydown', e=>{
   const k=e.key.toLowerCase();
+  if(game.paused && k==='q'){ quitRun(); return; } // quit-to-title from pause menu
   if(game.state==='upgrade'){ const n=parseInt(e.key); if(n>=1&&n<=3) pickUpgrade(n-1); }
   if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
@@ -302,7 +307,10 @@ function draw(){
     center('reached wave '+game.wave+'  ·  score '+game.score, 18, '#e8e8f0', H/2+4);
     center('press SPACE / click to try again', 15, '#7a7a98', H/2+46); }
 
-  if(game.paused){ ctx.fillStyle='rgba(6,6,11,.6)';ctx.fillRect(0,0,W,H); center('PAUSED',40,'#e8e8f0',H/2); }
+  if(game.paused){ ctx.fillStyle='rgba(6,6,11,.7)';ctx.fillRect(0,0,W,H);
+    center('PAUSED',40,'#e8e8f0',H/2-28);
+    center('[P] resume',17,'#b4b4d0',H/2+18);
+    center('[Q] quit to title',17,'#b4b4d0',H/2+46); }
 }
 
 function drawUpgrade(){
@@ -343,8 +351,11 @@ function drawClassSelect(){
     ctx.fillStyle=`hsl(${hue},70%,62%)`; ctx.shadowBlur=sel?18:6; ctx.shadowColor=ctx.fillStyle;
     ctx.beginPath(); ctx.moveTo(cx,cy-16); ctx.lineTo(cx-13,cy+12); ctx.lineTo(cx,cy+5); ctx.lineTo(cx+13,cy+12); ctx.closePath(); ctx.fill();
     ctx.shadowBlur=0;
-    center((i+1)+'. '+cls.name, 20, '#e8e8f0', r.y+120);
-    wrapText(cls.desc, cx, r.y+152, r.w-36, 18, '#b4b4d0', 13);
+    // name — centered within THIS card (not the screen)
+    ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 20px ui-monospace,monospace';
+    ctx.fillText((i+1)+'. '+cls.name, cx, r.y+120);
+    // description — LEFT-aligned inside the card padding
+    wrapText(cls.desc, r.x+18, r.y+150, r.w-36, 18, '#b4b4d0', 13);
     // stat line
     const s=cls.stats||{}, bits=[];
     if(s.dmg) bits.push('DMG '+s.dmg);
@@ -357,13 +368,14 @@ function drawClassSelect(){
   });
   frameFooter();
 }
-function wrapText(text,cx,y,maxw,lineH,color,size){
-  ctx.fillStyle=color; ctx.font=size+'px ui-monospace,monospace'; ctx.textAlign='center';
+// left-aligned word wrap; x is the left edge.
+function wrapText(text,x,y,maxw,lineH,color,size){
+  ctx.fillStyle=color; ctx.font=size+'px ui-monospace,monospace'; ctx.textAlign='left';
   const words=text.split(' '); let line='', yy=y;
   for(const w of words){ const test=line?line+' '+w:w;
-    if(ctx.measureText(test).width>maxw && line){ ctx.fillText(line,cx,yy); line=w; yy+=lineH; }
+    if(ctx.measureText(test).width>maxw && line){ ctx.fillText(line,x,yy); line=w; yy+=lineH; }
     else line=test; }
-  if(line) ctx.fillText(line,cx,yy); ctx.textAlign='left';
+  if(line) ctx.fillText(line,x,yy);
 }
 
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
