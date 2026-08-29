@@ -21,7 +21,7 @@ const game = {
   wave: 0, score: 0, paused:false,
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
   upgrades: [], upgradeChoices: [], time: 0,
-  cls: DEFAULT_CLASS, classIdx: 0,
+  cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
 };
 
 function newPlayer(cls=DEFAULT_CLASS) {
@@ -172,12 +172,12 @@ addEventListener('keydown', e=>{
   const k=e.key.toLowerCase();
   if(game.paused && k==='q'){ quitRun(); return; } // quit-to-title from pause menu
   if(game.state==='upgrade'){ const n=parseInt(e.key); if(n>=1&&n<=3) pickUpgrade(n-1); }
-  if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
+  if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
-    if(k==='arrowleft'||k==='a') game.classIdx=(game.classIdx+CLASSES.length-1)%CLASSES.length;
-    else if(k==='arrowright'||k==='d') game.classIdx=(game.classIdx+1)%CLASSES.length;
+    if(k==='arrowleft'||k==='a') game.classIdx=clamp(game.classIdx-1,0,CLASSES.length-1);
+    else if(k==='arrowright'||k==='d') game.classIdx=clamp(game.classIdx+1,0,CLASSES.length-1);
     else if(k===' '||k==='enter') reset(CLASSES[game.classIdx]);
-    else { const n=parseInt(e.key); if(n>=1&&n<=CLASSES.length) reset(CLASSES[n-1]); }
+    else { const n=parseInt(e.key); if(n>=1&&n<=CLASSES.length){ game.classIdx=n-1; reset(CLASSES[n-1]); } }
     return;
   }
   if(game.state==='playing' && k===' ') useActive(game.player);
@@ -187,17 +187,23 @@ function canvasXY(e){ const rect=cv.getBoundingClientRect();
 function classAt(mx,my){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
   if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
 
-// hover highlights the card under the cursor (moves the selection to it)
+// hover highlights the card under the cursor (no scroll — carousel scroll follows
+// selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
   if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
-  const over=classAt(...canvasXY(e));
-  if(over>=0){ game.classIdx=over; cv.style.cursor='pointer'; }
-  else cv.style.cursor='default';
+  const [mx,my]=canvasXY(e);
+  game.hoverIdx=classAt(mx,my);
+  const overChevron = (game.classIdx>0 && inRect(mx,my,chevronRect(-1))) ||
+                      (game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1)));
+  cv.style.cursor = (game.hoverIdx>=0 || overChevron) ? 'pointer' : 'default';
 });
 cv.addEventListener('pointerdown', e=>{
   const [mx,my]=canvasXY(e);
-  if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
+  if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
+    // chevrons page the selection; keeps far-off classes reachable by mouse
+    if(game.classIdx>0 && inRect(mx,my,chevronRect(-1))){ game.classIdx--; return; }
+    if(game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1))){ game.classIdx++; return; }
     const i=classAt(mx,my); if(i>=0) reset(CLASSES[i]); // click a card → lock in + launch
     return;
   }
@@ -391,18 +397,25 @@ function drawUpgrade(){
 }
 
 // ---- class select ----
+// Carousel: fixed-width cards; the selected index sits centered, others flank it.
+// `classScroll` eases toward `classIdx` (in drawClassSelect) for a smooth slide.
+const CARD_W=236, CARD_GAP=22, CARD_H=340;
 function classCardRect(i){
-  const n=CLASSES.length, gap=20, margin=40;
-  const cw=Math.min(300,(W-2*margin-(n-1)*gap)/n);
-  const tot=n*cw+(n-1)*gap;
-  return { x:(W-tot)/2 + i*(cw+gap), y:H/2-170, w:cw, h:340 };
+  return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-170, w:CARD_W, h:CARD_H };
 }
+function chevronRect(dir){ const w=36,h=90; return dir<0 ? {x:10,y:H/2-h/2,w,h} : {x:W-10-w,y:H/2-h/2,w,h}; }
+function inRect(mx,my,r){ return mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h; }
 function drawClassSelect(){
   ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
+  // ease the carousel toward the selected card
+  game.classScroll += (game.classIdx - game.classScroll)*0.2;
+  if(Math.abs(game.classIdx-game.classScroll)<0.002) game.classScroll=game.classIdx;
   center('CHOOSE YOUR VESSEL', 34, '#8a5cff', 120);
-  center('← → or 1-'+CLASSES.length+' to pick  ·  SPACE / click to descend', 14, '#7a7a98', 158);
+  center('← → / chevrons to browse  ·  click a vessel to launch', 14, '#7a7a98', 158);
   CLASSES.forEach((cls,i)=>{
     const r=classCardRect(i), sel=i===game.classIdx, hue=cls.hue;
+    if(r.x>W || r.x+r.w<0) return;              // cull off-screen cards
+    const hov = i===game.hoverIdx && !sel;
     if(sel){
       ctx.save();
       ctx.shadowBlur=30; ctx.shadowColor=`hsl(${hue},85%,62%)`;      // strong outer glow
@@ -412,9 +425,9 @@ function drawClassSelect(){
       ctx.strokeStyle=`hsl(${hue},92%,70%)`; ctx.lineWidth=4;         // bright thick border
       roundRect(r.x,r.y,r.w,r.h,12); ctx.stroke();
     } else {
-      ctx.fillStyle='#0d0d1c';
+      ctx.fillStyle = hov ? '#16162e' : '#0d0d1c';                    // brighten on hover
       roundRect(r.x,r.y,r.w,r.h,12); ctx.fill();
-      ctx.strokeStyle=`hsl(${hue},38%,40%)`; ctx.lineWidth=1.5;       // dim when not hovered
+      ctx.strokeStyle = hov ? `hsl(${hue},60%,55%)` : `hsl(${hue},38%,40%)`; ctx.lineWidth = hov?2.5:1.5;
       roundRect(r.x,r.y,r.w,r.h,12); ctx.stroke();
     }
     // ship glyph
@@ -445,7 +458,21 @@ function drawClassSelect(){
     ctx.textAlign='right'; ctx.fillStyle='#c8c8e0'; ctx.fillText(classActiveLabel(cls), r.x+r.w-14, sy+8);
     ctx.textAlign='left';
   });
+  // chevrons + position dots (only meaningful with more than one class)
+  drawChevron(-1, game.classIdx>0);
+  drawChevron(1, game.classIdx<CLASSES.length-1);
+  const dn=CLASSES.length, dgap=16, dy=H/2+192, dx0=W/2-(dn-1)*dgap/2;
+  for(let i=0;i<dn;i++){ ctx.beginPath(); ctx.arc(dx0+i*dgap, dy, i===game.classIdx?4:2.5, 0, TAU);
+    ctx.fillStyle = i===game.classIdx?'#e8e8f0':'#44465f'; ctx.fill(); }
   frameFooter();
+}
+function drawChevron(dir, active){
+  const r=chevronRect(dir), cx=r.x+r.w/2, cy=r.y+r.h/2, s=12;
+  ctx.strokeStyle = active?'#c8c8e0':'#242440'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath();
+  if(dir<0){ ctx.moveTo(cx+s*0.5,cy-s); ctx.lineTo(cx-s*0.5,cy); ctx.lineTo(cx+s*0.5,cy+s); }
+  else     { ctx.moveTo(cx-s*0.5,cy-s); ctx.lineTo(cx+s*0.5,cy); ctx.lineTo(cx-s*0.5,cy+s); }
+  ctx.stroke(); ctx.lineCap='butt';
 }
 // left-aligned word wrap; x is the left edge.
 function wrapText(text,x,y,maxw,lineH,color,size){
