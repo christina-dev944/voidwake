@@ -402,7 +402,7 @@ function drawUpgrade(){
 // ---- class select ----
 // Carousel: fixed-width cards; the selected index sits centered, others flank it.
 // `classScroll` eases toward `classIdx` (in drawClassSelect) for a smooth slide.
-const CARD_W=296, CARD_GAP=22, CARD_H=340;
+const CARD_W=350, CARD_GAP=22, CARD_H=340;
 function classCardRect(i){
   return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-170, w:CARD_W, h:CARD_H };
 }
@@ -444,7 +444,7 @@ function drawClassSelect(){
     // description — LEFT-aligned inside the card padding
     wrapText(cls.desc, r.x+18, r.y+134, r.w-36, 16, '#b4b4d0', 12);
     // stats — horizontal bar charts; fixed rows, aligned across all cards
-    const padL=r.x+16, labelW=52, valW=44, barX=padL+labelW, barW=r.w-16*2-labelW-valW, barH=8;
+    const padL=r.x+16, labelW=104, valW=54, barX=padL+labelW, barW=r.w-16*2-labelW-valW, barH=8;
     let sy=r.y+168;
     for(const b of classStatBars(cls)){
       ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace';

@@ -57,28 +57,28 @@ export const classById = id => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;
 const RANGE_CAP = 720; // unlimited range renders as a full bar; finite is a fraction
 const effective = cls => Object.assign({}, BASE, cls.stats || {});
 const STAT_DEFS = [
-  { label:'DMG',    get:(s)   => s.dmg },
-  { label:'FIRE',   get:(s)   => 60 / s.fireRate },   // shots/sec — higher is faster
-  { label:'BULLET', get:(s)   => s.bulletSpeed },
-  { label:'HP',     get:(s)   => s.maxhp },
-  { label:'MOVE',   get:(s)   => s.speed },
-  { label:'RANGE',  get:(s,c) => c.range || RANGE_CAP },
+  { label:'DMG',          get:(s)   => s.dmg },
+  { label:'FIRE RATE',    get:(s)   => 60 / s.fireRate },   // shots/sec — higher is faster
+  { label:'BULLET SPEED', get:(s)   => s.bulletSpeed },
+  { label:'HP',           get:(s)   => s.maxhp },
+  { label:'MOVE SPEED',   get:(s)   => s.speed },
+  { label:'RANGE',        get:(s,c) => c.range || RANGE_CAP },
 ];
 
 export function classStatBars(cls){
   const laser = cls.weapon === 'laser';
   return STAT_DEFS.map(def=>{
     // laser has no discrete shots/bullet-speed — show beam-appropriate readouts
-    if(laser && def.label==='FIRE')   return { label:'FIRE',   frac:1,    display:'beam' };
-    if(laser && def.label==='BULLET') return { label:'BULLET', frac:1,    display:'hitscan' };
+    if(laser && def.label==='FIRE RATE')    return { label:'FIRE RATE',    frac:1, display:'beam' };
+    if(laser && def.label==='BULLET SPEED') return { label:'BULLET SPEED', frac:1, display:'hitscan' };
     if(laser && def.label==='DMG'){
-      const dps=cls.beamDps||0, max=Math.max(dps,1);
+      const dps=cls.beamDps||0;
       return { label:'DMG', frac:1, display:dps+' dps' };
     }
     const val = def.get(effective(cls), cls);
     const max = Math.max(...CLASSES.map(c => def.get(effective(c), c)), 1);
-    const display = def.label==='FIRE'  ? val.toFixed(1)+'/s'
-                  : def.label==='RANGE' ? (cls.range ? String(cls.range) : '∞')
+    const display = def.label==='FIRE RATE' ? val.toFixed(1)+'/s'
+                  : def.label==='RANGE'     ? (cls.range ? String(cls.range) : '∞')
                   : String(Math.round(val*10)/10);
     return { label:def.label, frac: Math.max(0.04, Math.min(1, val/max)), display };
   });
