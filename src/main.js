@@ -1,5 +1,6 @@
 import { TAU, rand, clamp, dist2, DANGER_HUE } from './util.js';
 import { UPGRADES } from './upgrades.js';
+import { CLASSES, DEFAULT_CLASS } from './classes.js';
 import * as D from './difficulty.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
@@ -16,20 +17,25 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 // ---- game state ----
 const game = {
-  state: 'title', // title | playing | upgrade | dead
+  state: 'title', // title | classSelect | playing | upgrade | dead
   wave: 0, score: 0, paused:false,
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
   upgrades: [], upgradeChoices: [], time: 0,
+  cls: DEFAULT_CLASS, classIdx: 0,
 };
 
-function newPlayer() {
-  return {
+function newPlayer(cls=DEFAULT_CLASS) {
+  const p = {
     x: W/2, y: H*0.75, r: 12, hitR: 4,
     hp: 100, maxhp: 100, speed: 4.4, focusSpeed: 2.0,
     lvl: 1, xp: 0, xpNext: 8,
     fireRate: 10, fireCd: 0, dmg: 10, bulletSpeed: 9, shots: 1, spread: 0,
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
+    cls, weapon: cls.weapon||'bullet', range: cls.range||0,
+    active: cls.active||null, activeCd: 0,
   };
+  if (cls.stats) Object.assign(p, cls.stats); // class profile overrides base
+  return p;
 }
 
 function rollUpgrades() {
@@ -72,7 +78,8 @@ function playerShoot(p) {
     const a = baseAng+off;
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
-      r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce });
+      r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
+      ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0 });
   }
 }
 
@@ -109,8 +116,13 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
   if(pt.life<=0)game.particles.splice(i,1); } }
 
 // ---- flow ----
-function reset(){ game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];
-  game.score=0;game.wave=0;game.player=newPlayer();game.state='playing';startWave(1); }
+function reset(cls=game.cls){ game.cls=cls; game.paused=false;
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.upgrades=[];
+  game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
+
+// active-ability framework: trigger key fires the class's active if off cooldown.
+function useActive(p){ if(!p||!p.active||p.activeCd>0) return;
+  p.active.trigger(game,p); p.activeCd=p.active.cooldown; }
 
 function gainXp(p, amt){
   p.xp+=amt;
@@ -125,14 +137,28 @@ function pickUpgrade(i){
 }
 
 addEventListener('keydown', e=>{
+  const k=e.key.toLowerCase();
   if(game.state==='upgrade'){ const n=parseInt(e.key); if(n>=1&&n<=3) pickUpgrade(n-1); }
-  if(game.state==='title' && (e.key===' '||e.key==='Enter')) reset();
-  if(game.state==='dead' && (e.key===' '||e.key==='Enter')) reset();
+  if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
+  if(game.state==='classSelect'){
+    if(k==='arrowleft'||k==='a') game.classIdx=(game.classIdx+CLASSES.length-1)%CLASSES.length;
+    else if(k==='arrowright'||k==='d') game.classIdx=(game.classIdx+1)%CLASSES.length;
+    else if(k===' '||k==='enter') reset(CLASSES[game.classIdx]);
+    else { const n=parseInt(e.key); if(n>=1&&n<=CLASSES.length) reset(CLASSES[n-1]); }
+    return;
+  }
+  if(game.state==='playing' && k===' ') useActive(game.player);
 });
 cv.addEventListener('pointerdown', e=>{
-  if(game.state==='title'||game.state==='dead'){ reset(); return; }
+  const rect=cv.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(W/rect.width), my=(e.clientY-rect.top)*(H/rect.height);
+  if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.state='classSelect'; return; }
+  if(game.state==='classSelect'){
+    for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
+      if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h){ reset(CLASSES[i]); return; } }
+    return;
+  }
   if(game.state==='upgrade'){
-    const rect=cv.getBoundingClientRect(); const my=(e.clientY-rect.top)*(H/rect.height);
     const idx=Math.floor((my-220)/150); if(idx>=0&&idx<3) pickUpgrade(idx);
   }
 });
@@ -143,6 +169,7 @@ function update(){
   const p = game.player;
   if(!p) return;
   if(p.iframes>0) p.iframes--;
+  if(p.activeCd>0) p.activeCd--;
 
   // movement
   const focus = keys['shift'];
@@ -160,6 +187,7 @@ function update(){
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
     b.x+=b.vx;b.y+=b.vy;
+    if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
     for(const e of game.enemies){ if(dist2(b.x,b.y,e.x,e.y)<(e.r+b.r)**2){
       e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?8:4,2);
@@ -214,7 +242,9 @@ function draw(){
 
   if(game.state==='title'){ center('VOIDWAKE', 54, '#e8e8f0', H/2-40);
     center('a roguelike bullet hell', 18, '#8a5cff', H/2+6);
-    center('press SPACE / click to descend', 15, '#7a7a98', H/2+50); frameFooter(); return; }
+    center('press SPACE / click to choose a vessel', 15, '#7a7a98', H/2+50); frameFooter(); return; }
+
+  if(game.state==='classSelect'){ drawClassSelect(); return; }
 
   // particles
   for(const pt of game.particles){ ctx.globalAlpha=clamp(pt.life/24,0,1);
@@ -246,7 +276,8 @@ function draw(){
   if(p){
     const blink = p.iframes>0 && (game.time>>2)%2;
     if(!blink){
-      ctx.fillStyle='#8a5cff'; ctx.shadowBlur=14; ctx.shadowColor='#8a5cff';
+      const pc=`hsl(${(p.cls&&p.cls.hue)||265},70%,62%)`;
+      ctx.fillStyle=pc; ctx.shadowBlur=14; ctx.shadowColor=pc;
       ctx.beginPath();
       ctx.moveTo(p.x,p.y-p.r); ctx.lineTo(p.x-p.r*0.8,p.y+p.r*0.7);
       ctx.lineTo(p.x,p.y+p.r*0.3); ctx.lineTo(p.x+p.r*0.8,p.y+p.r*0.7); ctx.closePath(); ctx.fill();
@@ -255,6 +286,14 @@ function draw(){
     // hitbox dot when focusing
     if(keys['shift']){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
+    // active-ability indicator (only if this class has one)
+    if(p.active && (game.state==='playing'||game.state==='upgrade')){
+      const ready=p.activeCd<=0;
+      ctx.textAlign='center'; ctx.font='bold 13px ui-monospace,monospace';
+      ctx.fillStyle=ready?'#7cf7ff':'#565879';
+      ctx.fillText('[SPACE] '+p.active.name+(ready?'  READY':'  '+Math.ceil(p.activeCd/60)+'s'), W/2, H-22);
+      ctx.textAlign='left';
+    }
   }
 
   if(game.state==='upgrade') drawUpgrade();
@@ -281,6 +320,50 @@ function drawUpgrade(){
     ctx.fillText(u.desc, x+50, y+82);
   });
   ctx.textAlign='left';
+}
+
+// ---- class select ----
+function classCardRect(i){
+  const n=CLASSES.length, gap=20, margin=40;
+  const cw=Math.min(300,(W-2*margin-(n-1)*gap)/n);
+  const tot=n*cw+(n-1)*gap;
+  return { x:(W-tot)/2 + i*(cw+gap), y:H/2-150, w:cw, h:300 };
+}
+function drawClassSelect(){
+  ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
+  center('CHOOSE YOUR VESSEL', 34, '#8a5cff', 120);
+  center('← → or 1-'+CLASSES.length+' to pick  ·  SPACE / click to descend', 14, '#7a7a98', 158);
+  CLASSES.forEach((cls,i)=>{
+    const r=classCardRect(i), sel=i===game.classIdx, hue=cls.hue;
+    ctx.fillStyle = sel?'#1b1533':'#101022';
+    ctx.strokeStyle=`hsl(${hue},70%,60%)`; ctx.lineWidth=sel?3:1.5;
+    roundRect(r.x,r.y,r.w,r.h,12); ctx.fill(); ctx.stroke();
+    // ship glyph
+    const cx=r.x+r.w/2, cy=r.y+62;
+    ctx.fillStyle=`hsl(${hue},70%,62%)`; ctx.shadowBlur=sel?18:6; ctx.shadowColor=ctx.fillStyle;
+    ctx.beginPath(); ctx.moveTo(cx,cy-16); ctx.lineTo(cx-13,cy+12); ctx.lineTo(cx,cy+5); ctx.lineTo(cx+13,cy+12); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
+    center((i+1)+'. '+cls.name, 20, '#e8e8f0', r.y+120);
+    wrapText(cls.desc, cx, r.y+152, r.w-36, 18, '#b4b4d0', 13);
+    // stat line
+    const s=cls.stats||{}, bits=[];
+    if(s.dmg) bits.push('DMG '+s.dmg);
+    if(cls.range) bits.push('RANGE '+cls.range);
+    if(s.maxhp) bits.push('HP '+s.maxhp);
+    if(cls.active) bits.push('ACTIVE '+cls.active.name);
+    ctx.fillStyle='#7a7a98'; ctx.font='12px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText(bits.join('  ·  ')||'balanced loadout', cx, r.y+r.h-22);
+    ctx.textAlign='left';
+  });
+  frameFooter();
+}
+function wrapText(text,cx,y,maxw,lineH,color,size){
+  ctx.fillStyle=color; ctx.font=size+'px ui-monospace,monospace'; ctx.textAlign='center';
+  const words=text.split(' '); let line='', yy=y;
+  for(const w of words){ const test=line?line+' '+w:w;
+    if(ctx.measureText(test).width>maxw && line){ ctx.fillText(line,cx,yy); line=w; yy+=lineH; }
+    else line=test; }
+  if(line) ctx.fillText(line,cx,yy); ctx.textAlign='left';
 }
 
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
