@@ -1,5 +1,6 @@
 import { TAU, rand, clamp, dist2, DANGER_HUE } from './util.js';
 import { UPGRADES } from './upgrades.js';
+import * as D from './difficulty.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const W = cv.width, H = cv.height;
@@ -41,11 +42,10 @@ function rollUpgrades() {
 // ---- spawning ----
 function startWave(n) {
   game.wave = n;
-  const count = 3 + Math.floor(n*1.6);
-  const hpBase = 20 + n*8;
+  const count = D.enemyCount(n);
   for (let i=0;i<count;i++) {
     const boss = (n%5===0) && i===0;
-    game.enemies.push(makeEnemy(hpBase*(boss?12:1), n, boss));
+    game.enemies.push(makeEnemy(boss ? D.bossHp(n) : D.enemyHp(n), n, boss));
   }
 }
 
@@ -79,12 +79,18 @@ function playerShoot(p) {
 function enemyShoot(e) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
-  const spd = 2.4 + game.wave*0.05;
+  const spd = D.bulletSpeed(game.wave);
   const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue:e.hue });
   switch(e.pattern) {
-    case 'aimed': push(aim); if(e.boss){push(aim-0.15);push(aim+0.15);} break;
-    case 'spread': for(let i=-2;i<=2;i++) push(aim+i*0.18); break;
-    case 'ring': { const k=e.boss?18:10; for(let i=0;i<k;i++) push(i/k*TAU); } break;
+    case 'aimed': {
+      push(aim);
+      const flank = e.boss ? 1 : D.aimedExtra(game.wave);
+      for(let i=1;i<=flank;i++){ push(aim - i*0.15); push(aim + i*0.15); }
+      break;
+    }
+    case 'spread': { const k=D.spreadCount(game.wave), half=(k-1)/2;
+      for(let i=-half;i<=half;i++) push(aim+i*0.18); break; }
+    case 'ring': { const k=D.ringCount(game.wave, e.boss); for(let i=0;i<k;i++) push(i/k*TAU); break; }
     case 'spiral': { const arms=e.boss?4:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
   }
 }
@@ -163,7 +169,7 @@ function update(){
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
     if(e.y<e.targetY){ e.y+=e.vy; } else { e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4;
       if(e.x<40||e.x>W-40)e.vx*=-1; }
-    e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = e.boss? 12 : rand(45,90)-game.wave; }
+    e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
@@ -281,7 +287,7 @@ function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function center(t,size,color,y){ ctx.textAlign='center'; ctx.fillStyle=color;
   ctx.font=`bold ${size}px ui-monospace,monospace`; ctx.fillText(t,W/2,y); ctx.textAlign='left'; }
-function frameFooter(){ center('v0.1', 12, '#3a3a55', H-24); }
+function frameFooter(){ center('v0.2', 12, '#3a3a55', H-24); }
 
 // ---- loop ----
 function loop(){
