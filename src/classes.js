@@ -20,7 +20,7 @@ export const CLASSES = [
   {
     id: 'vanguard',
     name: 'Vanguard',
-    desc: 'Balanced auto-fire. No weaknesses, no tricks.',
+    desc: 'Balanced and basic auto fire.',
     hue: 265,
     weapon: 'bullet',
     stats: {},
@@ -29,7 +29,7 @@ export const CLASSES = [
   {
     id: 'glass',
     name: 'Glass Cannon',
-    desc: 'Short range, brutal damage, fragile.',
+    desc: 'High damage short range, fragile.',
     hue: 18,
     weapon: 'bullet',
     range: 300,
