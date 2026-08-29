@@ -327,10 +327,11 @@ function draw(){
   const pl=game.player;
   if(pl && pl.weapon==='laser' && pl.beam && pl.beam.active){
     const ang=pl.beam.ang, len=Math.hypot(W,H), ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
+    const glowW=pl.beamWidth*1.4, coreW=Math.max(2, pl.beamWidth*0.5); // beam thickens with Wide Lens
     ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
-    ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=7; ctx.globalAlpha=0.85;
+    ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=0.8;
     ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
-    ctx.globalAlpha=1; ctx.lineWidth=2; ctx.strokeStyle='#eaffff';
+    ctx.globalAlpha=1; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
     ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke(); ctx.restore();
   }
 

@@ -13,7 +13,7 @@ export const UPGRADES = [
 
   // --- laser (Lancer) ---
   { id:'beam',   for:'laser',  name:'Beam Amplifier', desc:'+30% beam damage',        apply:p=>p.beamDps*=1.3 },
-  { id:'wide',   for:'laser',  name:'Wide Lens',      desc:'wider beam',              apply:p=>p.beamWidth+=5 },
+  { id:'wide',   for:'laser',  name:'Wide Lens',      desc:'much wider beam',         apply:p=>p.beamWidth+=9 },
   { id:'coolant',for:'laser',  name:'Coolant',        desc:'-30% heat buildup',       apply:p=>p.heatRate*=0.7 },
   { id:'vent',   for:'laser',  name:'Heat Sink',      desc:'+40% cooldown recovery',  apply:p=>p.coolRate*=1.4 },
   { id:'capac',  for:'laser',  name:'Capacitor',      desc:'+25% overheat threshold', apply:p=>p.heatMax*=1.25 },
