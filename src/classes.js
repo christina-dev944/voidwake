@@ -46,6 +46,17 @@ export const CLASSES = [
     stats: { maxhp: 90, hp: 90, speed: 4.2, dmg: 15 }, // dmg shown on card = indicative
     active: null,
   },
+  {
+    id: 'mage',
+    name: 'Mage',
+    desc: 'Homing bolts. Nova clears bullets and enemies around you.',
+    hue: 285,
+    weapon: 'homing',
+    // active `effect` is resolved to a function in main.js (applyActive) to avoid a
+    // circular import; cooldown is in sim ticks (60/s).
+    active: { name: 'Nova', cooldown: 540, effect: 'nova', radius: 160, dmg: 120 },
+    stats: { dmg: 8, fireRate: 11, bulletSpeed: 6, maxhp: 85, hp: 85, speed: 4.2 },
+  },
 ];
 
 export const DEFAULT_CLASS = CLASSES[0];

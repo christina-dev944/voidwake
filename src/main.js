@@ -20,9 +20,12 @@ const game = {
   state: 'title', // title | classSelect | playing | upgrade | dead
   wave: 0, score: 0, paused:false,
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0,
+  upgrades: [], upgradeChoices: [], time: 0, novaFx: [],
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
 };
+
+// which upgrade categories each weapon draws from (besides 'all')
+const WEAPON_UPGRADES = { bullet:['bullet'], homing:['bullet'], laser:['laser'] };
 
 function newPlayer(cls=DEFAULT_CLASS) {
   const p = {
@@ -41,8 +44,8 @@ function newPlayer(cls=DEFAULT_CLASS) {
 }
 
 function rollUpgrades() {
-  const w = game.player.weapon;                     // only offer boons valid for this weapon
-  const pool = UPGRADES.filter(u => u.for==='all' || u.for===w);
+  const cats = WEAPON_UPGRADES[game.player.weapon] || []; // boons valid for this weapon
+  const pool = UPGRADES.filter(u => u.for==='all' || cats.includes(u.for));
   const out = [];
   for (let i=0;i<3 && pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   game.upgradeChoices = out;
@@ -82,7 +85,8 @@ function playerShoot(p) {
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
-      ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0 });
+      ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
+      homing: p.weapon==='homing' });
   }
 }
 
@@ -147,16 +151,29 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
 
 // ---- flow ----
 function reset(cls=game.cls){ game.cls=cls; game.paused=false; cv.style.cursor='default';
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.upgrades=[];
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
 // active-ability framework: trigger key fires the class's active if off cooldown.
 function useActive(p){ if(!p||!p.active||p.activeCd>0) return;
-  p.active.trigger(game,p); p.activeCd=p.active.cooldown; }
+  applyActive(p.active, p); p.activeCd=p.active.cooldown; }
+// map an active's `effect` string to its behavior (keeps classes.js import-free)
+function applyActive(a, p){
+  if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
+}
+// Nova: wipe enemy bullets near the player and damage enemies in the radius.
+function novaBlast(p, radius, dmg){
+  const r2=radius*radius;
+  for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
+    if(dist2(b.x,b.y,p.x,p.y)<=r2){ burst(b.x,b.y,285,2,1.6); game.eBullets.splice(i,1); } }
+  for(const e of game.enemies){ if(dist2(e.x,e.y,p.x,p.y)<=(radius+e.r)**2) e.hp-=dmg; } // death handled in enemy loop
+  burst(p.x,p.y,285,32,5);
+  game.novaFx.push({ x:p.x, y:p.y, r:12, max:radius, life:1 });
+}
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
 function quitRun(){ game.paused=false; game.state='title'; game.player=null;
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[]; }
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[]; }
 
 function gainXp(p, amt){
   p.xp+=amt;
@@ -238,6 +255,11 @@ function update(){
 
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
+    if(b.homing){ const t=nearestEnemy(b.x,b.y);            // steer toward nearest enemy
+      if(t){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(t.y-b.y,t.x-b.x);
+        let d=want-cur; while(d>Math.PI)d-=TAU; while(d<-Math.PI)d+=TAU;
+        const a=cur+clamp(d,-0.13,0.13), sp=Math.hypot(b.vx,b.vy);
+        b.vx=Math.cos(a)*sp; b.vy=Math.sin(a)*sp; } }
     b.x+=b.vx;b.y+=b.vy;
     if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
@@ -269,8 +291,10 @@ function update(){
     }
   }
 
-  // particles
+  // particles + nova rings
   animateParticles();
+  for(let i=game.novaFx.length-1;i>=0;i--){ const f=game.novaFx[i];
+    f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.novaFx.splice(i,1); }
 
   // wave clear
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
@@ -322,6 +346,12 @@ function draw(){
     ctx.shadowBlur=6; ctx.shadowColor=ctx.fillStyle;
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
   ctx.shadowBlur=0;
+
+  // nova rings
+  for(const f of game.novaFx){ ctx.globalAlpha=clamp(f.life,0,1)*0.7;
+    ctx.strokeStyle='hsl(285,90%,72%)'; ctx.lineWidth=4; ctx.shadowBlur=14; ctx.shadowColor='hsl(285,90%,70%)';
+    ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,TAU); ctx.stroke(); }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
 
   // laser beam (drawn under the ship)
   const pl=game.player;
