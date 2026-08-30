@@ -105,15 +105,14 @@ function playerShoot(p) {
     }
     baseAng = Math.atan2(ty-p.y, tx-p.x);
   }
-  const n = p.shots, perp = baseAng + Math.PI/2, spawnGap = p.r; // bolts spawn ~player-size apart → visibly split
-  // homing flies straight for ~a player-width of distance (converted to ticks via speed) before tracking
-  const homeD = p.weapon==='homing' ? Math.max(4, Math.round((p.r*2)/p.bulletSpeed)) : 0;
+  const n = p.shots;
+  // homing flies straight for ~3× the player's height (converted to ticks via bullet speed)
+  // before tracking, so split bolts fan out and stay visible before they curve to the target.
+  const homeD = p.weapon==='homing' ? Math.max(6, Math.round((p.r*3)/p.bulletSpeed)) : 0;
   for (let i=0;i<n;i++) {
-    const k = shotOffset(i);
-    const a = baseAng + k*p.spread;
-    const sx = p.x + Math.cos(perp)*k*spawnGap, sy = p.y + Math.sin(perp)*k*spawnGap;
+    const a = baseAng + shotOffset(i)*p.spread;
     const crit = Math.random() < p.crit;
-    game.pBullets.push({ x:sx, y:sy, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
+    game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
       homing: p.weapon==='homing', homeDelay: homeD });
