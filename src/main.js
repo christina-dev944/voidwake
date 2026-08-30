@@ -279,10 +279,10 @@ function update(){
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
     if(b.homing){
-      // fly straight during the delay (initial spread AND the coast after piercing an enemy),
-      // so bolts keep momentum and shoot THROUGH before curving back / to another target
+      // fly straight during the delay (initial spread AND the coast after piercing),
+      // so bolts keep momentum and shoot THROUGH before curving back
       if(b.homeDelay>0){ b.homeDelay--; }
-      else { const t=nearestEnemy(b.x,b.y,b.hits);          // steer toward nearest enemy not already hit
+      else { const t=nearestEnemy(b.x,b.y);                 // nearest — can loop back to a lone enemy (boomerang)
         if(t){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(t.y-b.y,t.x-b.x);
           let d=want-cur; while(d>Math.PI)d-=TAU; while(d<-Math.PI)d+=TAU;
           const a=cur+clamp(d,-0.11,0.11), sp=Math.hypot(b.vx,b.vy);
@@ -290,12 +290,14 @@ function update(){
     b.x+=b.vx;b.y+=b.vy;
     if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
-    for(const e of game.enemies){
-      if(b.hits && b.hits.has(e.id)) continue;              // never hit the same enemy twice
+    if(b.hitCd>0){ b.hitCd--; }                             // brief re-hit lockout after a pierce (prevents overlap multi-hits)
+    else for(const e of game.enemies){
+      if(b.hits && b.hits.has(e.id)) continue;              // straight pierce: hit each enemy once (cleave a line)
       if(dist2(b.x,b.y,e.x,e.y)<(e.r+b.r)**2){
         e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?8:4,2);
-        if(b.pierce>0){ b.pierce--; (b.hits||(b.hits=new Set())).add(e.id);
-          if(b.homing) b.homeDelay=Math.max(b.homeDelay,12); } // coast straight through with momentum
+        if(b.pierce>0){ b.pierce--;
+          if(b.homing){ b.hitCd=14; b.homeDelay=Math.max(b.homeDelay,12); } // punch through, then boomerang back (may re-hit same enemy)
+          else { (b.hits||(b.hits=new Set())).add(e.id); } }
         else { game.pBullets.splice(i,1); }
         break;
       }
