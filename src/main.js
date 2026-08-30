@@ -447,6 +447,8 @@ function draw(){
       ctx.fillStyle=p.overheated?'#ff4d6d':'#8a8aa6';
       ctx.fillText(p.overheated?'OVERHEATED':'HEAT', W/2, by-4); ctx.textAlign='left';
     }
+    // legible HP bar near the action (#14) — big enough to read mid-fight
+    if(game.state==='playing'||game.state==='upgrade') drawHpBar(p);
     // active-ability indicator (only if this class has one)
     if(p.active && (game.state==='playing'||game.state==='upgrade')){
       const ready=p.activeCd<=0;
@@ -467,6 +469,18 @@ function draw(){
     center('PAUSED',40,'#e8e8f0',H/2-28);
     center('[Esc/P] resume',17,'#b4b4d0',H/2+18);
     center('[Q] quit to title',17,'#b4b4d0',H/2+46); }
+}
+
+// Bottom-left health bar: color slides red→green with the fraction, with the
+// exact HP printed on it so it reads at a glance without leaving the top HUD.
+function drawHpBar(p){
+  const bw=210, bh=18, bx=16, by=H-bh-16;
+  const frac=clamp(p.hp/p.maxhp,0,1);
+  ctx.fillStyle='#0c0c18'; roundRect(bx,by,bw,bh,5); ctx.fill();
+  ctx.fillStyle=`hsl(${frac*120},72%,48%)`; roundRect(bx,by,Math.max(0,bw*frac),bh,5); ctx.fill();
+  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(bx,by,bw,bh,5); ctx.stroke();
+  ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace';
+  ctx.fillStyle='#f0f0f8'; ctx.fillText('HP  '+Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp, bx+8, by+13);
 }
 
 function drawUpgrade(){
