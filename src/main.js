@@ -515,7 +515,7 @@ function drawRunBoons(y0){
 }
 
 // Top-left health bar: color slides red→green with the fraction, with the exact
-// HP printed on it so it reads at a glance — kept up top per director feedback.
+// HP printed on it so it reads at a glance — kept up top where the eye expects it.
 function drawHpBar(p){
   const bw=210, bh=18, bx=16, by=16;
   const frac=clamp(p.hp/p.maxhp,0,1);
