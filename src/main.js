@@ -109,12 +109,10 @@ function makeEnemy(hp, wave, boss) {
 }
 
 // ---- shooting ----
-// Split-shot fan: shot 0 is dead-on the aim, extras alternate out around it
-// (0, +1, -1, +2, -2 …). Keeps the center shot on target under auto-aim so a
-// single enemy is never missed by an even split. Units are multiples of spread.
-// symmetric fan step: n shots spread evenly around the aim line (no bolt sits
-// dead-center for even counts), e.g. n=2 → -0.5,+0.5; n=3 → -1,0,+1.
-function shotOffset(i,n){ return i - (n-1)/2; }
+// Split-shot fan: shot 0 is dead-on the aim; extras alternate out around it
+// (0, +1, -1, +2, -2 …). Keeping a center shot means a single enemy on the aim
+// line is always covered, even with an even split. Units are multiples of the fan.
+function shotOffset(i){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 
 function playerShoot(p) {
   const target = pickTarget(p.x,p.y);
@@ -122,8 +120,10 @@ function playerShoot(p) {
   if (target) {
     let tx=target.x, ty=target.y;
     if(p.weapon!=='homing'){                 // lead a moving target so far/small enemies still get hit
+      // use the enemy's ACTUAL per-tick movement (mvx/mvy), not its static vx/vy
+      // fields — while descending it moves straight down, so vx would aim us off.
       const tt = Math.hypot(tx-p.x, ty-p.y)/p.bulletSpeed;
-      tx += (target.vx||0)*tt; ty += (target.vy||0)*tt;
+      tx += (target.mvx||0)*tt; ty += (target.mvy||0)*tt;
     }
     baseAng = Math.atan2(ty-p.y, tx-p.x);
   }
@@ -136,7 +136,7 @@ function playerShoot(p) {
   // straight phase (~3.5× player radius, in ticks) so the fan is visible before it converges.
   const homeD = homing ? Math.max(8, Math.round((p.r*3.5)/p.bulletSpeed)) : 0;
   for (let i=0;i<n;i++) {
-    const a = baseAng + shotOffset(i,n)*fan;
+    const a = baseAng + shotOffset(i)*fan;
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
@@ -158,7 +158,7 @@ function updateLaser(p){
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs=[];
     for(let s=0;s<n;s++){
-      const ang = base + shotOffset(s,n)*spr; angs.push(ang);   // beams fan symmetrically around target
+      const ang = base + shotOffset(s)*spr; angs.push(ang);   // beams fan around target (center beam stays on aim)
       const dx=Math.cos(ang), dy=Math.sin(ang);
       for(const e of game.enemies){               // damage enemies on this ray (death handled in enemy loop)
         const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
@@ -371,8 +371,10 @@ function update(){
 
   // enemies
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
+    const ox=e.x, oy=e.y;
     if(e.y<e.targetY){ e.y+=e.vy; } else { e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4;
       if(e.x<40||e.x>W-40)e.vx*=-1; }
+    e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       if(e.boss){ addShake(14); hitStop(8); }   // only boss death shakes + gets a beat of hit-stop (#5)
