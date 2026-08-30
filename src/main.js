@@ -199,8 +199,10 @@ function nearestEnemy(x,y,exclude) {
 }
 
 // ---- particles ----
-function burst(x,y,hue,n=10,sp=3){ for(let i=0;i<n;i++){ const a=rand(0,TAU),s=rand(0.5,sp);
-  game.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(14,30),hue}); } }
+// `dim` scales a particle's opacity (1 = full). Short-range bullet fizzle passes
+// game.pBulletAlpha so its puffs match the dimmed player bullets (#29).
+function burst(x,y,hue,n=10,sp=3,dim=1){ for(let i=0;i<n;i++){ const a=rand(0,TAU),s=rand(0.5,sp);
+  game.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(14,30),hue,dim}); } }
 function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const pt=game.particles[i];
   pt.x+=pt.vx;pt.y+=pt.vy;pt.vx*=0.94;pt.vy*=0.94;pt.life--;
   if(pt.life<=0)game.particles.splice(i,1); } }
@@ -326,7 +328,7 @@ function update(){
           const a=cur+clamp(d,-0.11,0.11), sp=Math.hypot(b.vx,b.vy);
           b.vx=Math.cos(a)*sp; b.vy=Math.sin(a)*sp; } } }
     b.x+=b.vx;b.y+=b.vy;
-    if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
+    if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4,game.pBulletAlpha); game.pBullets.splice(i,1); continue; } // short-range fizzle — dimmed to match the bullet
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
     if(b.hitCd>0){ b.hitCd--; }                             // brief re-hit lockout after a pierce (prevents overlap multi-hits)
     else for(const e of game.enemies){
@@ -396,7 +398,7 @@ function draw(){
   if(game.state==='classSelect'){ drawClassSelect(); return; }
 
   // particles
-  for(const pt of game.particles){ ctx.globalAlpha=clamp(pt.life/24,0,1);
+  for(const pt of game.particles){ ctx.globalAlpha=clamp(pt.life/24,0,1)*(pt.dim??1);
     ctx.fillStyle=`hsl(${pt.hue},90%,65%)`; ctx.fillRect(pt.x-1.5,pt.y-1.5,3,3); }
   ctx.globalAlpha=1;
 
