@@ -4,7 +4,20 @@ import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from '.
 import * as D from './difficulty.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
+// Responsive playfield: the canvas fills the viewport (square, capped), and the
+// backing store scales with devicePixelRatio so it stays crisp at any browser zoom.
+// W/H are the game-unit size (CSS px); drawing is done in game units via setTransform.
+let W = 720, H = 720;
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  const side = Math.max(480, Math.min(window.innerWidth - 24, window.innerHeight - 96, 1200));
+  W = side; H = side;
+  cv.style.width = side + 'px'; cv.style.height = side + 'px';
+  cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (game && game.player){ game.player.x = clamp(game.player.x, game.player.r, W-game.player.r);
+    game.player.y = clamp(game.player.y, game.player.r, H-game.player.r); }
+}
 
 // ---- input ----
 const keys = {};
@@ -20,7 +33,7 @@ const game = {
   state: 'title', // title | classSelect | playing | upgrade | dead
   wave: 0, score: 0, paused:false,
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [],
+  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
 };
 
@@ -66,6 +79,7 @@ function makeEnemy(hp, wave, boss) {
   const x = rand(60, W-60), y = rand(-140,-40);
   const patterns = ['aimed','spread','spiral','ring'];
   return {
+    id: game.eid++,
     x, y, r: boss?34:16, hp, maxhp:hp, boss,
     vx: rand(-0.6,0.6), vy: rand(0.5,1.1),
     targetY: boss? rand(90,150) : rand(60, H*0.42),
@@ -75,19 +89,24 @@ function makeEnemy(hp, wave, boss) {
 }
 
 // ---- shooting ----
+// Split-shot fan: shot 0 is dead-on the aim, extras alternate out around it
+// (0, +1, -1, +2, -2 …). Keeps the center shot on target under auto-aim so a
+// single enemy is never missed by an even split. Units are multiples of spread.
+function shotOffset(i){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
+
 function playerShoot(p) {
   const target = nearestEnemy(p.x,p.y);
   let baseAng = -Math.PI/2;
   if (target) baseAng = Math.atan2(target.y-p.y, target.x-p.x);
   const n = p.shots;
   for (let i=0;i<n;i++) {
-    const off = (i-(n-1)/2)*p.spread;
+    const off = shotOffset(i)*p.spread;
     const a = baseAng+off;
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
-      homing: p.weapon==='homing', homeDelay: p.weapon==='homing'?6:0 });
+      homing: p.weapon==='homing', homeDelay: p.weapon==='homing'?12:0 });
   }
 }
 
@@ -104,7 +123,7 @@ function updateLaser(p){
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs=[];
     for(let s=0;s<n;s++){
-      const ang = base + (s-(n-1)/2)*spr; angs.push(ang);
+      const ang = base + shotOffset(s)*spr; angs.push(ang);   // center beam stays on target
       const dx=Math.cos(ang), dy=Math.sin(ang);
       for(const e of game.enemies){               // damage enemies on this ray (death handled in enemy loop)
         const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
@@ -139,9 +158,10 @@ function enemyShoot(e) {
   }
 }
 
-function nearestEnemy(x,y) {
+function nearestEnemy(x,y,exclude) {
   let best=null, bd=Infinity;
-  for (const e of game.enemies){ const d=dist2(x,y,e.x,e.y); if(d<bd){bd=d;best=e;} }
+  for (const e of game.enemies){ if(exclude&&exclude.has(e.id)) continue;
+    const d=dist2(x,y,e.x,e.y); if(d<bd){bd=d;best=e;} }
   return best;
 }
 
@@ -259,20 +279,27 @@ function update(){
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];
     if(b.homing){
-      if(b.homeDelay>0){ b.homeDelay--; }                  // fly straight briefly so split shots fan out first
-      else { const t=nearestEnemy(b.x,b.y);                 // then steer toward nearest enemy
+      // fly straight during the delay (initial spread AND the coast after piercing an enemy),
+      // so bolts keep momentum and shoot THROUGH before curving back / to another target
+      if(b.homeDelay>0){ b.homeDelay--; }
+      else { const t=nearestEnemy(b.x,b.y,b.hits);          // steer toward nearest enemy not already hit
         if(t){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(t.y-b.y,t.x-b.x);
           let d=want-cur; while(d>Math.PI)d-=TAU; while(d<-Math.PI)d+=TAU;
-          const a=cur+clamp(d,-0.13,0.13), sp=Math.hypot(b.vx,b.vy);
+          const a=cur+clamp(d,-0.11,0.11), sp=Math.hypot(b.vx,b.vy);
           b.vx=Math.cos(a)*sp; b.vy=Math.sin(a)*sp; } } }
     b.x+=b.vx;b.y+=b.vy;
     if(b.ttl && --b.ttl<=0){ burst(b.x,b.y,190,3,1.4); game.pBullets.splice(i,1); continue; } // short-range fizzle
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.pBullets.splice(i,1);continue;}
-    for(const e of game.enemies){ if(dist2(b.x,b.y,e.x,e.y)<(e.r+b.r)**2){
-      e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?8:4,2);
-      if(b.pierce>0){b.pierce--;} else {game.pBullets.splice(i,1);}
-      break;
-    }}
+    for(const e of game.enemies){
+      if(b.hits && b.hits.has(e.id)) continue;              // never hit the same enemy twice
+      if(dist2(b.x,b.y,e.x,e.y)<(e.r+b.r)**2){
+        e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?8:4,2);
+        if(b.pierce>0){ b.pierce--; (b.hits||(b.hits=new Set())).add(e.id);
+          if(b.homing) b.homeDelay=Math.max(b.homeDelay,12); } // coast straight through with momentum
+        else { game.pBullets.splice(i,1); }
+        break;
+      }
+    }
   }
 
   // enemies
@@ -567,4 +594,5 @@ function loop(now){
   draw();
   requestAnimationFrame(loop);
 }
+addEventListener('resize', resize); resize();
 requestAnimationFrame(loop);
