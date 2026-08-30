@@ -36,6 +36,7 @@ const game = {
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
   upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
+  shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
   pBulletAlpha: 0.25,
@@ -198,6 +199,12 @@ function nearestEnemy(x,y,exclude) {
   return best;
 }
 
+// ---- game feel (#5) ----
+// screen shake: keep the strongest recent impulse; decays each tick in update().
+function addShake(m){ game.shake=Math.min(22,Math.max(game.shake,m)); }
+// hit-stop: freeze the sim for a few frames on a big impact for extra weight.
+function hitStop(frames){ game.hitStop=Math.max(game.hitStop,frames); }
+
 // ---- particles ----
 // `dim` scales a particle's opacity (1 = full). Short-range bullet fizzle passes
 // game.pBulletAlpha so its puffs match the dimmed player bullets (#29).
@@ -226,6 +233,7 @@ function novaBlast(p, radius, dmg){
     if(dist2(b.x,b.y,p.x,p.y)<=r2){ burst(b.x,b.y,285,2,1.6); game.eBullets.splice(i,1); } }
   for(const e of game.enemies){ if(dist2(e.x,e.y,p.x,p.y)<=(radius+e.r)**2) e.hp-=dmg; } // death handled in enemy loop
   burst(p.x,p.y,285,32,5);
+  addShake(11); hitStop(5);   // nova lands with a shockwave (#5)
   game.novaFx.push({ x:p.x, y:p.y, r:12, max:radius, life:1 });
 }
 
@@ -334,7 +342,7 @@ function update(){
     else for(const e of game.enemies){
       if(b.hits && b.hits.has(e.id)) continue;              // straight pierce: hit each enemy once (cleave a line)
       if(dist2(b.x,b.y,e.x,e.y)<(e.r+b.r)**2){
-        e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?8:4,2);
+        e.hp-=b.dmg; burst(b.x,b.y,b.crit?45:280,b.crit?10:6,3);   // punchier impact sparks (#5)
         if(b.pierce>0){ b.pierce--;
           if(b.homing){ b.hitCd=14; b.homeDelay=Math.max(b.homeDelay,12); } // punch through, then boomerang back (may re-hit same enemy)
           else { (b.hits||(b.hits=new Set())).add(e.id); } }
@@ -350,6 +358,7 @@ function update(){
       if(e.x<40||e.x>W-40)e.vx*=-1; }
     e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
+      addShake(e.boss?14:2.5); if(e.boss) hitStop(8);   // kills pop; boss death gets a beat of hit-stop (#5)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
   }
@@ -360,10 +369,14 @@ function update(){
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
       p.hp-=8; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
+      addShake(8); hitStop(3);   // getting hit jolts the screen (#5)
       game.eBullets.splice(i,1);
-      if(p.hp<=0){ game.state='dead'; recordBest(); }
+      if(p.hp<=0){ game.state='dead'; addShake(20); hitStop(10); recordBest(); }
     }
   }
+
+  // decay screen shake toward rest (#5)
+  if(game.shake>0.3) game.shake*=0.86; else game.shake=0;
 
   // particles + nova rings
   animateParticles();
@@ -396,6 +409,10 @@ function draw(){
     frameFooter(); return; }
 
   if(game.state==='classSelect'){ drawClassSelect(); return; }
+
+  // screen shake: offset the whole world layer (menus/overlays stay put) (#5)
+  ctx.save();
+  if(game.shake>0){ const s=game.shake; ctx.translate(rand(-s,s), rand(-s,s)); }
 
   // particles
   for(const pt of game.particles){ ctx.globalAlpha=clamp(pt.life/24,0,1)*(pt.dim??1);
@@ -487,6 +504,8 @@ function draw(){
       ctx.textAlign='left';
     }
   }
+
+  ctx.restore();   // end screen-shake transform (#5)
 
   if(game.state==='upgrade') drawUpgrade();
   if(game.state==='dead'){ ctx.fillStyle='rgba(6,6,11,.78)'; ctx.fillRect(0,0,W,H);
@@ -676,6 +695,7 @@ const MAX_STEPS = 5;    // cap catch-up per frame; prevents post-pause/tab-switc
 let acc = 0, last = performance.now();
 function tick(){
   if(game.paused) return;
+  if(game.hitStop>0){ game.hitStop--; return; }   // freeze the whole sim for a few frames (#5)
   if(game.state==='playing') update();
   else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
 }
