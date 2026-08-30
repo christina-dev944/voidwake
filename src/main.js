@@ -391,7 +391,7 @@ function draw(){
   if(game.state==='title'){ center('VOIDWAKE', 54, '#e8e8f0', H/2-40);
     center('a roguelike bullet hell', 18, '#8a5cff', H/2+6);
     center('press SPACE / click to choose a vessel', 15, '#7a7a98', H/2+50);
-    if(best.wave>0) center('best  ·  wave '+best.wave+'  ·  score '+best.score, 13, '#6a6a88', H/2+82);
+    if(best.wave>0) center('best run: wave '+best.wave+' - score '+best.score, 13, '#6a6a88', H/2+82);
     frameFooter(); return; }
 
   if(game.state==='classSelect'){ drawClassSelect(); return; }
@@ -484,7 +484,7 @@ function draw(){
   if(game.state==='dead'){ ctx.fillStyle='rgba(6,6,11,.78)'; ctx.fillRect(0,0,W,H);
     center('YOU DIED', 52, '#ff4d6d', H/2-54);
     center('reached wave '+game.wave+'  ·  score '+game.score, 18, '#e8e8f0', H/2);
-    center('best  ·  wave '+best.wave+'  ·  score '+best.score, 14, '#8a8aa6', H/2+28);
+    center('best run: wave '+best.wave+' - score '+best.score, 14, '#8a8aa6', H/2+28);
     center('press SPACE / click to try again', 15, '#7a7a98', H/2+64); }
 
   if(game.paused){ ctx.fillStyle='rgba(6,6,11,.7)';ctx.fillRect(0,0,W,H);
