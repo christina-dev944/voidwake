@@ -470,13 +470,20 @@ function draw(){
       ctx.fillText(p.overheated?'OVERHEATED':'HEAT', W/2, by-4); ctx.textAlign='left';
     }
     // legible HP bar near the action (#14) — big enough to read mid-fight
-    if(game.state==='playing'||game.state==='upgrade') drawHpBar(p);
-    // active-ability indicator (only if this class has one)
+    if(game.state==='playing'||game.state==='upgrade'){ drawHpBar(p); drawXpBar(p); }
+    // active-ability indicator (only if this class has one) — text + a cooldown
+    // fill bar that recharges to full when ready (#39)
     if(p.active && (game.state==='playing'||game.state==='upgrade')){
       const ready=p.activeCd<=0;
       ctx.textAlign='center'; ctx.font='bold 13px ui-monospace,monospace';
       ctx.fillStyle=ready?'#7cf7ff':'#565879';
-      ctx.fillText('[SPACE] '+p.active.name+(ready?'  READY':'  '+Math.ceil(p.activeCd/60)+'s'), W/2, H-22);
+      ctx.fillText('[SPACE] '+p.active.name+(ready?'  READY':'  '+Math.ceil(p.activeCd/60)+'s'), W/2, H-26);
+      const cd=p.active.cooldown||1, prog=clamp(1-p.activeCd/cd,0,1);
+      const bw=170, bh=5, bx=W/2-bw/2, by=H-18;
+      ctx.fillStyle='#26264a'; roundRect(bx,by,bw,bh,3); ctx.fill();
+      if(ready){ ctx.save(); ctx.shadowBlur=10; ctx.shadowColor='#7cf7ff'; }
+      ctx.fillStyle=ready?'#7cf7ff':'#4a6fa0'; roundRect(bx,by,bw*prog,bh,3); ctx.fill();
+      if(ready) ctx.restore();
       ctx.textAlign='left';
     }
   }
@@ -513,6 +520,14 @@ function drawRunBoons(y0){
     ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), cx, top+row*lh);
   });
   ctx.textAlign='left';
+}
+
+// Thin XP progress strip along the very top edge — fills left→right toward the
+// next level, resets on level-up (#38). Unobtrusive; the LVL count lives in the HUD.
+function drawXpBar(p){
+  const frac=clamp(p.xp/p.xpNext,0,1);
+  ctx.fillStyle='#181830'; ctx.fillRect(0,0,W,4);
+  ctx.fillStyle='hsl(258,100%,70%)'; ctx.fillRect(0,0,W*frac,4);
 }
 
 // Bottom-left health bar: color slides red→green with the fraction, with the
