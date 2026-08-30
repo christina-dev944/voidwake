@@ -16,6 +16,8 @@
   #hud { display:flex; gap:18px; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
   .hint { font-size:11px; color:#5c5c78; }
+  .hint a { color:#8a5cff; text-decoration:none; }
+  .hint a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -28,6 +30,7 @@
   </div>
   <canvas id="c"></canvas>
   <div class="hint">Move: WASD / Arrows &nbsp;·&nbsp; Hold Shift: focus (slow + small hitbox) &nbsp;·&nbsp; Auto-fire &nbsp;·&nbsp; Esc / P: pause</div>
+  <div class="hint"><a href="https://github.com/christina-dev944/voidwake" target="_blank" rel="noopener">source on GitHub ↗</a></div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>
