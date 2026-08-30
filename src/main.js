@@ -55,6 +55,9 @@ function recordBest(){ let changed=false;
   if(game.score>best.score){ best.score=game.score; changed=true; }
   if(changed){ try{ localStorage.setItem(BEST_KEY, JSON.stringify(best)); }catch{} } }
 
+// id → display name, for showing the run's acquired boons in the pause menu (#31)
+const UP_NAME = Object.fromEntries(UPGRADES.map(u=>[u.id,u.name]));
+
 function newPlayer(cls=DEFAULT_CLASS) {
   const p = {
     x: W/2, y: H*0.75, r: 12, hitR: 4,
@@ -480,9 +483,30 @@ function draw(){
     center('press SPACE / click to try again', 15, '#7a7a98', H/2+64); }
 
   if(game.paused){ ctx.fillStyle='rgba(6,6,11,.7)';ctx.fillRect(0,0,W,H);
-    center('PAUSED',40,'#e8e8f0',H/2-28);
-    center('[Esc/P] resume',17,'#b4b4d0',H/2+18);
-    center('[Q] quit to title',17,'#b4b4d0',H/2+46); }
+    center('PAUSED',40,'#e8e8f0',H/2-120);
+    center('[Esc/P] resume',17,'#b4b4d0',H/2-78);
+    center('[Q] quit to title',17,'#b4b4d0',H/2-52);
+    drawRunBoons(H/2-8); }
+}
+
+// pause-menu build readout (#31): every boon picked up this run, duplicates
+// stacked as "Name ×N", laid out in one or two columns as the list grows.
+function drawRunBoons(y0){
+  const p=game.player; if(!p) return;
+  center('— boons this run —', 13, '#7a7a98', y0);
+  if(!game.upgrades.length){ center('none yet', 13, '#565879', y0+26); return; }
+  const counts=new Map();
+  for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
+  const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
+  const cols = entries.length>7 ? 2 : 1, perCol=Math.ceil(entries.length/cols);
+  const colW=230, lh=20, top=y0+26;
+  ctx.textAlign='center'; ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
+  entries.forEach((en,i)=>{
+    const col=Math.floor(i/perCol), row=i%perCol;
+    const cx=W/2 + (cols===1?0:(col===0?-colW/2:colW/2));
+    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), cx, top+row*lh);
+  });
+  ctx.textAlign='left';
 }
 
 // Bottom-left health bar: color slides red→green with the fraction, with the
