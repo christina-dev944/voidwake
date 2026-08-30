@@ -37,6 +37,7 @@ const game = {
   upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
+  aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
   pBulletAlpha: 0.25,
@@ -116,7 +117,7 @@ function makeEnemy(hp, wave, boss) {
 function shotOffset(i,n){ return i - (n-1)/2; }
 
 function playerShoot(p) {
-  const target = nearestEnemy(p.x,p.y);
+  const target = pickTarget(p.x,p.y);
   let baseAng = -Math.PI/2;
   if (target) {
     let tx=target.x, ty=target.y;
@@ -148,7 +149,7 @@ function playerShoot(p) {
 // each tick (piercing). A heat gauge throttles it — sustained fire overheats and
 // forces a cooldown, so it can't just be held forever.
 function updateLaser(p){
-  const target = nearestEnemy(p.x,p.y);
+  const target = pickTarget(p.x,p.y);
   const firing = !!target && !p.overheated;
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
@@ -197,6 +198,21 @@ function nearestEnemy(x,y,exclude) {
   for (const e of game.enemies){ if(exclude&&exclude.has(e.id)) continue;
     const d=dist2(x,y,e.x,e.y); if(d<bd){bd=d;best=e;} }
   return best;
+}
+
+// auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
+// picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
+const AIM_MODES = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
+// choose the target for the current aim mode; ties fall back to nearest.
+function pickTarget(x,y){
+  if(!game.enemies.length) return null;
+  if(AIM_MODES[game.aimIdx].id==='highhp'){
+    let best=null, bh=-1, bd=Infinity;
+    for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
+      if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
+    return best;
+  }
+  return nearestEnemy(x,y);
 }
 
 // ---- game feel (#5) ----
@@ -266,6 +282,7 @@ addEventListener('keydown', e=>{
     return;
   }
   if(game.state==='playing' && k===' ') useActive(game.player);
+  if(game.state==='playing' && k==='t') game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle auto-aim mode (#35)
 });
 function canvasXY(e){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
@@ -506,6 +523,12 @@ function draw(){
   }
 
   ctx.restore();   // end screen-shake transform (#5)
+
+  // auto-aim mode indicator (#35) — drawn outside the shake so it stays legible
+  if((game.state==='playing'||game.state==='upgrade') && game.player){
+    ctx.textAlign='right'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#7a7a98';
+    ctx.fillText('[T] AIM: '+AIM_MODES[game.aimIdx].label, W-14, 20); ctx.textAlign='left';
+  }
 
   if(game.state==='upgrade') drawUpgrade();
   if(game.state==='dead'){ ctx.fillStyle='rgba(6,6,11,.78)'; ctx.fillRect(0,0,W,H);
