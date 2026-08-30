@@ -375,7 +375,7 @@ function update(){
       if(e.x<40||e.x>W-40)e.vx*=-1; }
     e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
-      addShake(e.boss?14:2.5); if(e.boss) hitStop(8);   // kills pop; boss death gets a beat of hit-stop (#5)
+      if(e.boss){ addShake(14); hitStop(8); }   // only boss death shakes + gets a beat of hit-stop (#5)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
   }
@@ -386,7 +386,7 @@ function update(){
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
       p.hp-=8; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
-      addShake(8); hitStop(3);   // getting hit jolts the screen (#5)
+      addShake(8); hitStop(5);   // getting hit jolts the screen (#5)
       game.eBullets.splice(i,1);
       if(p.hp<=0){ game.state='dead'; addShake(20); hitStop(10); recordBest(); }
     }
