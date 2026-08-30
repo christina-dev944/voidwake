@@ -513,10 +513,10 @@ function drawRunBoons(y0){
   ctx.textAlign='left';
 }
 
-// Top-left health bar: color slides red→green with the fraction, with the exact
-// HP printed on it so it reads at a glance — kept up top where the eye expects it.
+// Bottom-left health bar: color slides red→green with the fraction, with the
+// exact HP printed on it so it reads at a glance near the ship.
 function drawHpBar(p){
-  const bw=210, bh=18, bx=16, by=16;
+  const bw=210, bh=18, bx=16, by=H-bh-16;
   const frac=clamp(p.hp/p.maxhp,0,1);
   ctx.fillStyle='#0c0c18'; roundRect(bx,by,bw,bh,5); ctx.fill();
   ctx.fillStyle=`hsl(${frac*120},72%,48%)`; roundRect(bx,by,Math.max(0,bw*frac),bh,5); ctx.fill();
