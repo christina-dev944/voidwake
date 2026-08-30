@@ -36,6 +36,9 @@ const game = {
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
   upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
+  // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
+  // a settings slider will drive this once the settings menu (#28) lands.
+  pBulletAlpha: 0.25,
 };
 
 // which upgrade categories each weapon draws from (besides 'all')
@@ -377,11 +380,12 @@ function draw(){
     ctx.fillStyle=`hsl(${pt.hue},90%,65%)`; ctx.fillRect(pt.x-1.5,pt.y-1.5,3,3); }
   ctx.globalAlpha=1;
 
-  // player bullets
+  // player bullets — dimmed (see game.pBulletAlpha) so enemy fire reads clearly
+  ctx.globalAlpha=game.pBulletAlpha;
   for(const b of game.pBullets){ ctx.fillStyle=b.crit?'#ffd24d':'#7cf7ff';
     ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle;
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
-  ctx.shadowBlur=0;
+  ctx.shadowBlur=0; ctx.globalAlpha=1;
 
   // enemies
   for(const e of game.enemies){ const c=`hsl(${e.hue},70%,${e.boss?60:55}%)`;
