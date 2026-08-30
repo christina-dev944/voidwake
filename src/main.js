@@ -92,7 +92,9 @@ function makeEnemy(hp, wave, boss) {
 // Split-shot fan: shot 0 is dead-on the aim, extras alternate out around it
 // (0, +1, -1, +2, -2 …). Keeps the center shot on target under auto-aim so a
 // single enemy is never missed by an even split. Units are multiples of spread.
-function shotOffset(i){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
+// symmetric fan step: n shots spread evenly around the aim line (no bolt sits
+// dead-center for even counts), e.g. n=2 → -0.5,+0.5; n=3 → -1,0,+1.
+function shotOffset(i,n){ return i - (n-1)/2; }
 
 function playerShoot(p) {
   const target = nearestEnemy(p.x,p.y);
@@ -106,16 +108,20 @@ function playerShoot(p) {
     baseAng = Math.atan2(ty-p.y, tx-p.x);
   }
   const n = p.shots;
-  // homing flies straight for ~3× the player's height (converted to ticks via bullet speed)
-  // before tracking, so split bolts fan out and stay visible before they curve to the target.
-  const homeD = p.weapon==='homing' ? Math.max(6, Math.round((p.r*3)/p.bulletSpeed)) : 0;
+  // homing bolts leave the ship in a WIDE fan and fly straight for a moment before
+  // they start tracking — the tight 0.12 combat spread is invisible on same-origin
+  // bolts, so homing gets its own spawn fan. They curve back onto the target anyway.
+  const homing = p.weapon==='homing';
+  const fan = homing ? Math.max(p.spread, 0.28) : p.spread;
+  // straight phase (~3.5× player radius, in ticks) so the fan is visible before it converges.
+  const homeD = homing ? Math.max(8, Math.round((p.r*3.5)/p.bulletSpeed)) : 0;
   for (let i=0;i<n;i++) {
-    const a = baseAng + shotOffset(i)*p.spread;
+    const a = baseAng + shotOffset(i,n)*fan;
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
-      homing: p.weapon==='homing', homeDelay: homeD });
+      homing, homeDelay: homeD });
   }
 }
 
@@ -132,7 +138,7 @@ function updateLaser(p){
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs=[];
     for(let s=0;s<n;s++){
-      const ang = base + shotOffset(s)*spr; angs.push(ang);   // center beam stays on target
+      const ang = base + shotOffset(s,n)*spr; angs.push(ang);   // beams fan symmetrically around target
       const dx=Math.cos(ang), dy=Math.sin(ang);
       for(const e of game.enemies){               // damage enemies on this ray (death handled in enemy loop)
         const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
