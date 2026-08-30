@@ -240,7 +240,7 @@ function gainXp(p, amt){
 function pickUpgrade(i){
   const u=game.upgradeChoices[i]; if(!u)return;
   u.apply(game.player); game.upgrades.push(u.id);
-  if(game.state==='upgrade') game.state='playing';
+  if(game.state==='upgrade'){ game.state='playing'; cv.style.cursor='default'; }
 }
 
 addEventListener('keydown', e=>{
@@ -261,12 +261,17 @@ function canvasXY(e){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
 function classAt(mx,my){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
   if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
+// exact level-up card bounds (must match drawUpgrade's layout) so clicks land
+// only on a card, not the gaps between them (#34)
+function upgradeAt(mx,my){ for(let i=0;i<game.upgradeChoices.length;i++){
+  const y=220+i*150, x=W/2-260; if(mx>=x&&mx<=x+520&&my>=y&&my<=y+120) return i; } return -1; }
 
 // hover highlights the card under the cursor (no scroll — carousel scroll follows
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
-  if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
   const [mx,my]=canvasXY(e);
+  if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
+  if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
   game.hoverIdx=classAt(mx,my);
   const overChevron = (game.classIdx>0 && inRect(mx,my,chevronRect(-1))) ||
                       (game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1)));
@@ -283,7 +288,7 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if(game.state==='upgrade'){
-    const idx=Math.floor((my-220)/150); if(idx>=0&&idx<3) pickUpgrade(idx);
+    const idx=upgradeAt(mx,my); if(idx>=0) pickUpgrade(idx);
   }
 });
 
