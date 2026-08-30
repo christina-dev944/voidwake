@@ -386,7 +386,7 @@ function update(){
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
       p.hp-=8; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
-      addShake(8); hitStop(5);   // getting hit jolts the screen (#5)
+      addShake(8); hitStop(3);   // getting hit jolts the screen (#5)
       game.eBullets.splice(i,1);
       if(p.hp<=0){ game.state='dead'; addShake(20); hitStop(10); recordBest(); }
     }
