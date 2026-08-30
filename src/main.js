@@ -24,7 +24,8 @@ const keys = {};
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
-  if (e.key.toLowerCase()==='p') game.paused = !game.paused;
+  const k0=e.key.toLowerCase();
+  if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)) game.paused = !game.paused;
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
@@ -460,7 +461,7 @@ function draw(){
 
   if(game.paused){ ctx.fillStyle='rgba(6,6,11,.7)';ctx.fillRect(0,0,W,H);
     center('PAUSED',40,'#e8e8f0',H/2-28);
-    center('[P] resume',17,'#b4b4d0',H/2+18);
+    center('[Esc/P] resume',17,'#b4b4d0',H/2+18);
     center('[Q] quit to title',17,'#b4b4d0',H/2+46); }
 }
 
