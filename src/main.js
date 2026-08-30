@@ -97,16 +97,26 @@ function shotOffset(i){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 function playerShoot(p) {
   const target = nearestEnemy(p.x,p.y);
   let baseAng = -Math.PI/2;
-  if (target) baseAng = Math.atan2(target.y-p.y, target.x-p.x);
-  const n = p.shots;
+  if (target) {
+    let tx=target.x, ty=target.y;
+    if(p.weapon!=='homing'){                 // lead a moving target so far/small enemies still get hit
+      const tt = Math.hypot(tx-p.x, ty-p.y)/p.bulletSpeed;
+      tx += (target.vx||0)*tt; ty += (target.vy||0)*tt;
+    }
+    baseAng = Math.atan2(ty-p.y, tx-p.x);
+  }
+  const n = p.shots, perp = baseAng + Math.PI/2, spawnGap = p.r; // bolts spawn ~player-size apart → visibly split
+  // homing flies straight for ~a player-width of distance (converted to ticks via speed) before tracking
+  const homeD = p.weapon==='homing' ? Math.max(4, Math.round((p.r*2)/p.bulletSpeed)) : 0;
   for (let i=0;i<n;i++) {
-    const off = shotOffset(i)*p.spread;
-    const a = baseAng+off;
+    const k = shotOffset(i);
+    const a = baseAng + k*p.spread;
+    const sx = p.x + Math.cos(perp)*k*spawnGap, sy = p.y + Math.sin(perp)*k*spawnGap;
     const crit = Math.random() < p.crit;
-    game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
+    game.pBullets.push({ x:sx, y:sy, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
-      homing: p.weapon==='homing', homeDelay: p.weapon==='homing'?12:0 });
+      homing: p.weapon==='homing', homeDelay: homeD });
   }
 }
 
