@@ -373,7 +373,6 @@ function update(){
 
   // hud
   document.getElementById('h-wave').textContent=game.wave;
-  document.getElementById('h-hp').textContent=Math.max(0,Math.ceil(p.hp));
   document.getElementById('h-lvl').textContent=p.lvl;
   document.getElementById('h-score').textContent=game.score;
 }
