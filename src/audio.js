@@ -87,9 +87,11 @@ export const sfx = {
     const b = (on && !muted) ? beamEnsure() : beam;   // don't spin up nodes just to silence
     if(!b || !ctx) return;
     const t=ctx.currentTime, live = on && !muted;
-    b.oscG.gain.setTargetAtTime(live?0.05:0, t, 0.02);
-    b.nG.gain.setTargetAtTime(live?0.045:0, t, 0.02);
-    if(live) b.osc.frequency.setTargetAtTime(overheated?115:170, t, 0.04);
+    // quieter overall, and the tonal hum kept well under the airy sizzle so the pitch
+    // barely registers; overheat nudges pitch only slightly (was a loud 170→115 drop).
+    b.oscG.gain.setTargetAtTime(live?0.018:0, t, 0.02);
+    b.nG.gain.setTargetAtTime(live?0.03:0, t, 0.02);
+    if(live) b.osc.frequency.setTargetAtTime(overheated?150:170, t, 0.04);
   },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
   // explosion: bright crack → broadband boom whose filter sweeps down, over a
