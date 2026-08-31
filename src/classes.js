@@ -34,10 +34,10 @@ export const CLASSES = [
     weapon: 'bullet',
     range: 300,
     // HP nerfed 70→55 (#42): now that it has a strong active, it leans harder into glass.
-    stats: { dmg: 24, fireRate: 12, bulletSpeed: 7, maxhp: 55, hp: 55, speed: 4.0, focusSpeed: 1.8 },
+    stats: { dmg: 24, fireRate: 12, bulletSpeed: 7, maxhp: 55, hp: 55, speed: 4.3, focusSpeed: 2.0 },
     // Scythe: Nova-style burst but a SECTOR aimed at the target, not a full ring.
     // `angle` = full central angle (rad); range = reach. Resolved in main.js applyActive.
-    active: { name: 'Scythe', cooldown: 420, effect: 'cone', range: 175, angle: 1.0, dmg: 60 },
+    active: { name: 'Scythe', cooldown: 360, effect: 'cone', range: 200, angle: 1.0, dmg: 60 },
   },
   {
     id: 'lancer',
