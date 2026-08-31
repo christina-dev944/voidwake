@@ -680,9 +680,10 @@ function drawUpgrade(){
     ctx.strokeStyle=accent; ctx.lineWidth=exHue!=null?3:2; roundRect(x,y,w,h,10); ctx.stroke();
     ctx.textAlign='left';
     ctx.fillStyle=accent; ctx.font='bold 22px ui-monospace,monospace';
-    ctx.fillText((i+1)+'.  '+u.name, x+24, y+48);
+    ctx.fillText((i+1)+'. '+u.name, x+24, y+48);   // tighter number↔name gap (single space)
     ctx.fillStyle='#c8c8e0'; ctx.font='16px ui-monospace,monospace';
-    ctx.fillText(u.desc, x+50, y+82);
+    // dynamic desc (e.g. Aegis shows live invuln duration); flush-left with the name
+    ctx.fillText(u.descFn?u.descFn(game.player):u.desc, x+24, y+82);
     if(u.tag){
       const label=u.tag+' EXCLUSIVE'; ctx.font='bold 11px ui-monospace,monospace';
       const bw=ctx.measureText(label).width+20, bx=x+w-bw-16, by=y+14, bh=20;

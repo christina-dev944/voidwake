@@ -29,5 +29,10 @@ export const UPGRADES = [
   // loop. Leech tops out at +4/kill so trash-farming can't outheal a wave; Aegis
   // i-frames cap at 90f (1.5s) so extra picks stop turning contact damage off.
   { id:'leech',  for:'all', name:'Bloodpact',  desc:'heal 2 HP on kill (max +4)',   apply:p=>p.leech=Math.min(4,(p.leech||0)+2) },
-  { id:'ward',   for:'all', name:'Aegis',      desc:'+longer invuln on hit (cap 1.5s)', apply:p=>p.iframeMax=Math.min(90,(p.iframeMax||40)+18) },
+  { id:'ward',   for:'all', name:'Aegis',      desc:'+longer invuln on hit (cap 1.5s)',
+    // descFn (main.js drawUpgrade) shows the live number: current i-frame window and
+    // what this pick brings it to. Frames→seconds at 60fps; delta shrinks near the cap.
+    descFn:p=>{ const cur=p.iframeMax||40, nxt=Math.min(90,cur+18), s=f=>(f/60).toFixed(2)+'s';
+      return nxt>cur ? `invuln ${s(cur)} → ${s(nxt)} (+${((nxt-cur)/60).toFixed(2)}s)` : `invuln ${s(cur)} (maxed)`; },
+    apply:p=>p.iframeMax=Math.min(90,(p.iframeMax||40)+18) },
 ];
