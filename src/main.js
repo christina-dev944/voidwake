@@ -333,8 +333,8 @@ function hazardHitsPlayer(h,p){
 // Marksman/boss laser: mark a beam line at (x,y)→ang, warn for `tele` frames, then
 // deal `dmg` for `active` frames (an "instant" shot). Reusable by bosses (#3/#46).
 // `owner` ties it to the firing enemy so the shot cancels if that enemy dies.
-function telegraphLine(x,y,ang,{width=5,tele=90,active:act=9,dmg=14,hue=0,owner=null}={}){
-  game.hazards.push({ kind:'line', x, y, ang, width, tele, maxTele:tele, active:act, dmg, hue, owner, pulse:0, pulsePhase:0 });
+function telegraphLine(x,y,ang,{width=5,tele=90,active:act=9,dmg=14,hue=0,owner=null,track=false}={}){
+  game.hazards.push({ kind:'line', x, y, ang, width, tele, maxTele:tele, active:act, dmg, hue, owner, track, pulse:0, pulsePhase:0 });
 }
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
@@ -483,7 +483,7 @@ function update(){
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         const pl=game.player; const ang=Math.atan2(pl.y-e.y, pl.x-e.x);
-        telegraphLine(e.x, e.y, ang, { width:5, tele:90, active:9, dmg:14, owner:e.id }); // ~1.5s warning
+        telegraphLine(e.x, e.y, ang, { width:5, tele:90, active:9, dmg:14, owner:e.id, track: game.wave>=10 }); // ~1.5s warning; tracks the player at wave 10+
         e.aimCd=90;  // freeze in place for the warning so the beam origin stays on the enemy
         sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
       } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
@@ -511,6 +511,7 @@ function update(){
       // static for the first ~2/3, then pulse increasingly fast over the last third;
       // a quiet beep fires at each pulse peak (so the beeping accelerates too).
       const frac=(h.maxTele-h.tele)/h.maxTele;
+      if(h.track && frac<2/3) h.ang=Math.atan2(p.y-h.y, p.x-h.x); // higher waves: follow the player, then lock at 2/3
       if(frac>=2/3){ const u=(frac-2/3)/(1/3), f=3+u*10, prev=h.pulsePhase;   // 3Hz → 13Hz
         h.pulsePhase=prev+(2*Math.PI*f)/60; h.pulse=(1-Math.cos(h.pulsePhase))/2;
         if(Math.floor(h.pulsePhase/Math.PI)>Math.floor(prev/Math.PI) && Math.floor(h.pulsePhase/Math.PI)%2===1) sfx.teleBeep();
