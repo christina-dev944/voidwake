@@ -513,7 +513,7 @@ function update(){
         h.pulsePhase=prev+(2*Math.PI*f)/60; h.pulse=(1-Math.cos(h.pulsePhase))/2;
         if(Math.floor(h.pulsePhase/Math.PI)>Math.floor(prev/Math.PI) && Math.floor(h.pulsePhase/Math.PI)%2===1) sfx.teleBeep();
       } else h.pulse=0;
-      if(h.tele===0){ addShake(6); sfx.laserFire(); } // fires as the warning ends
+      if(h.tele===0){ sfx.laserFire(); } // fires as the warning ends — no shake/jolt on fire
     }
     else if(h.active>0){ h.active--;
       if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg, {noHitStop:true}); // no hit stop on beam hit
