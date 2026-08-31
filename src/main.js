@@ -536,10 +536,13 @@ function draw(){
 
   if(game.state==='upgrade') drawUpgrade();
   if(game.state==='dead'){ ctx.fillStyle='rgba(6,6,11,.78)'; ctx.fillRect(0,0,W,H);
-    center('YOU DIED', 52, '#ff4d6d', H/2-54);
-    center('reached wave '+game.wave+'  ·  score '+game.score, 18, '#e8e8f0', H/2);
-    center('best run: wave '+best.wave+' - score '+best.score, 14, '#8a8aa6', H/2+28);
-    center('press SPACE / click to try again', 15, '#7a7a98', H/2+64); }
+    center('YOU DIED', 52, '#ff4d6d', H/2-140);
+    center('reached wave '+game.wave+'  ·  score '+game.score, 18, '#e8e8f0', H/2-86);
+    center('best run: wave '+best.wave+' - score '+best.score, 14, '#8a8aa6', H/2-58);
+    // run summary: every boon taken this run, same panel as the pause menu (#44)
+    const bw=Math.min(460,W*0.72);
+    drawRunBoons(W/2-bw/2, H/2-30, bw);
+    center('press SPACE / click to try again', 15, '#7a7a98', H-48); }
 
   if(game.paused){ ctx.fillStyle='rgba(6,6,11,.72)';ctx.fillRect(0,0,W,H);
     const lx=Math.max(40,W*0.10);
@@ -605,7 +608,7 @@ function drawRunBoons(px,py,panelW){
   const counts=new Map();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
-  const cols = entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
+  const cols = entries.length>18 ? 3 : entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
   const lh=22, panelH = 54 + (entries.length?perCol:1)*lh;
   panelBox(px,py,panelW,panelH);
   ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
