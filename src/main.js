@@ -584,9 +584,12 @@ function draw(){
       ctx.globalAlpha=Math.min(1,a+0.2); ctx.strokeStyle='hsl(0,95%,74%)'; ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
     } else if(h.active>0){
-      ctx.globalAlpha=1; ctx.shadowBlur=14; ctx.shadowColor='hsl(0,95%,60%)';
-      ctx.strokeStyle='#fff'; ctx.lineWidth=h.width; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
-      ctx.strokeStyle='hsl(0,95%,64%)'; ctx.lineWidth=Math.max(1,h.width*0.5); ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      // layered strokes instead of shadowBlur — a full-screen blurred line is very
+      // expensive and hitched with several beams at once (#46 perf).
+      ctx.globalAlpha=0.35; ctx.strokeStyle='hsl(0,90%,55%)'; ctx.lineWidth=h.width*2.4;
+      ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.globalAlpha=1; ctx.strokeStyle='#fff'; ctx.lineWidth=h.width;
+      ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
     }
   }
   ctx.globalAlpha=1; ctx.shadowBlur=0;

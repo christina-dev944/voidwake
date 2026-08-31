@@ -32,19 +32,28 @@ function tone(freq, dur, {type='triangle', gain=0.2, slideTo=null, attack=0.005}
   o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.02);
 }
 
+// One 1-second white-noise buffer, generated once and shared by every noise() call
+// (playing a random slice). Avoids allocating + filling a fresh buffer per SFX, which
+// hitched when many fired at once (e.g. a screen full of marksman shots, #46).
+let noiseBuf=null;
+function sharedNoise(c){
+  if(noiseBuf && noiseBuf.length===c.sampleRate) return noiseBuf;
+  const n=c.sampleRate; noiseBuf=c.createBuffer(1,n,c.sampleRate);
+  const d=noiseBuf.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  return noiseBuf;
+}
 // a filtered white-noise burst — the basis for hits/explosions. `freqTo` sweeps
 // the filter cutoff over the burst (e.g. high→low = a "boom" closing down).
 function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}={}){
   if(muted) return; const c=ensure(); if(!c) return;
-  const t=c.currentTime, n=Math.floor(c.sampleRate*dur);
-  const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
-  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
-  const src=c.createBufferSource(); src.buffer=buf;
+  const t=c.currentTime;
+  const src=c.createBufferSource(); src.buffer=sharedNoise(c);
+  const off=Math.max(0, Math.random()*(1-Math.min(0.99,dur)));  // random slice for variety
   const f=c.createBiquadFilter(); f.type=type; f.Q.value=q;
   f.frequency.setValueAtTime(freq,t);
   if(freqTo) f.frequency.exponentialRampToValueAtTime(Math.max(1,freqTo), t+dur);
   const g=c.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t+dur);
+  src.connect(f); f.connect(g); g.connect(master); src.start(t, off, dur); // start(when, offset, duration) auto-stops
 }
 
 // Lancer beam: a sustained hum + sizzle held while the laser fires (#43). The nodes
