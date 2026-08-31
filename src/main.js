@@ -31,8 +31,8 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 // ---- game state ----
 const game = {
-  state: 'title', // title | classSelect | playing | upgrade | dead
-  wave: 0, score: 0, paused:false,
+  state: 'title', // title | classSelect | playing | upgrade | dying | dead
+  wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
   upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
@@ -231,7 +231,7 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
   if(pt.life<=0)game.particles.splice(i,1); } }
 
 // ---- flow ----
-function reset(cls=game.cls){ game.cls=cls; game.paused=false; cv.style.cursor='default';
+function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
   game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
@@ -390,7 +390,9 @@ function update(){
       p.hp-=8; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
       addShake(8); hitStop(3);   // getting hit jolts the screen (#5)
       game.eBullets.splice(i,1);
-      if(p.hp<=0){ game.state='dead'; addShake(20); hitStop(10); recordBest(); }
+      // death: blow up + hold the frozen world for a beat before the game-over screen (#40)
+      if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
+        burst(p.x,p.y,DANGER_HUE,60,7); recordBest(); }
     }
   }
 
@@ -480,9 +482,9 @@ function draw(){
     ctx.restore();
   }
 
-  // player
+  // player (hidden during the death hold so the explosion stands alone) (#40)
   const p=game.player;
-  if(p){
+  if(p && game.state!=='dying'){
     const blink = p.iframes>0 && (game.time>>2)%2;
     if(!blink){
       const pc=`hsl(${(p.cls&&p.cls.hue)||265},70%,62%)`;
@@ -723,6 +725,7 @@ function tick(){
   if(game.hitStop>0){ game.hitStop--; return; }   // freeze the whole sim for a few frames (#5)
   if(game.state==='playing') update();
   else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
+  else if(game.state==='dying'){ animateParticles(); if(--game.dying<=0) game.state='dead'; } // hold, then game over (#40)
 }
 function loop(now){
   let frame = now - last; last = now;
