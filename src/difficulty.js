@@ -43,11 +43,15 @@ export function fireCooldown(wave, boss) {
 
 // Air density: bullet counts grow with wave so patterns get denser late, which
 // is the real dodging pressure once HP alone can't threaten a fed player.
+// NOTE (#30): the old discrete steps (ring +1 at w12, spread +2 at w12/w22)
+// landed right after the wave-10 boss and stacked on the same wave, reading as a
+// hard cliff at wave 11-12. Both now ramp gradually in +1 increments, staggered
+// off that band, so density creeps up instead of jumping.
 export function ringCount(wave, boss) {
-  return (boss ? 18 : 10) + Math.floor(wave / 6);
+  return (boss ? 18 : 10) + Math.floor(Math.max(0, wave - 3) / 6); // +1 @ w9, w15, w21...
 }
 export function spreadCount(wave) {
-  return 5 + (wave >= 12 ? 2 : 0) + (wave >= 22 ? 2 : 0); // 5 -> 7 -> 9
+  return 5 + Math.floor(Math.max(0, wave - 8) / 6); // 5 -> 6 @ w14 -> 7 @ w20 ...
 }
 export function aimedExtra(wave) {
   // non-boss aimed shots gain flanking bullets deep in a run
