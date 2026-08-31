@@ -402,9 +402,6 @@ function update(){
     }
   }
 
-  // decay screen shake toward rest (#5)
-  if(game.shake>0.3) game.shake*=0.86; else game.shake=0;
-
   // particles + nova rings
   animateParticles();
   for(let i=game.novaFx.length-1;i>=0;i--){ const f=game.novaFx[i];
@@ -730,6 +727,9 @@ const MAX_STEPS = 5;    // cap catch-up per frame; prevents post-pause/tab-switc
 let acc = 0, last = performance.now();
 function tick(){
   if(game.paused) return;
+  // decay screen shake in EVERY state (incl. dying/dead) with a fast falloff, so it
+  // settles quickly and the game-over screen isn't left jittering (#5/#40)
+  if(game.shake>0.3) game.shake*=0.72; else game.shake=0;
   if(game.hitStop>0){ game.hitStop--; return; }   // freeze the whole sim for a few frames (#5)
   if(game.state==='playing') update();
   else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
