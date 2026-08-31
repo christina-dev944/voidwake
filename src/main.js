@@ -496,9 +496,11 @@ function draw(){
     ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
     for(const ang of pl.beam.angs){
       const ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
-      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=0.8;
+      // dimmed to game.pBulletAlpha so the beam reads at the same weight as player
+      // bullets and doesn't wash out enemy fire (#45); core kept a touch brighter.
+      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.pBulletAlpha;
       ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
-      ctx.globalAlpha=1; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
+      ctx.globalAlpha=Math.min(1,game.pBulletAlpha*1.6); ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
       ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
     }
     ctx.restore();
