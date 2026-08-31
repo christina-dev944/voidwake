@@ -32,14 +32,17 @@ function tone(freq, dur, {type='triangle', gain=0.2, slideTo=null, attack=0.005}
   o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.02);
 }
 
-// a filtered white-noise burst — the basis for hits/explosions
-function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass'}={}){
+// a filtered white-noise burst — the basis for hits/explosions. `freqTo` sweeps
+// the filter cutoff over the burst (e.g. high→low = a "boom" closing down).
+function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}={}){
   if(muted) return; const c=ensure(); if(!c) return;
   const t=c.currentTime, n=Math.floor(c.sampleRate*dur);
   const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
   for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
   const src=c.createBufferSource(); src.buffer=buf;
-  const f=c.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q;
+  const f=c.createBiquadFilter(); f.type=type; f.Q.value=q;
+  f.frequency.setValueAtTime(freq,t);
+  if(freqTo) f.frequency.exponentialRampToValueAtTime(Math.max(1,freqTo), t+dur);
   const g=c.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t+dur);
 }
@@ -50,7 +53,9 @@ export const sfx = {
   enemyKill(){ noise(0.10,{gain:0.13,freq:1500,q:0.7}); },
   bossKill(){ noise(0.5,{gain:0.3,freq:700,q:0.6}); tone(140,0.5,{type:'sawtooth',gain:0.2,slideTo:50}); },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
-  // explosive boom: punchy low-passed noise blast + a descending sub-tone (no rising whoosh)
-  nova(){ noise(0.45,{gain:0.3,freq:900,q:0.4}); tone(220,0.45,{type:'sawtooth',gain:0.22,slideTo:45}); noise(0.12,{gain:0.18,freq:2500,q:0.8}); },
+  // explosion: bright crack → broadband boom whose filter sweeps down, over a
+  // clean SINE sub-thump (deliberately no sawtooth tone, so it reads as a blast,
+  // not the sawtooth "hurt" buzz).
+  nova(){ noise(0.09,{gain:0.22,freq:6000,q:0.5}); noise(0.55,{gain:0.34,freq:2200,freqTo:110,q:0.6}); tone(72,0.4,{type:'sine',gain:0.3,slideTo:30}); },
   death(){ noise(0.7,{gain:0.34,freq:800,q:0.5}); tone(180,0.7,{type:'sawtooth',gain:0.24,slideTo:40}); },
 };
