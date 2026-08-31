@@ -104,16 +104,38 @@ function startWave(n) {
   }
 }
 
+// Enemy archetypes (#2). Each tweaks size, bulk (hpMul), speed, fire pattern pool,
+// fire cadence (fireMul, <1 = faster), colour and movement style. `minWave` gates
+// when a type starts appearing; `weight` biases the random pick, so grunts stay the
+// backbone while tougher/faster types trickle in as a run deepens.
+const ENEMY_TYPES = {
+  grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
+  weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
+  darter: { r:12, hpMul:0.6,  spd:1.6,  patterns:['aimed'],                          move:'dart',  fireMul:0.7, hue:()=>rand(40,62),  minWave:4, weight:2 },
+  brute:  { r:26, hpMul:2.6,  spd:0.55, patterns:['ring','spiral'],                  move:'drift', fireMul:1.3, hue:()=>rand(344,360), minWave:6, weight:1 },
+};
+function pickEnemyType(wave){
+  const pool=[];
+  for(const [id,d] of Object.entries(ENEMY_TYPES)) if(wave>=d.minWave) for(let i=0;i<d.weight;i++) pool.push(id);
+  return pool[Math.floor(Math.random()*pool.length)] || 'grunt';
+}
+
 function makeEnemy(hp, wave, boss) {
   const x = rand(60, W-60), y = rand(-140,-40);
-  const patterns = ['aimed','spread','spiral','ring'];
+  if(boss){
+    return { id:game.eid++, x, y, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift',
+      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:rand(90,150),
+      fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1 };
+  }
+  const t = pickEnemyType(wave), d = ENEMY_TYPES[t];
+  const HP = Math.max(1, Math.round(hp * d.hpMul));
   return {
     id: game.eid++,
-    x, y, r: boss?34:16, hp, maxhp:hp, boss,
-    vx: rand(-0.6,0.6), vy: rand(0.5,1.1),
-    targetY: boss? rand(90,150) : rand(60, H*0.42),
-    fireCd: rand(30,90), pattern: boss?'spiral': patterns[Math.floor(rand(0,patterns.length))],
-    ang: 0, wave, hue: boss?350:rand(180,320),
+    x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
+    vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
+    targetY: rand(60, H*0.42),
+    fireCd: rand(30,90), pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
+    ang: 0, wave, hue: d.hue(),
   };
 }
 
@@ -414,10 +436,17 @@ function update(){
   // enemies
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
     const ox=e.x, oy=e.y;
-    if(e.y<e.targetY){ e.y+=e.vy; } else { e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4;
-      if(e.x<40||e.x>W-40)e.vx*=-1; }
+    if(e.y<e.targetY){ e.y+=e.vy; }            // dive-in phase (all types descend to their slot)
+    else if(e.move==='dart'){                  // darter: chase the player's x, creep downward, hover low
+      const pl=game.player; if(pl) e.x+=clamp((pl.x-e.x)*0.045,-2.8,2.8);
+      if(e.y<H*0.72) e.y+=0.5; e.x=clamp(e.x,20,W-20);
+    } else if(e.move==='weave'){               // weaver: wide horizontal sweep, gentle bob
+      e.x+=e.vx*2.2; e.y+=Math.sin(game.time*0.03+i)*0.6; if(e.x<40||e.x>W-40)e.vx*=-1;
+    } else {                                    // drift: original settle-and-strafe (grunt, brute, boss)
+      e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4; if(e.x<40||e.x>W-40)e.vx*=-1;
+    }
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
-    e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
+    e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); } else sfx.enemyKill();   // shake/hit-stop on boss (#5), kill SFX (#7)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
