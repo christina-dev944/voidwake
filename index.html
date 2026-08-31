@@ -19,16 +19,19 @@
   /* WAVE/LVL/SCORE — top, right-aligned over the playfield */
   #hud { display:flex; gap:18px; justify-content:flex-end; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
-  #side { position:absolute; right:18px; top:50%; transform:translateY(-50%);
-    display:flex; flex-direction:column; gap:16px; width:210px; }
+  /* positioned in JS (resize) so it sits just right of the centered canvas */
+  #side { position:absolute; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:14px; width:196px; }
   #side .hint { line-height:1.85; }
   .hint b { color:#8a8aa6; font-weight:600; }
+  .shdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; margin-bottom:5px; }
   /* live player stats readout (#stats) — shown on the right during a run */
   #stats { display:none; flex-direction:column; gap:3px; font-size:11px; color:#8a8aa6; }
   #stats.on { display:flex; }
-  #stats .shdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; margin-bottom:3px; }
   .srow { display:flex; justify-content:space-between; gap:12px; }
   .srow b { color:#e8e8f0; }
+  /* controls, visually separated from the stats section above */
+  #controls { border-top:1px solid #23233a; padding-top:12px; }
   /* bottom HUD strip — sits OUTSIDE the canvas so status bars never block the
      playfield while dodging near the bottom (#41) */
   #hud2 { display:flex; align-items:center; gap:16px; height:22px; font-size:12px; color:#a9a9c8; }
@@ -69,10 +72,10 @@
       <div class="srow"><span>Pierce</span><b id="s-pierce">–</b></div>
       <div class="srow"><span>Crit</span><b id="s-crit">–</b></div>
     </div>
-    <div class="hint">
+    <div id="controls" class="hint">
+      <div class="shdr">CONTROLS</div>
       <b>Move</b> &nbsp;WASD / Arrows<br>
       <b>Shift</b> &nbsp;focus (slow, small hitbox)<br>
-      <b>Fire</b> &nbsp;automatic — the ship shoots on its own and auto-aims<br>
       <b>Space</b> &nbsp;active ability<br>
       <b>T</b> &nbsp;aim mode<br>
       <b>M</b> &nbsp;mute<br>

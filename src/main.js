@@ -18,6 +18,9 @@ function resize(){
   cv.style.width = side + 'px'; cv.style.height = side + 'px';
   cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // tuck the side panel right up against the centered canvas's right edge
+  const sideEl = document.getElementById('side');
+  if(sideEl){ sideEl.style.left = Math.round(window.innerWidth/2 + side/2 + 14) + 'px'; sideEl.style.right = 'auto'; }
   if (game && game.player){ game.player.x = clamp(game.player.x, game.player.r, W-game.player.r);
     game.player.y = clamp(game.player.y, game.player.r, H-game.player.r); }
 }
@@ -567,7 +570,7 @@ function drawRunBoons(){
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
   const cols = entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
   const lh=22, panelW = cols===2 ? Math.min(440,W*0.46) : Math.min(340,Math.max(240,W*0.36));
-  const px = W - panelW - Math.max(40,W*0.08), py = Math.max(72,H*0.16)-30;
+  const px = W - panelW - Math.max(40,W*0.08), py = pauseButtons().resume.y;   // top-aligned with Resume
   const panelH = 54 + (entries.length?perCol:1)*lh;
   ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(px,py,panelW,panelH,10); ctx.fill();
   ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(px,py,panelW,panelH,10); ctx.stroke();
