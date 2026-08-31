@@ -56,6 +56,6 @@ export const sfx = {
   // explosion: bright crack → broadband boom whose filter sweeps down, over a
   // clean SINE sub-thump (deliberately no sawtooth tone, so it reads as a blast,
   // not the sawtooth "hurt" buzz).
-  nova(){ noise(0.09,{gain:0.22,freq:6000,q:0.5}); noise(0.55,{gain:0.34,freq:2200,freqTo:110,q:0.6}); tone(72,0.4,{type:'sine',gain:0.3,slideTo:30}); },
+  nova(){ noise(0.09,{gain:0.12,freq:6000,q:0.5}); noise(0.55,{gain:0.19,freq:2200,freqTo:110,q:0.6}); tone(72,0.4,{type:'sine',gain:0.17,slideTo:30}); },
   death(){ noise(0.7,{gain:0.34,freq:800,q:0.5}); tone(180,0.7,{type:'sawtooth',gain:0.24,slideTo:40}); },
 };
