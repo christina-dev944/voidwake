@@ -311,10 +311,10 @@ function novaBlast(p, radius, dmg){
 // central player-damage path (bullets + hazards, #46): honours i-frames, jolts the
 // screen, and runs the death hold when HP hits 0. Callers gate on iframes themselves
 // where they need to, but this re-checks so it's always safe to call.
-function hurtPlayer(dmg){
+function hurtPlayer(dmg, opts={}){
   const p=game.player; if(!p||p.iframes>0) return;
   p.hp-=dmg; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
-  addShake(8); hitStop(3);
+  addShake(8); if(!opts.noHitStop) hitStop(3);
   if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
     burst(p.x,p.y,DANGER_HUE,60,7); sfx.death(); recordBest(); }
   else sfx.hurt();
@@ -332,8 +332,9 @@ function hazardHitsPlayer(h,p){
 }
 // Marksman/boss laser: mark a beam line at (x,y)→ang, warn for `tele` frames, then
 // deal `dmg` for `active` frames (an "instant" shot). Reusable by bosses (#3/#46).
-function telegraphLine(x,y,ang,{width=9,tele=50,active:act=9,dmg=14,hue=0}={}){
-  game.hazards.push({ kind:'line', x, y, ang, width, tele, active:act, dmg, hue });
+// `owner` ties it to the firing enemy so the shot cancels if that enemy dies.
+function telegraphLine(x,y,ang,{width=5,tele=90,active:act=9,dmg=14,hue=0,owner=null}={}){
+  game.hazards.push({ kind:'line', x, y, ang, width, tele, maxTele:tele, active:act, dmg, hue, owner, pulse:0, pulsePhase:0 });
 }
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
@@ -481,7 +482,7 @@ function update(){
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         const pl=game.player; const ang=Math.atan2(pl.y-e.y, pl.x-e.x);
-        telegraphLine(e.x, e.y, ang, { width:9, tele:52, active:9, dmg:14 });
+        telegraphLine(e.x, e.y, ang, { width:5, tele:90, active:9, dmg:14, owner:e.id }); // ~1.5s warning
         sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
       } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
@@ -503,9 +504,19 @@ function update(){
   // telegraphed hazards (#46): red warning zone during `tele`, then a live danger
   // window for `active` frames. Line hazards = the marksman/boss laser.
   for(let i=game.hazards.length-1;i>=0;i--){ const h=game.hazards[i];
-    if(h.tele>0){ h.tele--; if(h.tele===0){ addShake(6); sfx.laserFire(); } } // fires as the warning ends
+    if(h.owner!=null && !game.enemies.some(e=>e.id===h.owner)){ game.hazards.splice(i,1); continue; } // owner died → cancel shot
+    if(h.tele>0){ h.tele--;
+      // static for the first ~2/3, then pulse increasingly fast over the last third;
+      // a quiet beep fires at each pulse peak (so the beeping accelerates too).
+      const frac=(h.maxTele-h.tele)/h.maxTele;
+      if(frac>=2/3){ const u=(frac-2/3)/(1/3), f=3+u*10, prev=h.pulsePhase;   // 3Hz → 13Hz
+        h.pulsePhase=prev+(2*Math.PI*f)/60; h.pulse=(1-Math.cos(h.pulsePhase))/2;
+        if(Math.floor(h.pulsePhase/Math.PI)>Math.floor(prev/Math.PI) && Math.floor(h.pulsePhase/Math.PI)%2===1) sfx.teleBeep();
+      } else h.pulse=0;
+      if(h.tele===0){ addShake(6); sfx.laserFire(); } // fires as the warning ends
+    }
     else if(h.active>0){ h.active--;
-      if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg);
+      if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg, {noHitStop:true}); // no hit stop on beam hit
     } else game.hazards.splice(i,1);
   }
 
@@ -567,14 +578,15 @@ function draw(){
   for(const h of game.hazards){ if(h.kind!=='line') continue;
     const ex=h.x+Math.cos(h.ang)*HZLEN, ey=h.y+Math.sin(h.ang)*HZLEN;
     if(h.tele>0){
-      ctx.globalAlpha=0.30+0.22*Math.sin(game.time*0.5); ctx.strokeStyle='hsl(0,90%,55%)'; ctx.lineWidth=h.width*2;
+      const a=0.30+(h.pulse||0)*0.55;   // static ~0.30, ramps toward ~0.85 at pulse peaks near the end
+      ctx.globalAlpha=a; ctx.strokeStyle='hsl(0,90%,55%)'; ctx.lineWidth=h.width;
       ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
-      ctx.globalAlpha=0.85; ctx.strokeStyle='hsl(0,95%,72%)'; ctx.lineWidth=2;
+      ctx.globalAlpha=Math.min(1,a+0.2); ctx.strokeStyle='hsl(0,95%,74%)'; ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
     } else if(h.active>0){
-      ctx.globalAlpha=1; ctx.shadowBlur=18; ctx.shadowColor='hsl(0,95%,60%)';
-      ctx.strokeStyle='#fff'; ctx.lineWidth=h.width*2; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
-      ctx.strokeStyle='hsl(0,95%,64%)'; ctx.lineWidth=h.width; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.globalAlpha=1; ctx.shadowBlur=14; ctx.shadowColor='hsl(0,95%,60%)';
+      ctx.strokeStyle='#fff'; ctx.lineWidth=h.width; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.strokeStyle='hsl(0,95%,64%)'; ctx.lineWidth=Math.max(1,h.width*0.5); ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
     }
   }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
