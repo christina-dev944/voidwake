@@ -46,10 +46,11 @@ function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass'}={}){
 
 export const sfx = {
   shoot(){ tone(700+Math.random()*50, 0.06, {gain:0.045, slideTo:500}); },   // soft pew (auto-fire → kept quiet)
-  hurt(){ tone(200,0.18,{type:'sawtooth',gain:0.16,slideTo:80}); noise(0.12,{gain:0.1,freq:500}); },
+  hurt(){ tone(110,0.2,{type:'sawtooth',gain:0.17,slideTo:42}); noise(0.12,{gain:0.1,freq:380}); },   // lower, heavier
   enemyKill(){ noise(0.10,{gain:0.13,freq:1500,q:0.7}); },
   bossKill(){ noise(0.5,{gain:0.3,freq:700,q:0.6}); tone(140,0.5,{type:'sawtooth',gain:0.2,slideTo:50}); },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
-  nova(){ tone(300,0.35,{type:'sine',gain:0.2,slideTo:1200}); noise(0.3,{gain:0.11,freq:2200}); },
+  // explosive boom: punchy low-passed noise blast + a descending sub-tone (no rising whoosh)
+  nova(){ noise(0.45,{gain:0.3,freq:900,q:0.4}); tone(220,0.45,{type:'sawtooth',gain:0.22,slideTo:45}); noise(0.12,{gain:0.18,freq:2500,q:0.8}); },
   death(){ noise(0.7,{gain:0.34,freq:800,q:0.5}); tone(180,0.7,{type:'sawtooth',gain:0.24,slideTo:40}); },
 };
