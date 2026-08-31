@@ -469,7 +469,8 @@ function update(){
   // enemies
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
     const ox=e.x, oy=e.y;
-    if(e.y<e.targetY){ e.y+=e.vy; }            // dive-in phase (all types descend to their slot)
+    if(e.aimCd>0){ e.aimCd--; }                // hold still while telegraphing so the beam stays attached (#46)
+    else if(e.y<e.targetY){ e.y+=e.vy; }       // dive-in phase (all types descend to their slot)
     else if(e.move==='dart'){                  // darter: chase the player's x, creep downward, hover low
       const pl=game.player; if(pl) e.x+=clamp((pl.x-e.x)*0.045,-2.8,2.8);
       if(e.y<H*0.72) e.y+=0.5; e.x=clamp(e.x,20,W-20);
@@ -483,6 +484,7 @@ function update(){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         const pl=game.player; const ang=Math.atan2(pl.y-e.y, pl.x-e.x);
         telegraphLine(e.x, e.y, ang, { width:5, tele:90, active:9, dmg:14, owner:e.id }); // ~1.5s warning
+        e.aimCd=90;  // freeze in place for the warning so the beam origin stays on the enemy
         sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
       } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
