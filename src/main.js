@@ -817,6 +817,11 @@ function loop(now){
   let steps = 0;
   while(acc >= STEP && steps < MAX_STEPS){ tick(); acc -= STEP; steps++; }
   if(steps === MAX_STEPS) acc = 0; // drop leftover backlog instead of spiraling
+  // drive the Lancer beam sound every frame (not just in update) so it cuts out on
+  // pause / death / upgrade — states where the sim, and updateLaser, don't run (#43)
+  const p=game.player;
+  const beamOn = !game.paused && game.state==='playing' && p && p.weapon==='laser' && p.beam && p.beam.active;
+  sfx.laser(beamOn, p && p.overheated);
   draw();
   requestAnimationFrame(loop);
 }

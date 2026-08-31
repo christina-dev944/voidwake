@@ -47,11 +47,50 @@ function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}={}){
   src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t+dur);
 }
 
+// Lancer beam: a sustained hum + sizzle held while the laser fires (#43). The nodes
+// are persistent (built once on first fire) and never stop — instead their gains ramp
+// in/out via setTargetAtTime so starting/stopping the beam doesn't click. laser(on)
+// is called every frame from the loop; it drives the ramp toward on/off.
+let beam=null;
+function beamEnsure(){
+  const c=ensure(); if(!c) return null;
+  if(beam) return beam;
+  const osc=c.createOscillator(); osc.type='sawtooth'; osc.frequency.value=170; // the electric hum
+  const sub=c.createOscillator(); sub.type='sine';     sub.frequency.value=85;  // weight under it
+  const oscG=c.createGain(); oscG.gain.value=0;
+  const len=c.sampleRate, b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const nsrc=c.createBufferSource(); nsrc.buffer=b; nsrc.loop=true;          // looping sizzle
+  const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2600; bp.Q.value=0.7;
+  const nG=c.createGain(); nG.gain.value=0;
+  osc.connect(oscG); sub.connect(oscG); oscG.connect(master);
+  nsrc.connect(bp); bp.connect(nG); nG.connect(master);
+  osc.start(); sub.start(); nsrc.start();
+  beam={oscG,nG,osc};
+  return beam;
+}
+
 export const sfx = {
   shoot(){ tone(700+Math.random()*50, 0.06, {gain:0.045, slideTo:500}); },   // soft pew (auto-fire → kept quiet)
   hurt(){ tone(110,0.2,{type:'sawtooth',gain:0.17,slideTo:42}); noise(0.12,{gain:0.1,freq:380}); },   // lower, heavier
   enemyKill(){ noise(0.10,{gain:0.13,freq:1500,q:0.7}); },
-  bossKill(){ noise(0.5,{gain:0.3,freq:700,q:0.6}); tone(140,0.5,{type:'sawtooth',gain:0.2,slideTo:50}); },
+  // Big layered explosion with an UPWARD flourish so a boss kill reads as a victory,
+  // not the downward sawtooth buzz it used to share with hurt/death (#43).
+  bossKill(){
+    noise(0.08,{gain:0.16,freq:7000,q:0.5});             // bright opening crack
+    noise(0.6, {gain:0.32,freq:3200,freqTo:120,q:0.6});  // broadband boom sweeping down
+    tone(80, 0.55,{type:'sine',    gain:0.30,slideTo:34});  // deep sub-thump (sine, NOT sawtooth)
+    tone(180,0.5, {type:'triangle',gain:0.14,slideTo:520}); // rising flourish — the distinguishing cue
+  },
+  // Hold the beam sound while firing; overheating drops the pitch as a warning growl.
+  laser(on, overheated=false){
+    const b = (on && !muted) ? beamEnsure() : beam;   // don't spin up nodes just to silence
+    if(!b || !ctx) return;
+    const t=ctx.currentTime, live = on && !muted;
+    b.oscG.gain.setTargetAtTime(live?0.05:0, t, 0.02);
+    b.nG.gain.setTargetAtTime(live?0.045:0, t, 0.02);
+    if(live) b.osc.frequency.setTargetAtTime(overheated?115:170, t, 0.04);
+  },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
   // explosion: bright crack → broadband boom whose filter sweeps down, over a
   // clean SINE sub-thump (deliberately no sawtooth tone, so it reads as a blast,
