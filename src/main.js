@@ -42,7 +42,7 @@ const game = {
   state: 'title', // title | classSelect | playing | upgrade | dying | dead
   wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], eid: 0,
+  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
@@ -242,7 +242,7 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
 
 // ---- flow ----
 function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.upgrades=[];
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
 // active-ability framework: trigger key fires the class's active if off cooldown.
@@ -251,6 +251,25 @@ function useActive(p){ if(!p||!p.active||p.activeCd>0) return;
 // map an active's `effect` string to its behavior (keeps classes.js import-free)
 function applyActive(a, p){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
+  else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
+}
+// Reaper Scythe (#42): a sector blast aimed at the current target — clears enemy
+// bullets and damages enemies inside the wedge (reach + central angle), where Nova
+// hits a full ring. `angle` is the full central angle; half of it is the arc each side.
+function coneBlast(p, range, angle, dmg){
+  const target=pickTarget(p.x,p.y);
+  const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
+  const half=angle/2, hue=(p.cls&&p.cls.hue)||18;
+  const inWedge=(x,y,pad=0)=>{ const dx=x-p.x, dy=y-p.y, d=Math.hypot(dx,dy);
+    if(d>range+pad) return false; if(d<8) return true;                  // point-blank always caught
+    let da=Math.atan2(dy,dx)-aim; da=Math.atan2(Math.sin(da),Math.cos(da)); // wrap to [-PI,PI]
+    return Math.abs(da)<=half; };
+  for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
+    if(inWedge(b.x,b.y)){ burst(b.x,b.y,hue,2,1.6); game.eBullets.splice(i,1); } }
+  for(const e of game.enemies){ if(inWedge(e.x,e.y,e.r)) e.hp-=dmg; } // death handled in enemy loop
+  burst(p.x,p.y,hue,24,5);
+  addShake(11); hitStop(5); sfx.nova();
+  game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
 }
 // Nova: wipe enemy bullets near the player and damage enemies in the radius.
 function novaBlast(p, radius, dmg){
@@ -265,7 +284,7 @@ function novaBlast(p, radius, dmg){
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
 function quitRun(){ game.paused=false; game.state='title'; game.player=null;
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[]; }
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[]; }
 
 function gainXp(p, amt){
   p.xp+=amt;
@@ -424,6 +443,8 @@ function update(){
   animateParticles();
   for(let i=game.novaFx.length-1;i>=0;i--){ const f=game.novaFx[i];
     f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.novaFx.splice(i,1); }
+  for(let i=game.coneFx.length-1;i>=0;i--){ const f=game.coneFx[i];
+    f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.coneFx.splice(i,1); }
 
   // wave clear
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
@@ -487,6 +508,14 @@ function draw(){
   for(const f of game.novaFx){ ctx.globalAlpha=clamp(f.life,0,1)*0.7;
     ctx.strokeStyle='hsl(285,90%,72%)'; ctx.lineWidth=4; ctx.shadowBlur=14; ctx.shadowColor='hsl(285,90%,70%)';
     ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,TAU); ctx.stroke(); }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+
+  // Scythe wedges — a filled sector that expands + fades in the blast direction (#42)
+  for(const f of game.coneFx){ ctx.globalAlpha=clamp(f.life,0,1)*0.5;
+    ctx.fillStyle='hsl(18,90%,58%)'; ctx.strokeStyle='hsl(18,95%,68%)'; ctx.lineWidth=3;
+    ctx.shadowBlur=14; ctx.shadowColor='hsl(18,90%,62%)';
+    ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,f.r,f.aim-f.half,f.aim+f.half); ctx.closePath();
+    ctx.fill(); ctx.stroke(); }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
 
   // laser beam (drawn under the ship)

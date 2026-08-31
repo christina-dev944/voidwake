@@ -22,6 +22,9 @@ export const UPGRADES = [
   { id:'novarng', for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Radius',   desc:'+35% nova radius',    apply:p=>p.active.radius*=1.35 },
   { id:'novacd',  for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Recharge', desc:'-20% nova cooldown',  apply:p=>p.active.cooldown=Math.round(p.active.cooldown*0.8) },
 
+  // --- Reaper (Scythe) — gated on the cone active, so only the Reaper rolls this ---
+  { id:'scythe',  for:'all', tag:'REAPER', req:p=>p.active&&p.active.effect==='cone', name:'Scythe Sweep', desc:'+25% Scythe reach & +20% arc', apply:p=>{ p.active.range*=1.25; p.active.angle=Math.min(Math.PI*1.6, p.active.angle*1.2); } },
+
   // --- shared (any weapon) ---
   { id:'swift',  for:'all', name:'Swift Feet', desc:'+18% move speed',       apply:p=>{p.speed*=1.18; p.focusSpeed*=1.18;} },
   { id:'vital',  for:'all', name:'Vitality',   desc:'+30 max HP & heal 30',  apply:p=>{p.maxhp+=30; p.hp=Math.min(p.maxhp,p.hp+30);} },
