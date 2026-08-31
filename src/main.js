@@ -41,6 +41,7 @@ const game = {
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
+  pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
   pBulletAlpha: 0.25,
@@ -301,6 +302,11 @@ function upgradeAt(mx,my){ for(let i=0;i<game.upgradeChoices.length;i++){
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
   const [mx,my]=canvasXY(e);
+  if(game.paused){                                   // hover-highlight pause buttons (#36)
+    const b=pauseButtons();
+    game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.quit)?'quit':null;
+    cv.style.cursor = game.pauseHover?'pointer':'default'; return;
+  }
   if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
   if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
   game.hoverIdx=classAt(mx,my);
@@ -311,6 +317,13 @@ cv.addEventListener('pointermove', e=>{
 cv.addEventListener('pointerdown', e=>{
   resumeAudio();   // first gesture unlocks WebAudio (#7)
   const [mx,my]=canvasXY(e);
+  if(game.paused){                                   // clickable pause menu (#36)
+    const b=pauseButtons();
+    if(inRect(mx,my,b.resume)) game.paused=false;
+    else if(inRect(mx,my,b.quit)) quitRun();
+    game.pauseHover=null; cv.style.cursor='default';
+    return;
+  }
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     // chevrons page the selection; keeps far-off classes reachable by mouse
@@ -523,30 +536,46 @@ function draw(){
     center('best run: wave '+best.wave+' - score '+best.score, 14, '#8a8aa6', H/2+28);
     center('press SPACE / click to try again', 15, '#7a7a98', H/2+64); }
 
-  if(game.paused){ ctx.fillStyle='rgba(6,6,11,.7)';ctx.fillRect(0,0,W,H);
-    center('PAUSED',40,'#e8e8f0',H/2-120);
-    center('[Esc/P] resume',17,'#b4b4d0',H/2-78);
-    center('[Q] quit to title',17,'#b4b4d0',H/2-52);
-    drawRunBoons(H/2-8); }
+  if(game.paused){ ctx.fillStyle='rgba(6,6,11,.72)';ctx.fillRect(0,0,W,H);
+    center('PAUSED',38,'#e8e8f0',H/2-152);
+    const b=pauseButtons();
+    drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');
+    drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
+    drawRunBoons(H/2-30); }
 }
 
-// pause-menu build readout (#31): every boon picked up this run, duplicates
-// stacked as "Name ×N", laid out in one or two columns as the list grows.
+// clickable pause-menu buttons (#36) — hit-tested in the pointer handlers too
+function pauseButtons(){ const w=240,h=44,x=W/2-w/2;
+  return { resume:{x,y:H/2-116,w,h}, quit:{x,y:H/2-62,w,h} }; }
+function drawButton(r,label,hover){
+  ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
+  ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
+  ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
+  ctx.fillText(label, r.x+r.w/2, r.y+r.h/2+6); ctx.textAlign='left';
+}
+
+// pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",
+// in its own bordered panel below the buttons.
 function drawRunBoons(y0){
   const p=game.player; if(!p) return;
-  center('— boons this run —', 13, '#7a7a98', y0);
-  if(!game.upgrades.length){ center('none yet', 13, '#565879', y0+26); return; }
   const counts=new Map();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
-  const cols = entries.length>7 ? 2 : 1, perCol=Math.ceil(entries.length/cols);
-  const colW=230, lh=20, top=y0+26;
-  ctx.textAlign='center'; ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
-  entries.forEach((en,i)=>{
-    const col=Math.floor(i/perCol), row=i%perCol;
+  const cols = entries.length>7 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
+  const rows = entries.length ? perCol : 1;
+  const panelW = cols===2 ? 500 : 300, lh=20, panelH=44+rows*lh;
+  const px=W/2-panelW/2;
+  ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(px,y0,panelW,panelH,10); ctx.fill();
+  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(px,y0,panelW,panelH,10); ctx.stroke();
+  ctx.textAlign='center'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
+  ctx.fillText('BOONS THIS RUN', W/2, y0+22);
+  if(!entries.length){ ctx.fillStyle='#565879'; ctx.font='13px ui-monospace,monospace';
+    ctx.fillText('none yet', W/2, y0+46); ctx.textAlign='left'; return; }
+  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
+  const top=y0+44, colW=230;
+  entries.forEach((en,i)=>{ const col=Math.floor(i/perCol), row=i%perCol;
     const cx=W/2 + (cols===1?0:(col===0?-colW/2:colW/2));
-    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), cx, top+row*lh);
-  });
+    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), cx, top+row*lh); });
   ctx.textAlign='left';
 }
 
