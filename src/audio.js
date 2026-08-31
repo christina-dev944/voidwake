@@ -89,8 +89,8 @@ export const sfx = {
     const t=ctx.currentTime, live = on && !muted;
     // quieter overall, and the tonal hum kept well under the airy sizzle so the pitch
     // barely registers; overheat nudges pitch only slightly (was a loud 170→115 drop).
-    b.oscG.gain.setTargetAtTime(live?0.009:0, t, 0.02);
-    b.nG.gain.setTargetAtTime(live?0.016:0, t, 0.02);
+    b.oscG.gain.setTargetAtTime(live?0.004:0, t, 0.02);
+    b.nG.gain.setTargetAtTime(live?0.007:0, t, 0.02);
     if(live) b.osc.frequency.setTargetAtTime(overheated?150:170, t, 0.04);
   },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
