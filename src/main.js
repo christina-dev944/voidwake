@@ -12,8 +12,8 @@ let W = 720, H = 720;
 function resize(){
   const dpr = window.devicePixelRatio || 1;
   // canvas is centered with the side panel floating over the right margin, so keep
-  // symmetric horizontal room for it (~460px) plus the thin top/bottom HUD rows
-  const side = Math.max(400, Math.min(window.innerWidth - 470, window.innerHeight - 100, 1200));
+  // symmetric horizontal room for it (~500px) plus the thin top/bottom HUD rows
+  const side = Math.max(400, Math.min(window.innerWidth - 500, window.innerHeight - 100, 1200));
   W = side; H = side;
   cv.style.width = side + 'px'; cv.style.height = side + 'px';
   cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
@@ -548,13 +548,22 @@ function draw(){
     const b=pauseButtons();
     drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');           // left column
     drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
-    drawPauseStats(b.quit.x, b.quit.y+b.quit.h+34);                         // stats under the buttons
-    drawRunBoons(); }                                                       // right column
+    // right column: STATS panel on top, UPGRADES THIS RUN panel below it
+    const panelW=Math.min(360,Math.max(260,W*0.34));
+    const rx=W-panelW-Math.max(40,W*0.08), ry=b.resume.y;
+    const statsBottom=drawPauseStats(rx, ry, panelW);
+    drawRunBoons(rx, statsBottom+14, panelW); }
 }
 
-// player stat readout shown in the pause menu (moved here from the sidebar)
-function drawPauseStats(x,y){
-  const p=game.player; if(!p) return;
+// shared bordered panel backdrop for the pause-menu panels
+function panelBox(x,y,w,h){
+  ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(x,y,w,h,10); ctx.fill();
+  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(x,y,w,h,10); ctx.stroke();
+}
+
+// player stat readout — right column of the pause menu; returns its bottom Y
+function drawPauseStats(x,y,w){
+  const p=game.player; if(!p) return y;
   const laser=p.weapon==='laser';
   const rows=[
     ['DMG',        laser ? p.beamDps+' dps' : Math.round(p.dmg)],
@@ -565,15 +574,18 @@ function drawPauseStats(x,y){
     ['Pierce',     p.pierce],
     ['Crit',       Math.round(p.crit*100)+'%'],
   ];
+  const lh=20, panelH=52+rows.length*lh;
+  panelBox(x,y,w,panelH);
   ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
-  ctx.fillText('STATS', x, y);
-  const w=210, lh=20; let yy=y+24; ctx.font='12px ui-monospace,monospace';
+  ctx.fillText('STATS', x+18, y+28);
+  let yy=y+52; ctx.font='12px ui-monospace,monospace';
   for(const [k,v] of rows){
-    ctx.textAlign='left';  ctx.fillStyle='#8a8aa6'; ctx.fillText(k, x, yy);
-    ctx.textAlign='right'; ctx.fillStyle='#e8e8f0'; ctx.fillText(String(v), x+w, yy);
+    ctx.textAlign='left';  ctx.fillStyle='#8a8aa6'; ctx.fillText(k, x+18, yy);
+    ctx.textAlign='right'; ctx.fillStyle='#e8e8f0'; ctx.fillText(String(v), x+w-18, yy);
     yy+=lh;
   }
   ctx.textAlign='left';
+  return y+panelH;
 }
 
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
@@ -587,18 +599,15 @@ function drawButton(r,label,hover){
 }
 
 // pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",
-// in its own bordered panel in the RIGHT column of the pause screen.
-function drawRunBoons(){
+// in a bordered panel below the STATS panel in the RIGHT column of the pause screen.
+function drawRunBoons(px,py,panelW){
   const p=game.player; if(!p) return;
   const counts=new Map();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
   const cols = entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
-  const lh=22, panelW = cols===2 ? Math.min(440,W*0.46) : Math.min(340,Math.max(240,W*0.36));
-  const px = W - panelW - Math.max(40,W*0.08), py = pauseButtons().resume.y;   // top-aligned with Resume
-  const panelH = 54 + (entries.length?perCol:1)*lh;
-  ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(px,py,panelW,panelH,10); ctx.fill();
-  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(px,py,panelW,panelH,10); ctx.stroke();
+  const lh=22, panelH = 54 + (entries.length?perCol:1)*lh;
+  panelBox(px,py,panelW,panelH);
   ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
   ctx.fillText('UPGRADES THIS RUN', px+18, py+28);
   if(!entries.length){ ctx.fillStyle='#565879'; ctx.font='13px ui-monospace,monospace';
