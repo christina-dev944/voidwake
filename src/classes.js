@@ -37,7 +37,7 @@ export const CLASSES = [
     stats: { dmg: 24, fireRate: 12, bulletSpeed: 7, maxhp: 55, hp: 55, speed: 4.0, focusSpeed: 1.8 },
     // Scythe: Nova-style burst but a SECTOR aimed at the target, not a full ring.
     // `angle` = full central angle (rad); range = reach. Resolved in main.js applyActive.
-    active: { name: 'Scythe', cooldown: 420, effect: 'cone', range: 230, angle: 1.4, dmg: 60 },
+    active: { name: 'Scythe', cooldown: 420, effect: 'cone', range: 175, angle: 1.0, dmg: 60 },
   },
   {
     id: 'lancer',
