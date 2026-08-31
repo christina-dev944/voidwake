@@ -25,6 +25,9 @@ export const UPGRADES = [
   // --- shared (any weapon) ---
   { id:'swift',  for:'all', name:'Swift Feet', desc:'+18% move speed',       apply:p=>{p.speed*=1.18; p.focusSpeed*=1.18;} },
   { id:'vital',  for:'all', name:'Vitality',   desc:'+30 max HP & heal 30',  apply:p=>{p.maxhp+=30; p.hp=Math.min(p.maxhp,p.hp+30);} },
-  { id:'leech',  for:'all', name:'Bloodpact',  desc:'heal 2 HP on kill',     apply:p=>p.leech=(p.leech||0)+2 },
-  { id:'ward',   for:'all', name:'Aegis',      desc:'+longer invuln on hit', apply:p=>p.iframeMax=(p.iframeMax||40)+25 },
+  // #32: both capped to close the Glass Cannon + Bloodpact + Aegis infinite-sustain
+  // loop. Leech tops out at +4/kill so trash-farming can't outheal a wave; Aegis
+  // i-frames cap at 90f (1.5s) so extra picks stop turning contact damage off.
+  { id:'leech',  for:'all', name:'Bloodpact',  desc:'heal 2 HP on kill (max +4)',   apply:p=>p.leech=Math.min(4,(p.leech||0)+2) },
+  { id:'ward',   for:'all', name:'Aegis',      desc:'+longer invuln on hit (cap 1.5s)', apply:p=>p.iframeMax=Math.min(90,(p.iframeMax||40)+18) },
 ];
