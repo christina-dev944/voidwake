@@ -115,7 +115,7 @@ const ENEMY_TYPES = {
   brute:  { r:26, hpMul:2.6,  spd:0.55, patterns:['ring','spiral'],                  move:'drift', fireMul:1.3, hue:()=>rand(344,360), minWave:6, weight:1 },
   // marksman telegraphs a laser line at the player, then fires an instant hitscan
   // beam (#46). `telegraph` routes it to the hazard system instead of enemyShoot.
-  marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,36), minWave:5, weight:1, telegraph:true },
+  marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(300,318), minWave:4, weight:2, telegraph:true },
 };
 function pickEnemyType(wave){
   const pool=[];
@@ -135,6 +135,7 @@ function makeEnemy(hp, wave, boss) {
   return {
     id: game.eid++,
     x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
+    telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
     fireCd: rand(30,90), pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
