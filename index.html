@@ -9,12 +9,18 @@
   * { box-sizing:border-box; }
   html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow:hidden; }
-  #wrap { display:flex; flex-direction:column; align-items:center; justify-content:center;
-    height:100%; gap:10px; }
+  #wrap { display:flex; flex-direction:row; align-items:center; justify-content:center;
+    height:100%; gap:16px; padding:12px; }
+  #main { display:flex; flex-direction:column; gap:8px; }
   canvas { background:#06060b; border:1px solid #23233a; border-radius:8px;
     box-shadow:0 0 60px -20px var(--accent); touch-action:none; }
-  #hud { display:flex; gap:18px; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
+  /* WAVE/LVL/SCORE — top, right-aligned over the playfield */
+  #hud { display:flex; gap:18px; justify-content:flex-end; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
+  /* controls live in a side column so they don't add vertical space under the field */
+  #side { display:flex; flex-direction:column; gap:12px; max-width:210px; }
+  #side .hint { line-height:1.85; }
+  .hint b { color:#8a8aa6; font-weight:600; }
   /* bottom HUD strip — sits OUTSIDE the canvas so status bars never block the
      playfield while dodging near the bottom (#41) */
   #hud2 { display:flex; align-items:center; gap:16px; height:22px; font-size:12px; color:#a9a9c8; }
@@ -32,18 +38,30 @@
 </head>
 <body>
 <div id="wrap">
-  <div id="hud">
-    <span>WAVE <b id="h-wave">0</b></span>
-    <span>LVL <b id="h-lvl">1</b></span>
-    <span>SCORE <b id="h-score">0</b></span>
+  <div id="main">
+    <div id="hud">
+      <span>WAVE <b id="h-wave">0</b></span>
+      <span>LVL <b id="h-lvl">1</b></span>
+      <span>SCORE <b id="h-score">0</b></span>
+    </div>
+    <canvas id="c"></canvas>
+    <div id="hud2">
+      <div id="hpbar"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
+      <div id="statwrap"><span id="statlbl"></span><div id="statbar"><div id="statfill"></div></div></div>
+    </div>
   </div>
-  <canvas id="c"></canvas>
-  <div id="hud2">
-    <div id="hpbar"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
-    <div id="statwrap"><span id="statlbl"></span><div id="statbar"><div id="statfill"></div></div></div>
-  </div>
-  <div class="hint">Move: WASD / Arrows &nbsp;·&nbsp; Hold Shift: focus (slow + small hitbox) &nbsp;·&nbsp; Auto-fire &nbsp;·&nbsp; T: aim mode &nbsp;·&nbsp; M: mute &nbsp;·&nbsp; Esc / P: pause</div>
-  <div class="hint"><a href="https://github.com/christina-dev944/voidwake" target="_blank" rel="noopener">source on GitHub ↗</a></div>
+  <aside id="side">
+    <div class="hint">
+      <b>Move</b> &nbsp;WASD / Arrows<br>
+      <b>Shift</b> &nbsp;focus (slow, small hitbox)<br>
+      Auto-fire<br>
+      <b>Space</b> &nbsp;active ability<br>
+      <b>T</b> &nbsp;aim mode<br>
+      <b>M</b> &nbsp;mute<br>
+      <b>Esc / P</b> &nbsp;pause
+    </div>
+    <div class="hint"><a href="https://github.com/christina-dev944/voidwake" target="_blank" rel="noopener">source on GitHub ↗</a></div>
+  </aside>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

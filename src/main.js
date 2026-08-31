@@ -11,7 +11,8 @@ const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 let W = 720, H = 720;
 function resize(){
   const dpr = window.devicePixelRatio || 1;
-  const side = Math.max(480, Math.min(window.innerWidth - 24, window.innerHeight - 96, 1200));
+  // leave room for the right control sidebar (~250px) and the thin top/bottom HUD rows
+  const side = Math.max(420, Math.min(window.innerWidth - 270, window.innerHeight - 110, 1200));
   W = side; H = side;
   cv.style.width = side + 'px'; cv.style.height = side + 'px';
   cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
@@ -537,46 +538,46 @@ function draw(){
     center('press SPACE / click to try again', 15, '#7a7a98', H/2+64); }
 
   if(game.paused){ ctx.fillStyle='rgba(6,6,11,.72)';ctx.fillRect(0,0,W,H);
-    center('PAUSED',38,'#e8e8f0',H/2-152);
+    const lx=Math.max(40,W*0.10);
+    ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 40px ui-monospace,monospace';
+    ctx.fillText('PAUSED', lx, Math.max(72,H*0.16));                        // title top-left
     const b=pauseButtons();
-    drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');
+    drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');           // left column
     drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
-    drawRunBoons(H/2-30); }
+    drawRunBoons(); }                                                       // right column
 }
 
-// clickable pause-menu buttons (#36) — hit-tested in the pointer handlers too
-function pauseButtons(){ const w=240,h=44,x=W/2-w/2;
-  return { resume:{x,y:H/2-116,w,h}, quit:{x,y:H/2-62,w,h} }; }
+// clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
+function pauseButtons(){ const w=230,h=46, x=Math.max(40,W*0.10), y0=Math.max(120,H*0.30);
+  return { resume:{x,y:y0,w,h}, quit:{x,y:y0+60,w,h} }; }
 function drawButton(r,label,hover){
   ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
-  ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
-  ctx.fillText(label, r.x+r.w/2, r.y+r.h/2+6); ctx.textAlign='left';
+  ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
+  ctx.fillText(label, r.x+18, r.y+r.h/2+6);
 }
 
 // pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",
-// in its own bordered panel below the buttons.
-function drawRunBoons(y0){
+// in its own bordered panel in the RIGHT column of the pause screen.
+function drawRunBoons(){
   const p=game.player; if(!p) return;
   const counts=new Map();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
-  const cols = entries.length>7 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
-  const rows = entries.length ? perCol : 1;
-  const panelW = cols===2 ? 500 : 300, lh=20, panelH=44+rows*lh;
-  const px=W/2-panelW/2;
-  ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(px,y0,panelW,panelH,10); ctx.fill();
-  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(px,y0,panelW,panelH,10); ctx.stroke();
-  ctx.textAlign='center'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
-  ctx.fillText('BOONS THIS RUN', W/2, y0+22);
+  const cols = entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
+  const lh=22, panelW = cols===2 ? Math.min(440,W*0.46) : Math.min(340,Math.max(240,W*0.36));
+  const px = W - panelW - Math.max(40,W*0.08), py = Math.max(72,H*0.16)-30;
+  const panelH = 54 + (entries.length?perCol:1)*lh;
+  ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(px,py,panelW,panelH,10); ctx.fill();
+  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(px,py,panelW,panelH,10); ctx.stroke();
+  ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
+  ctx.fillText('UPGRADES THIS RUN', px+18, py+28);
   if(!entries.length){ ctx.fillStyle='#565879'; ctx.font='13px ui-monospace,monospace';
-    ctx.fillText('none yet', W/2, y0+46); ctx.textAlign='left'; return; }
+    ctx.fillText('none yet', px+18, py+54); return; }
   ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
-  const top=y0+44, colW=230;
+  const colW=(panelW-36)/cols;
   entries.forEach((en,i)=>{ const col=Math.floor(i/perCol), row=i%perCol;
-    const cx=W/2 + (cols===1?0:(col===0?-colW/2:colW/2));
-    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), cx, top+row*lh); });
-  ctx.textAlign='left';
+    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), px+18+col*colW, py+54+row*lh); });
 }
 
 // Thin XP progress strip along the very top edge — fills left→right toward the
