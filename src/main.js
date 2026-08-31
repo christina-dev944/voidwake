@@ -2,6 +2,7 @@ import { TAU, rand, clamp, dist2, DANGER_HUE } from './util.js';
 import { UPGRADES } from './upgrades.js';
 import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from './classes.js';
 import * as D from './difficulty.js';
+import { sfx, resumeAudio, toggleMute, isMuted } from './audio.js';
 
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 // Responsive playfield: the canvas fills the viewport (square, capped), and the
@@ -23,9 +24,11 @@ function resize(){
 const keys = {};
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
+  resumeAudio();   // first gesture unlocks WebAudio (#7)
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)) game.paused = !game.paused;
+  if (k0==='m') toggleMute();   // mute toggle (#7)
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
@@ -143,6 +146,7 @@ function playerShoot(p) {
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
       homing, homeDelay: homeD });
   }
+  sfx.shoot();
 }
 
 // Lancer beam: auto-aims the nearest enemy and damages EVERY enemy along the ray
@@ -249,7 +253,7 @@ function novaBlast(p, radius, dmg){
     if(dist2(b.x,b.y,p.x,p.y)<=r2){ burst(b.x,b.y,285,2,1.6); game.eBullets.splice(i,1); } }
   for(const e of game.enemies){ if(dist2(e.x,e.y,p.x,p.y)<=(radius+e.r)**2) e.hp-=dmg; } // death handled in enemy loop
   burst(p.x,p.y,285,32,5);
-  addShake(11); hitStop(5);   // nova lands with a shockwave (#5)
+  addShake(11); hitStop(5); sfx.nova();   // nova lands with a shockwave (#5)
   game.novaFx.push({ x:p.x, y:p.y, r:12, max:radius, life:1 });
 }
 
@@ -260,7 +264,7 @@ function quitRun(){ game.paused=false; game.state='title'; game.player=null;
 function gainXp(p, amt){
   p.xp+=amt;
   while(p.xp>=p.xpNext){ p.xp-=p.xpNext; p.lvl++; p.xpNext=Math.floor(p.xpNext*1.35+3);
-    rollUpgrades(); game.state='upgrade'; }
+    rollUpgrades(); game.state='upgrade'; sfx.levelUp(); }
 }
 
 function pickUpgrade(i){
@@ -305,6 +309,7 @@ cv.addEventListener('pointermove', e=>{
   cv.style.cursor = (game.hoverIdx>=0 || overChevron) ? 'pointer' : 'default';
 });
 cv.addEventListener('pointerdown', e=>{
+  resumeAudio();   // first gesture unlocks WebAudio (#7)
   const [mx,my]=canvasXY(e);
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
@@ -377,7 +382,7 @@ function update(){
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = D.fireCooldown(game.wave, e.boss); }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
-      if(e.boss){ addShake(14); hitStop(8); }   // only boss death shakes + gets a beat of hit-stop (#5)
+      if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); } else sfx.enemyKill();   // shake/hit-stop on boss (#5), kill SFX (#7)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
   }
@@ -392,7 +397,8 @@ function update(){
       game.eBullets.splice(i,1);
       // death: blow up + hold the frozen world for a beat before the game-over screen (#40)
       if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
-        burst(p.x,p.y,DANGER_HUE,60,7); recordBest(); }
+        burst(p.x,p.y,DANGER_HUE,60,7); sfx.death(); recordBest(); }
+      else sfx.hurt();
     }
   }
 
@@ -531,7 +537,9 @@ function draw(){
   // auto-aim mode indicator (#35) — drawn outside the shake so it stays legible
   if((game.state==='playing'||game.state==='upgrade') && game.player){
     ctx.textAlign='right'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#7a7a98';
-    ctx.fillText('[T] AIM: '+AIM_MODES[game.aimIdx].label, W-14, 20); ctx.textAlign='left';
+    ctx.fillText('[T] AIM: '+AIM_MODES[game.aimIdx].label, W-14, 20);
+    if(isMuted()){ ctx.fillStyle='#565879'; ctx.fillText('[M] MUTED', W-14, 36); }   // audio muted (#7)
+    ctx.textAlign='left';
   }
 
   if(game.state==='upgrade') drawUpgrade();
