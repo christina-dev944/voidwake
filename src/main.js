@@ -138,7 +138,8 @@ function makeEnemy(hp, wave, boss) {
     telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
-    fireCd: rand(30,90), pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
+    fireCd: d.telegraph ? rand(80,130) : rand(30,90), // marksman waits longer before its first shot
+    pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
     ang: 0, wave, hue: d.hue(),
   };
 }
@@ -365,8 +366,8 @@ addEventListener('keydown', e=>{
     else { const n=parseInt(e.key); if(n>=1&&n<=CLASSES.length){ game.classIdx=n-1; reset(CLASSES[n-1]); } }
     return;
   }
-  if(game.state==='playing' && k===' ') useActive(game.player);
-  if(game.state==='playing' && k==='t') game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle auto-aim mode (#35)
+  if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
+  if(game.state==='playing' && !game.paused && k==='t') game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle auto-aim mode (#35)
 });
 function canvasXY(e){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
@@ -482,10 +483,14 @@ function update(){
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
-        const pl=game.player; const ang=Math.atan2(pl.y-e.y, pl.x-e.x);
-        telegraphLine(e.x, e.y, ang, { width:5, tele:90, active:9, dmg:14, owner:e.id, track: game.wave>=10 }); // ~1.5s warning; tracks the player at wave 10+
-        e.aimCd=90;  // freeze in place for the warning so the beam origin stays on the enemy
-        sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
+        if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
+        else {
+          const pl=game.player, ang=Math.atan2(pl.y-e.y, pl.x-e.x);
+          const trk = game.wave>=10, teleFrames = trk?120:90; // harder variant winds up ~2s and tracks
+          telegraphLine(e.x, e.y, ang, { width:5, tele:teleFrames, active:9, dmg:14, owner:e.id, track:trk });
+          e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
+          sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
+        }
       } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
@@ -506,7 +511,9 @@ function update(){
   // telegraphed hazards (#46): red warning zone during `tele`, then a live danger
   // window for `active` frames. Line hazards = the marksman/boss laser.
   for(let i=game.hazards.length-1;i>=0;i--){ const h=game.hazards[i];
-    if(h.owner!=null && !game.enemies.some(e=>e.id===h.owner)){ game.hazards.splice(i,1); continue; } // owner died → cancel shot
+    const owner = h.owner!=null ? game.enemies.find(e=>e.id===h.owner) : null;
+    if(h.owner!=null && !owner){ game.hazards.splice(i,1); continue; }   // owner died → cancel shot
+    if(owner){ h.x=owner.x; h.y=owner.y; }                               // keep the beam origin glued to the enemy body
     if(h.tele>0){ h.tele--;
       // static for the first ~2/3, then pulse increasingly fast over the last third;
       // a quiet beep fires at each pulse peak (so the beeping accelerates too).
