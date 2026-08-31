@@ -418,6 +418,7 @@ function update(){
 
 // ---- render ----
 function draw(){
+  syncBottomHud();   // keep the DOM HUD strip below the canvas in sync (#41)
   ctx.clearRect(0,0,W,H);
   // starfield backdrop
   ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
@@ -500,33 +501,9 @@ function draw(){
     // hitbox dot when focusing
     if(keys['shift']){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
-    // heat gauge (laser only)
-    if(p.weapon==='laser' && (game.state==='playing'||game.state==='upgrade')){
-      const bw=140, bh=7, bx=W/2-bw/2, by=H-30;
-      ctx.fillStyle='#26264a'; ctx.fillRect(bx,by,bw,bh);
-      ctx.fillStyle = p.overheated ? '#ff4d6d' : `hsl(${190-(p.heat/p.heatMax)*40},85%,58%)`;
-      ctx.fillRect(bx,by,bw*clamp(p.heat/p.heatMax,0,1),bh);
-      ctx.textAlign='center'; ctx.font='10px ui-monospace,monospace';
-      ctx.fillStyle=p.overheated?'#ff4d6d':'#8a8aa6';
-      ctx.fillText(p.overheated?'OVERHEATED':'HEAT', W/2, by-4); ctx.textAlign='left';
-    }
-    // legible HP bar near the action (#14) — big enough to read mid-fight
-    if(game.state==='playing'||game.state==='upgrade'){ drawHpBar(p); drawXpBar(p); }
-    // active-ability indicator (only if this class has one) — text + a cooldown
-    // fill bar that recharges to full when ready (#39)
-    if(p.active && (game.state==='playing'||game.state==='upgrade')){
-      const ready=p.activeCd<=0;
-      ctx.textAlign='center'; ctx.font='bold 13px ui-monospace,monospace';
-      ctx.fillStyle=ready?'#7cf7ff':'#565879';
-      ctx.fillText('[SPACE] '+p.active.name+(ready?'  READY':'  '+Math.ceil(p.activeCd/60)+'s'), W/2, H-26);
-      const cd=p.active.cooldown||1, prog=clamp(1-p.activeCd/cd,0,1);
-      const bw=170, bh=5, bx=W/2-bw/2, by=H-18;
-      ctx.fillStyle='#26264a'; roundRect(bx,by,bw,bh,3); ctx.fill();
-      if(ready){ ctx.save(); ctx.shadowBlur=10; ctx.shadowColor='#7cf7ff'; }
-      ctx.fillStyle=ready?'#7cf7ff':'#4a6fa0'; roundRect(bx,by,bw*prog,bh,3); ctx.fill();
-      if(ready) ctx.restore();
-      ctx.textAlign='left';
-    }
+    // XP strip stays on the top edge (thin, doesn't block the field); HP + active/heat
+    // now live in the DOM strip below the canvas (see syncBottomHud, #41)
+    if(game.state==='playing'||game.state==='upgrade') drawXpBar(p);
   }
 
   ctx.restore();   // end screen-shake transform (#5)
@@ -581,16 +558,42 @@ function drawXpBar(p){
   ctx.fillStyle='hsl(258,100%,70%)'; ctx.fillRect(0,0,W*frac,4);
 }
 
-// Bottom-left health bar: color slides red→green with the fraction, with the
-// exact HP printed on it so it reads at a glance near the ship.
-function drawHpBar(p){
-  const bw=210, bh=18, bx=16, by=H-bh-16;
+// Sync the DOM HUD strip below the canvas (HP + active/heat), so these bars live
+// OUTSIDE the playfield and never obscure the bottom while dodging (#41).
+const HUD2 = {
+  root:   document.getElementById('hud2'),
+  hpfill: document.getElementById('hpfill'),
+  hptext: document.getElementById('hptext'),
+  statlbl:document.getElementById('statlbl'),
+  statbar:document.getElementById('statbar'),
+  statfill:document.getElementById('statfill'),
+};
+function syncBottomHud(){
+  const p=game.player;
+  const show = p && (game.state==='playing'||game.state==='upgrade'||game.state==='dying');
+  HUD2.root.style.visibility = show ? 'visible' : 'hidden';
+  if(!show) return;
   const frac=clamp(p.hp/p.maxhp,0,1);
-  ctx.fillStyle='#0c0c18'; roundRect(bx,by,bw,bh,5); ctx.fill();
-  ctx.fillStyle=`hsl(${frac*120},72%,48%)`; roundRect(bx,by,Math.max(0,bw*frac),bh,5); ctx.fill();
-  ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(bx,by,bw,bh,5); ctx.stroke();
-  ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace';
-  ctx.fillStyle='#f0f0f8'; ctx.fillText('HP  '+Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp, bx+8, by+13);
+  HUD2.hpfill.style.width=(frac*100)+'%';
+  HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
+  HUD2.hptext.textContent=Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp;
+  if(p.active){                                   // active-ability cooldown (#39)
+    const ready=p.activeCd<=0, cd=p.active.cooldown||1, prog=clamp(1-p.activeCd/cd,0,1);
+    HUD2.statlbl.textContent='[SPACE] '+p.active.name+(ready?' READY':' '+Math.ceil(p.activeCd/60)+'s');
+    HUD2.statlbl.style.color=ready?'#7cf7ff':'#8a8aa6';
+    HUD2.statbar.style.visibility='visible';
+    HUD2.statfill.style.width=(prog*100)+'%';
+    HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
+  } else if(p.weapon==='laser'){                   // Lancer heat gauge
+    const h=clamp(p.heat/p.heatMax,0,1);
+    HUD2.statlbl.textContent=p.overheated?'OVERHEATED':'HEAT';
+    HUD2.statlbl.style.color=p.overheated?'#ff4d6d':'#8a8aa6';
+    HUD2.statbar.style.visibility='visible';
+    HUD2.statfill.style.width=(h*100)+'%';
+    HUD2.statfill.style.background=p.overheated?'#ff4d6d':`hsl(${190-h*40},85%,58%)`;
+  } else {                                         // no status bar for plain-bullet classes
+    HUD2.statlbl.textContent=''; HUD2.statbar.style.visibility='hidden';
+  }
 }
 
 function drawUpgrade(){

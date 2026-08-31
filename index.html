@@ -15,6 +15,16 @@
     box-shadow:0 0 60px -20px var(--accent); touch-action:none; }
   #hud { display:flex; gap:18px; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
+  /* bottom HUD strip — sits OUTSIDE the canvas so status bars never block the
+     playfield while dodging near the bottom (#41) */
+  #hud2 { display:flex; align-items:center; gap:16px; height:22px; font-size:12px; color:#a9a9c8; }
+  #hpbar { position:relative; width:220px; height:18px; background:#0c0c18;
+    border:1px solid #2a2a48; border-radius:5px; overflow:hidden; }
+  #hpfill { position:absolute; inset:0 auto 0 0; width:100%; background:#3fb84f; }
+  #hptext { position:absolute; left:8px; top:0; line-height:18px; font-weight:bold; color:#f0f0f8; }
+  #statwrap { display:flex; align-items:center; gap:8px; }
+  #statbar { width:150px; height:8px; background:#26264a; border-radius:3px; overflow:hidden; }
+  #statfill { height:100%; width:0; background:#7cf7ff; }
   .hint { font-size:11px; color:#5c5c78; }
   .hint a { color:#8a5cff; text-decoration:none; }
   .hint a:hover { text-decoration:underline; }
@@ -28,6 +38,10 @@
     <span>SCORE <b id="h-score">0</b></span>
   </div>
   <canvas id="c"></canvas>
+  <div id="hud2">
+    <div id="hpbar"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
+    <div id="statwrap"><span id="statlbl"></span><div id="statbar"><div id="statfill"></div></div></div>
+  </div>
   <div class="hint">Move: WASD / Arrows &nbsp;·&nbsp; Hold Shift: focus (slow + small hitbox) &nbsp;·&nbsp; Auto-fire &nbsp;·&nbsp; T: aim mode &nbsp;·&nbsp; M: mute &nbsp;·&nbsp; Esc / P: pause</div>
   <div class="hint"><a href="https://github.com/christina-dev944/voidwake" target="_blank" rel="noopener">source on GitHub ↗</a></div>
 </div>
