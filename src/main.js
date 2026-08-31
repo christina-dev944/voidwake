@@ -548,7 +548,32 @@ function draw(){
     const b=pauseButtons();
     drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');           // left column
     drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
+    drawPauseStats(b.quit.x, b.quit.y+b.quit.h+34);                         // stats under the buttons
     drawRunBoons(); }                                                       // right column
+}
+
+// player stat readout shown in the pause menu (moved here from the sidebar)
+function drawPauseStats(x,y){
+  const p=game.player; if(!p) return;
+  const laser=p.weapon==='laser';
+  const rows=[
+    ['DMG',        laser ? p.beamDps+' dps' : Math.round(p.dmg)],
+    ['Fire rate',  laser ? 'beam' : (60/p.fireRate).toFixed(1)+'/s'],
+    ['Bullet spd', laser ? 'hitscan' : p.bulletSpeed.toFixed(1)],
+    ['Move spd',   p.speed.toFixed(1)],
+    ['Shots',      p.shots],
+    ['Pierce',     p.pierce],
+    ['Crit',       Math.round(p.crit*100)+'%'],
+  ];
+  ctx.textAlign='left'; ctx.font='bold 12px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
+  ctx.fillText('STATS', x, y);
+  const w=210, lh=20; let yy=y+24; ctx.font='12px ui-monospace,monospace';
+  for(const [k,v] of rows){
+    ctx.textAlign='left';  ctx.fillStyle='#8a8aa6'; ctx.fillText(k, x, yy);
+    ctx.textAlign='right'; ctx.fillStyle='#e8e8f0'; ctx.fillText(String(v), x+w, yy);
+    yy+=lh;
+  }
+  ctx.textAlign='left';
 }
 
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
@@ -602,29 +627,11 @@ const HUD2 = {
   statbar:document.getElementById('statbar'),
   statfill:document.getElementById('statfill'),
 };
-// live player-stat readout in the right sidebar (shown during a run)
-const STATS = {
-  root:document.getElementById('stats'),
-  dmg:document.getElementById('s-dmg'), fire:document.getElementById('s-fire'),
-  bspd:document.getElementById('s-bspd'), mspd:document.getElementById('s-mspd'),
-  shots:document.getElementById('s-shots'), pierce:document.getElementById('s-pierce'),
-  crit:document.getElementById('s-crit'),
-};
 function syncBottomHud(){
   const p=game.player;
   const show = p && (game.state==='playing'||game.state==='upgrade'||game.state==='dying');
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
-  STATS.root.classList.toggle('on', !!show);
   if(!show) return;
-  // right-sidebar stats (laser has no discrete shots/bullet speed)
-  const laser=p.weapon==='laser';
-  STATS.dmg.textContent   = laser ? p.beamDps+' dps' : String(Math.round(p.dmg));
-  STATS.fire.textContent  = laser ? 'beam' : (60/p.fireRate).toFixed(1)+'/s';
-  STATS.bspd.textContent  = laser ? 'hitscan' : p.bulletSpeed.toFixed(1);
-  STATS.mspd.textContent  = p.speed.toFixed(1);
-  STATS.shots.textContent = String(p.shots);
-  STATS.pierce.textContent= String(p.pierce);
-  STATS.crit.textContent  = Math.round(p.crit*100)+'%';
   const frac=clamp(p.hp/p.maxhp,0,1);
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
