@@ -42,7 +42,7 @@ const game = {
   state: 'title', // title | classSelect | playing | upgrade | dying | dead
   wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], eid: 0,
+  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], hazards: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
@@ -111,8 +111,11 @@ function startWave(n) {
 const ENEMY_TYPES = {
   grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
   weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
-  darter: { r:12, hpMul:0.6,  spd:1.6,  patterns:['aimed'],                          move:'dart',  fireMul:0.7, hue:()=>rand(40,62),  minWave:4, weight:2 },
+  darter: { r:12, hpMul:0.45, spd:1.6,  patterns:['aimed'],                          move:'dart',  fireMul:0.7, hue:()=>rand(40,62),  minWave:4, weight:2 },
   brute:  { r:26, hpMul:2.6,  spd:0.55, patterns:['ring','spiral'],                  move:'drift', fireMul:1.3, hue:()=>rand(344,360), minWave:6, weight:1 },
+  // marksman telegraphs a laser line at the player, then fires an instant hitscan
+  // beam (#46). `telegraph` routes it to the hazard system instead of enemyShoot.
+  marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,36), minWave:5, weight:1, telegraph:true },
 };
 function pickEnemyType(wave){
   const pool=[];
@@ -264,7 +267,7 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
 
 // ---- flow ----
 function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.upgrades=[];
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.hazards=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
 // active-ability framework: trigger key fires the class's active if off cooldown.
@@ -304,9 +307,37 @@ function novaBlast(p, radius, dmg){
   game.novaFx.push({ x:p.x, y:p.y, r:12, max:radius, life:1 });
 }
 
+// central player-damage path (bullets + hazards, #46): honours i-frames, jolts the
+// screen, and runs the death hold when HP hits 0. Callers gate on iframes themselves
+// where they need to, but this re-checks so it's always safe to call.
+function hurtPlayer(dmg){
+  const p=game.player; if(!p||p.iframes>0) return;
+  p.hp-=dmg; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
+  addShake(8); hitStop(3);
+  if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
+    burst(p.x,p.y,DANGER_HUE,60,7); sfx.death(); recordBest(); }
+  else sfx.hurt();
+}
+// is the player inside a live hazard zone? (line = perpendicular distance to the
+// forward ray; circle/rect stubs ready for future telegraph shapes.)
+function hazardHitsPlayer(h,p){
+  if(h.kind==='line'){
+    const dx=Math.cos(h.ang), dy=Math.sin(h.ang), rx=p.x-h.x, ry=p.y-h.y;
+    if(rx*dx+ry*dy < 0) return false;               // behind the emitter
+    return Math.abs(rx*dy - ry*dx) <= h.width + p.hitR;
+  }
+  if(h.kind==='circle') return dist2(p.x,p.y,h.x,h.y) <= (h.radius+p.hitR)**2;
+  return false;
+}
+// Marksman/boss laser: mark a beam line at (x,y)→ang, warn for `tele` frames, then
+// deal `dmg` for `active` frames (an "instant" shot). Reusable by bosses (#3/#46).
+function telegraphLine(x,y,ang,{width=9,tele=50,active:act=9,dmg=14,hue=0}={}){
+  game.hazards.push({ kind:'line', x, y, ang, width, tele, active:act, dmg, hue });
+}
+
 // abandon the current run and return to the title screen (pause-menu quit, #27).
 function quitRun(){ game.paused=false; game.state='title'; game.player=null;
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[]; }
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.hazards=[]; }
 
 function gainXp(p, amt){
   p.xp+=amt;
@@ -446,7 +477,13 @@ function update(){
       e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4; if(e.x<40||e.x>W-40)e.vx*=-1;
     }
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
-    e.fireCd--; if(e.fireCd<=0 && e.y>0){ enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
+    e.fireCd--; if(e.fireCd<=0 && e.y>0){
+      if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
+        const pl=game.player; const ang=Math.atan2(pl.y-e.y, pl.x-e.x);
+        telegraphLine(e.x, e.y, ang, { width:9, tele:52, active:9, dmg:14 });
+        sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
+      } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
+    }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); } else sfx.enemyKill();   // shake/hit-stop on boss (#5), kill SFX (#7)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
@@ -458,14 +495,17 @@ function update(){
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
-      p.hp-=8; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
-      addShake(8); hitStop(3);   // getting hit jolts the screen (#5)
-      game.eBullets.splice(i,1);
-      // death: blow up + hold the frozen world for a beat before the game-over screen (#40)
-      if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
-        burst(p.x,p.y,DANGER_HUE,60,7); sfx.death(); recordBest(); }
-      else sfx.hurt();
+      game.eBullets.splice(i,1); hurtPlayer(8);
     }
+  }
+
+  // telegraphed hazards (#46): red warning zone during `tele`, then a live danger
+  // window for `active` frames. Line hazards = the marksman/boss laser.
+  for(let i=game.hazards.length-1;i>=0;i--){ const h=game.hazards[i];
+    if(h.tele>0){ h.tele--; if(h.tele===0){ addShake(6); sfx.laserFire(); } } // fires as the warning ends
+    else if(h.active>0){ h.active--;
+      if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg);
+    } else game.hazards.splice(i,1);
   }
 
   // particles + nova rings
@@ -520,6 +560,24 @@ function draw(){
   ctx.shadowBlur=0; ctx.globalAlpha=1;
 
   // enemies
+  // telegraphed hazards (#46) — drawn under enemies: pulsing red warning line during
+  // the wind-up, then a bright white/red beam on the instant-fire frames.
+  const HZLEN=Math.hypot(W,H);
+  for(const h of game.hazards){ if(h.kind!=='line') continue;
+    const ex=h.x+Math.cos(h.ang)*HZLEN, ey=h.y+Math.sin(h.ang)*HZLEN;
+    if(h.tele>0){
+      ctx.globalAlpha=0.30+0.22*Math.sin(game.time*0.5); ctx.strokeStyle='hsl(0,90%,55%)'; ctx.lineWidth=h.width*2;
+      ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.globalAlpha=0.85; ctx.strokeStyle='hsl(0,95%,72%)'; ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+    } else if(h.active>0){
+      ctx.globalAlpha=1; ctx.shadowBlur=18; ctx.shadowColor='hsl(0,95%,60%)';
+      ctx.strokeStyle='#fff'; ctx.lineWidth=h.width*2; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.strokeStyle='hsl(0,95%,64%)'; ctx.lineWidth=h.width; ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+
   for(const e of game.enemies){ const c=`hsl(${e.hue},70%,${e.boss?60:55}%)`;
     ctx.fillStyle=c; ctx.strokeStyle='#000'; ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.fill();ctx.stroke();

@@ -99,4 +99,8 @@ export const sfx = {
   // not the sawtooth "hurt" buzz).
   nova(){ noise(0.09,{gain:0.12,freq:6000,q:0.5}); noise(0.55,{gain:0.19,freq:2200,freqTo:110,q:0.6}); tone(72,0.4,{type:'sine',gain:0.17,slideTo:30}); },
   death(){ noise(0.7,{gain:0.34,freq:800,q:0.5}); tone(180,0.7,{type:'sawtooth',gain:0.24,slideTo:40}); },
+  // #46 telegraph: a rising warning chirp as a laser winds up…
+  telegraph(){ tone(300,0.18,{type:'square',gain:0.07,slideTo:560}); },
+  // …then a sharp zap when it fires the instant beam.
+  laserFire(){ tone(880,0.14,{type:'sawtooth',gain:0.12,slideTo:180}); noise(0.14,{gain:0.14,freq:5000,freqTo:800,q:0.7}); },
 };
