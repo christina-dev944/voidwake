@@ -11,8 +11,9 @@ const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 let W = 720, H = 720;
 function resize(){
   const dpr = window.devicePixelRatio || 1;
-  // leave room for the right control sidebar (~250px) and the thin top/bottom HUD rows
-  const side = Math.max(420, Math.min(window.innerWidth - 270, window.innerHeight - 110, 1200));
+  // canvas is centered with the side panel floating over the right margin, so keep
+  // symmetric horizontal room for it (~460px) plus the thin top/bottom HUD rows
+  const side = Math.max(400, Math.min(window.innerWidth - 470, window.innerHeight - 100, 1200));
   W = side; H = side;
   cv.style.width = side + 'px'; cv.style.height = side + 'px';
   cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
@@ -598,11 +599,29 @@ const HUD2 = {
   statbar:document.getElementById('statbar'),
   statfill:document.getElementById('statfill'),
 };
+// live player-stat readout in the right sidebar (shown during a run)
+const STATS = {
+  root:document.getElementById('stats'),
+  dmg:document.getElementById('s-dmg'), fire:document.getElementById('s-fire'),
+  bspd:document.getElementById('s-bspd'), mspd:document.getElementById('s-mspd'),
+  shots:document.getElementById('s-shots'), pierce:document.getElementById('s-pierce'),
+  crit:document.getElementById('s-crit'),
+};
 function syncBottomHud(){
   const p=game.player;
   const show = p && (game.state==='playing'||game.state==='upgrade'||game.state==='dying');
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
+  STATS.root.classList.toggle('on', !!show);
   if(!show) return;
+  // right-sidebar stats (laser has no discrete shots/bullet speed)
+  const laser=p.weapon==='laser';
+  STATS.dmg.textContent   = laser ? p.beamDps+' dps' : String(Math.round(p.dmg));
+  STATS.fire.textContent  = laser ? 'beam' : (60/p.fireRate).toFixed(1)+'/s';
+  STATS.bspd.textContent  = laser ? 'hitscan' : p.bulletSpeed.toFixed(1);
+  STATS.mspd.textContent  = p.speed.toFixed(1);
+  STATS.shots.textContent = String(p.shots);
+  STATS.pierce.textContent= String(p.pierce);
+  STATS.crit.textContent  = Math.round(p.crit*100)+'%';
   const frac=clamp(p.hp/p.maxhp,0,1);
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;

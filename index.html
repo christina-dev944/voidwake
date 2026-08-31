@@ -9,18 +9,26 @@
   * { box-sizing:border-box; }
   html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow:hidden; }
-  #wrap { display:flex; flex-direction:row; align-items:center; justify-content:center;
-    height:100%; gap:16px; padding:12px; }
+  /* canvas stays centered in the viewport; the side panel floats over the right
+     margin so it never shifts the playfield off-center */
+  #wrap { position:relative; display:flex; align-items:center; justify-content:center;
+    height:100%; }
   #main { display:flex; flex-direction:column; gap:8px; }
   canvas { background:#06060b; border:1px solid #23233a; border-radius:8px;
     box-shadow:0 0 60px -20px var(--accent); touch-action:none; }
   /* WAVE/LVL/SCORE — top, right-aligned over the playfield */
   #hud { display:flex; gap:18px; justify-content:flex-end; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
-  /* controls live in a side column so they don't add vertical space under the field */
-  #side { display:flex; flex-direction:column; gap:12px; max-width:210px; }
+  #side { position:absolute; right:18px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:16px; width:210px; }
   #side .hint { line-height:1.85; }
   .hint b { color:#8a8aa6; font-weight:600; }
+  /* live player stats readout (#stats) — shown on the right during a run */
+  #stats { display:none; flex-direction:column; gap:3px; font-size:11px; color:#8a8aa6; }
+  #stats.on { display:flex; }
+  #stats .shdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; margin-bottom:3px; }
+  .srow { display:flex; justify-content:space-between; gap:12px; }
+  .srow b { color:#e8e8f0; }
   /* bottom HUD strip — sits OUTSIDE the canvas so status bars never block the
      playfield while dodging near the bottom (#41) */
   #hud2 { display:flex; align-items:center; gap:16px; height:22px; font-size:12px; color:#a9a9c8; }
@@ -51,10 +59,20 @@
     </div>
   </div>
   <aside id="side">
+    <div id="stats">
+      <div class="shdr">STATS</div>
+      <div class="srow"><span>DMG</span><b id="s-dmg">–</b></div>
+      <div class="srow"><span>Fire rate</span><b id="s-fire">–</b></div>
+      <div class="srow"><span>Bullet spd</span><b id="s-bspd">–</b></div>
+      <div class="srow"><span>Move spd</span><b id="s-mspd">–</b></div>
+      <div class="srow"><span>Shots</span><b id="s-shots">–</b></div>
+      <div class="srow"><span>Pierce</span><b id="s-pierce">–</b></div>
+      <div class="srow"><span>Crit</span><b id="s-crit">–</b></div>
+    </div>
     <div class="hint">
       <b>Move</b> &nbsp;WASD / Arrows<br>
       <b>Shift</b> &nbsp;focus (slow, small hitbox)<br>
-      Auto-fire<br>
+      <b>Fire</b> &nbsp;automatic — the ship shoots on its own and auto-aims<br>
       <b>Space</b> &nbsp;active ability<br>
       <b>T</b> &nbsp;aim mode<br>
       <b>M</b> &nbsp;mute<br>
