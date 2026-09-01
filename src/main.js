@@ -213,30 +213,30 @@ function updateLaser(p){
 function enemyShoot(e) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
-  const spd = D.bulletSpeed(game.wave);
+  const spd = D.bulletSpeed(game.wave) * (e.boss?1.2:1);   // boss bullets fly faster (#3)
   const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue:e.hue });
   switch(e.pattern) {
     case 'aimed': {
       push(aim);
-      const flank = e.boss ? 1 : D.aimedExtra(game.wave);
+      const flank = e.boss ? 2 : D.aimedExtra(game.wave);   // boss fans a wider aimed volley
       for(let i=1;i<=flank;i++){ push(aim - i*0.15); push(aim + i*0.15); }
       break;
     }
-    case 'spread': { const k=D.spreadCount(game.wave), half=(k-1)/2;
+    case 'spread': { const k=D.spreadCount(game.wave)+(e.boss?4:0), half=(k-1)/2;
       for(let i=-half;i<=half;i++) push(aim+i*0.18); break; }
     case 'ring': { const k=D.ringCount(game.wave, e.boss); for(let i=0;i<k;i++) push(i/k*TAU); break; }
-    case 'spiral': { const arms=e.boss?4:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
+    case 'spiral': { const arms=e.boss?6:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
   }
 }
 
 // Boss attack scheduler (#3): instead of a monotone spiral, a boss weaves through a
 // sequence of volleys — spinning spiral streams, aimed bursts, spreads and full rings
 // — each with its own recovery gap so the fight breathes. Sets its own next fireCd.
-const BOSS_SEQ = ['spiral','spiral','spiral','aimed','ring','spiral','spiral','spread','aimed'];
+const BOSS_SEQ = ['spiral','spiral','ring','aimed','spread','spiral','ring','spread','aimed','spiral'];
 function bossAttack(e){
   const pat = BOSS_SEQ[e.atkIdx % BOSS_SEQ.length]; e.atkIdx++;
   e.pattern = pat; enemyShoot(e);
-  let gap = pat==='ring' ? 44 : pat==='spread' ? 22 : pat==='aimed' ? 14 : 5; // rings need breathing room
+  let gap = pat==='ring' ? 34 : pat==='spread' ? 16 : pat==='aimed' ? 11 : 4; // rings need breathing room
   gap *= e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;                            // more relentless each phase (#3)
   e.fireCd = Math.max(4, Math.round(gap));
 }
