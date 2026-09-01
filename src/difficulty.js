@@ -21,10 +21,9 @@ export function enemyHp(wave) {
   return Math.round((16 + wave * 6) * Math.pow(1.055, wave));
 }
 
-// Flat boss HP (#3) — a fixed pool independent of wave, so the multi-phase fight is
-// tuned by hand rather than the compounding curve.
+// Boss HP = 90x a normal enemy on that wave (#3), so it scales with the run.
 export function bossHp(wave) {
-  return 90;
+  return enemyHp(wave) * 90;
 }
 
 // Enemy bullet speed. v0.1's 0.05/wave was nearly flat; 0.12/wave keeps late
