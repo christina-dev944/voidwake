@@ -29,7 +29,8 @@ export const CLASSES = [
   {
     id: 'reaper',
     name: 'Reaper',
-    desc: 'High damage short range, very fragile. Scythe carves a cone of death in your aim.',
+    desc: 'Glass cannon — massive damage, short range, very fragile. A mobile diver built around the Scythe.',
+    activeDesc: 'Carves a cone of death in your aim, clearing bullets and dealing heavy damage. Each cast also dashes you forward with a brief burst of invulnerability and speed. Charges refill one at a time — bank all three to punch through a boss barrage, strike, then fall back and recharge.',
     hue: 18,
     weapon: 'bullet',
     range: 300,
@@ -55,6 +56,7 @@ export const CLASSES = [
     id: 'mage',
     name: 'Mage',
     desc: 'Homing bolts, starts with +1 pierce. Nova clears bullets and enemies around you.',
+    activeDesc: 'A radial shockwave around you that wipes nearby bullets and damages every enemy in range. A single charge on a steady recharge — save it to break out of a moment of overwhelming crossfire.',
     hue: 285,
     weapon: 'homing',
     // active `effect` is resolved to a function in main.js (applyActive) to avoid a

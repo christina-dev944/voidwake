@@ -1066,6 +1066,18 @@ function drawClassSelect(){
   const dn=CLASSES.length, dgap=16, dy=H/2+192, dx0=W/2-(dn-1)*dgap/2;
   for(let i=0;i<dn;i++){ ctx.beginPath(); ctx.arc(dx0+i*dgap, dy, i===game.classIdx?4:2.5, 0, TAU);
     ctx.fillStyle = i===game.classIdx?'#e8e8f0':'#44465f'; ctx.fill(); }
+  // ability-detail panel for the selected class — explains how its active works (#56)
+  const selCls=CLASSES[game.classIdx];
+  if(selCls.active && selCls.activeDesc){
+    const ph=120, pw=Math.min(700, W-48), px=W/2-pw/2, py=Math.min(H/2+206, H-ph-40), pad=16, hue=selCls.hue;
+    ctx.fillStyle='rgba(12,12,26,0.92)'; roundRect(px,py,pw,ph,10); ctx.fill();
+    ctx.strokeStyle=`hsl(${hue},60%,55%)`; ctx.lineWidth=1.5; roundRect(px,py,pw,ph,10); ctx.stroke();
+    const maxCh=selCls.active.maxCharges||1;
+    ctx.textAlign='left'; ctx.font='bold 14px ui-monospace,monospace'; ctx.fillStyle=`hsl(${hue},82%,68%)`;
+    ctx.fillText('◆ '+selCls.active.name.toUpperCase()+(maxCh>1?'   ·   '+maxCh+' CHARGES':''), px+pad, py+26);
+    wrapText(selCls.activeDesc, px+pad, py+48, pw-pad*2, 16, '#c4c4dc', 12);
+    ctx.textAlign='left';
+  }
   frameFooter();
 }
 function drawChevron(dir, active){
