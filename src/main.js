@@ -690,15 +690,19 @@ function draw(){
   const pl=game.player;
   if(pl && pl.weapon==='laser' && pl.beam && pl.beam.active){
     const len=Math.hypot(W,H), glowW=pl.beamWidth*1.4, coreW=Math.max(2, pl.beamWidth*0.5); // thickens with Wide Lens
-    ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
+    // #47 perf: NO per-beam shadowBlur — a full-diagonal blurred stroke per beam
+    // hitched hard with several Split Shot beams. The wide glow underlay already
+    // reads as a glow, so we layer plain strokes (like the marksman beam, #46).
+    // Batched into two passes (all glows, then all cores) so style/alpha is set
+    // once instead of per beam. Opacity capped below a bullet's (#48).
+    ctx.save(); ctx.lineCap='round';
+    ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.beamAlpha*0.6;
     for(const ang of pl.beam.angs){
-      const ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
-      // capped below a player bullet's opacity so the always-on beam sits quieter
-      // than discrete fire and enemy patterns stay readable (#48). Glow dimmer still.
-      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.beamAlpha*0.6;
-      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
-      ctx.globalAlpha=game.beamAlpha; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
-      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+Math.cos(ang)*len, pl.y+Math.sin(ang)*len); ctx.stroke();
+    }
+    ctx.strokeStyle='#eaffff'; ctx.lineWidth=coreW; ctx.globalAlpha=game.beamAlpha;
+    for(const ang of pl.beam.angs){
+      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+Math.cos(ang)*len, pl.y+Math.sin(ang)*len); ctx.stroke();
     }
     ctx.restore();
   }
