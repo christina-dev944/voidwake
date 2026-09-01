@@ -38,7 +38,8 @@ export const CLASSES = [
     // Scythe: Nova-style burst but a SECTOR aimed at the target, not a full ring.
     // `angle` = full central angle (rad); range = reach. Resolved in main.js applyActive.
     // maxCharges 3 (#51): hold up to 3 casts; charges regen one at a time off `cooldown`.
-    active: { name: 'Scythe', cooldown: 360, effect: 'cone', range: 200, angle: 1.0, dmg: 60, maxCharges: 3 },
+    // range 200 -> 300 (+50%, #51 feedback).
+    active: { name: 'Scythe', cooldown: 360, effect: 'cone', range: 300, angle: 1.0, dmg: 60, maxCharges: 3 },
   },
   {
     id: 'lancer',

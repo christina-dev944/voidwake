@@ -362,7 +362,7 @@ function coneBlast(p, range, angle, dmg){
     if(inWedge(b.x,b.y)){ burst(b.x,b.y,hue,2,1.6); game.eBullets.splice(i,1); } }
   for(const e of game.enemies){ if(inWedge(e.x,e.y,e.r)) e.hp-=dmg; } // death handled in enemy loop
   burst(p.x,p.y,hue,24,5);
-  addShake(11); hitStop(5); sfx.nova();
+  addShake(13); hitStop(12); sfx.nova();   // beefier hit-stop for a weightier Scythe swing (#51)
   game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
 }
 // Nova: wipe enemy bullets near the player and damage enemies in the radius.
