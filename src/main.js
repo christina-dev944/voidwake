@@ -210,12 +210,13 @@ function updateLaser(p){
   }
 }
 
-// pattern/spdMul overrides let the boss fire two layers at once at different speeds (#3)
-function enemyShoot(e, pattern=e.pattern, spdMul=1) {
+// pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds
+// AND different colors, so the player can read fast vs slow shots by hue (#3)
+function enemyShoot(e, pattern=e.pattern, spdMul=1, hue=e.hue) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
   const spd = D.bulletSpeed(game.wave) * (e.boss?1.2:1) * spdMul;
-  const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue:e.hue });
+  const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
   switch(pattern) {
     case 'aimed': {
       push(aim);
@@ -234,17 +235,17 @@ function enemyShoot(e, pattern=e.pattern, spdMul=1) {
 // sharp track (aimed/spiral) that snipes, layered over a SLOW, space-filling track
 // (rings/spreads) you weave through. Each has its own rotation, cadence and speed.
 // FAST_SPD / SLOW_SPD are the easy knobs to play with the speed contrast.
-const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.0;
-const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5;
+const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.0, FAST_HUE=40;  // fast = warm amber
+const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5, SLOW_HUE=200; // slow = cool cyan
 const phaseMul = e => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
 function bossAttackFast(e){
   const pat = BOSS_FAST_SEQ[e.atkIdx % BOSS_FAST_SEQ.length]; e.atkIdx++;
-  enemyShoot(e, pat, FAST_SPD);
+  enemyShoot(e, pat, FAST_SPD, FAST_HUE);
   e.fireCd = Math.max(3, Math.round((pat==='aimed'?13:5) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 function bossAttackSlow(e){
   const pat = BOSS_SLOW_SEQ[e.atkIdx2 % BOSS_SLOW_SEQ.length]; e.atkIdx2++;
-  enemyShoot(e, pat, SLOW_SPD);
+  enemyShoot(e, pat, SLOW_SPD, SLOW_HUE);
   e.fireCd2 = Math.max(6, Math.round((pat==='ring'?57:29) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 // Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
