@@ -97,11 +97,9 @@ function rollUpgrades() {
 // ---- spawning ----
 function startWave(n) {
   game.wave = n;
+  if(n%10===0){ game.enemies.push(makeEnemy(D.bossHp(n), n, true)); return; } // every 10th wave = a solo boss (#3)
   const count = D.enemyCount(n);
-  for (let i=0;i<count;i++) {
-    const boss = (n%5===0) && i===0;
-    game.enemies.push(makeEnemy(boss ? D.bossHp(n) : D.enemyHp(n), n, boss));
-  }
+  for (let i=0;i<count;i++) game.enemies.push(makeEnemy(D.enemyHp(n), n, false));
 }
 
 // Enemy archetypes (#2). Each tweaks size, bulk (hpMul), speed, fire pattern pool,
