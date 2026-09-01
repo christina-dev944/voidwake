@@ -753,13 +753,16 @@ function draw(){
   // player (hidden during the death hold so the explosion stands alone) (#40)
   const p=game.player;
   if(p && game.state!=='dying'){
-    const blink = p.iframes>0 && (game.time>>2)%2;
-    if(!blink){
-      const pc=`hsl(${(p.cls&&p.cls.hue)||265},70%,62%)`;
-      ctx.fillStyle=pc; ctx.shadowBlur=14; ctx.shadowColor=pc;
-      shipPath(p.x,p.y,p.r); ctx.fill();
-      ctx.shadowBlur=0;
-    }
+    const pc=`hsl(${(p.cls&&p.cls.hue)||265},70%,62%)`;
+    const inv=p.iframes>0;
+    // i-frames used to hard-blink the ship on/off, which was hard to track (#51).
+    // Instead keep it solidly visible with a gentle shimmer + a pulsing shield ring.
+    ctx.globalAlpha = inv ? 0.78+0.18*Math.sin(game.time*0.5) : 1;
+    ctx.fillStyle=pc; ctx.shadowBlur=14; ctx.shadowColor=pc;
+    shipPath(p.x,p.y,p.r); ctx.fill();
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    if(inv){ ctx.strokeStyle=pc; ctx.globalAlpha=0.35+0.2*Math.sin(game.time*0.5);
+      ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r+5,0,TAU); ctx.stroke(); ctx.globalAlpha=1; }
     // hitbox dot when focusing
     if(keys['shift']){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
