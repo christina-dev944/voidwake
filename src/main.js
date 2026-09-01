@@ -191,7 +191,7 @@ function playerShoot(p) {
 // each tick (piercing). A heat gauge throttles it — sustained fire overheats and
 // forces a cooldown, so it can't just be held forever.
 function updateLaser(p){
-  const target = pickTarget(p.x,p.y);
+  const target = pickTarget(p.x,p.y,true);   // laser passes dwell=true for HIGH-HP target stickiness (#49)
   const firing = !!target && !p.overheated;
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
@@ -285,24 +285,24 @@ function nearestEnemy(x,y,exclude) {
 // auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
 // picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
 const AIM_MODES = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
-const AIM_DWELL = 30;  // frames (~0.5s @60fps) a HIGH-HP target is held before re-evaluating (#49)
+const AIM_DWELL = 12;  // frames (~0.2s @60fps) a HIGH-HP laser target is held before re-evaluating (#49)
 // choose the target for the current aim mode; ties fall back to nearest.
-function pickTarget(x,y){
+function pickTarget(x,y,dwell=false){
   if(!game.enemies.length){ game.aimTarget=null; return null; }
   let pick;
   if(AIM_MODES[game.aimIdx].id==='highhp'){
-    // dwell timer (#49): commit to the current target for AIM_DWELL frames before
-    // re-evaluating highest HP. Re-picking every frame flickered because the beam
-    // drains its own target below a tied enemy each tick; a dwell bounds swaps to
-    // ~twice a second so it reads smooth while still tracking the biggest enemy.
+    // dwell timer (#49) — LASER ONLY (dwell flag): the beam drains its own target
+    // below a tied enemy each tick, so re-picking highest HP every frame flickers.
+    // Hold the target for AIM_DWELL frames (~0.2s) before re-evaluating. Discrete
+    // weapons pass no dwell and just track the current highest HP each shot.
     // (A dead/despawned target re-picks immediately — no need to wait out the dwell.)
     const cur=game.aimTarget, alive = cur && cur.hp>0 && game.enemies.indexOf(cur)>=0;
-    if(alive && game.time - game.aimLockTime < AIM_DWELL){ pick=cur; }
+    if(dwell && alive && game.time - game.aimLockTime < AIM_DWELL){ pick=cur; }
     else {
       let best=null, bh=-1, bd=Infinity;
       for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
         if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
-      pick=best; game.aimLockTime=game.time;   // re-commit and restart the dwell window
+      pick=best; if(dwell) game.aimLockTime=game.time;   // (re)start the dwell window
     }
   } else {
     pick = nearestEnemy(x,y);
