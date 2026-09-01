@@ -240,12 +240,12 @@ const phaseMul = e => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relen
 function bossAttackFast(e){
   const pat = BOSS_FAST_SEQ[e.atkIdx % BOSS_FAST_SEQ.length]; e.atkIdx++;
   enemyShoot(e, pat, FAST_SPD);
-  e.fireCd = Math.max(3, Math.round((pat==='aimed'?12:4) * phaseMul(e)));
+  e.fireCd = Math.max(3, Math.round((pat==='aimed'?13:5) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 function bossAttackSlow(e){
   const pat = BOSS_SLOW_SEQ[e.atkIdx2 % BOSS_SLOW_SEQ.length]; e.atkIdx2++;
   enemyShoot(e, pat, SLOW_SPD);
-  e.fireCd2 = Math.max(6, Math.round((pat==='ring'?52:26) * phaseMul(e)));
+  e.fireCd2 = Math.max(6, Math.round((pat==='ring'?57:29) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 // Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
 // menacing tint and restart the attack cycle — a clear "it's getting serious" beat.
