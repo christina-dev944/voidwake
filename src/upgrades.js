@@ -24,7 +24,6 @@ export const UPGRADES = [
 
   // --- Reaper (Scythe) — gated on the cone active, so only the Reaper rolls this ---
   { id:'scythe',  for:'all', tag:'REAPER', req:p=>p.active&&p.active.effect==='cone', name:'Scythe Sweep',   desc:'+20% Scythe reach & +15% arc', apply:p=>{ p.active.range*=1.20; p.active.angle=Math.min(Math.PI*1.2, p.active.angle*1.15); } },
-  { id:'scythecd',for:'all', tag:'REAPER', req:p=>p.active&&p.active.effect==='cone', name:'Whetstone',      desc:'-20% Scythe recharge',       apply:p=>p.active.cooldown=Math.round(p.active.cooldown*0.8) },
 
   // --- shared (any weapon) ---
   { id:'swift',  for:'all', name:'Swift Feet', desc:'+18% move speed',       apply:p=>{p.speed*=1.18; p.focusSpeed*=1.18;} },
