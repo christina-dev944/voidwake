@@ -21,10 +21,10 @@ export function enemyHp(wave) {
   return Math.round((16 + wave * 6) * Math.pow(1.055, wave));
 }
 
-// Boss HP scales off the same curve. Slightly lower multiplier than v0.1 (11 vs
-// 12) so boss fights stay tense, not tedious slogs, now that base HP compounds.
+// Boss HP scales off the same curve. Now that bosses are solo fights every 10 waves
+// (#3), they're 10x beefier (was *11) so the multi-phase fight has real staying power.
 export function bossHp(wave) {
-  return enemyHp(wave) * 11;
+  return enemyHp(wave) * 110;
 }
 
 // Enemy bullet speed. v0.1's 0.05/wave was nearly flat; 0.12/wave keeps late
