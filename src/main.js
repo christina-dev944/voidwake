@@ -289,13 +289,18 @@ function pickTarget(x,y){
   if(!game.enemies.length){ game.aimTarget=null; return null; }
   let pick;
   if(AIM_MODES[game.aimIdx].id==='highhp'){
-    let best=null, bh=-1, bd=Infinity;
-    for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
-      if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
-    // stickiness (#49): keep the current target unless another is MEANINGFULLY
-    // higher HP (>15%). Equal/near-equal ties no longer flip the aim frame-to-frame.
+    // focus-lock (#49): once locked, stay on the current target until it DIES.
+    // A live-HP hysteresis oscillated because the beam itself drains the target's
+    // HP below a tied enemy's, flipping the aim back and forth — locking until
+    // death is flicker-proof and matches the "commit to the tanky one" intent.
     const cur=game.aimTarget;
-    pick = (cur && cur.hp>0 && game.enemies.indexOf(cur)>=0 && bh <= cur.hp*1.15) ? cur : best;
+    if(cur && cur.hp>0 && game.enemies.indexOf(cur)>=0){ pick=cur; }
+    else {
+      let best=null, bh=-1, bd=Infinity;
+      for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
+        if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
+      pick=best;   // re-pick the highest-HP enemy only when the locked one is gone
+    }
   } else {
     pick = nearestEnemy(x,y);
   }
