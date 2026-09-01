@@ -503,8 +503,11 @@ function update(){
   // stacks regen one after another (Amumu-Q style) until back at max (#51).
   if(p.active && p.charges < (p.active.maxCharges||1)){
     if(--p.activeCd<=0){
+      const maxCh=p.active.maxCharges||1;
       p.charges++;
-      p.activeCd = p.charges < (p.active.maxCharges||1) ? p.active.cooldown : 0;
+      const full=p.charges>=maxCh;
+      full ? sfx.chargeFull() : sfx.chargeRefill();   // subtle per-charge tick, fuller cue when fully recharged (#54)
+      p.activeCd = full ? 0 : p.active.cooldown;
     }
   }
 

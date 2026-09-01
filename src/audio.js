@@ -107,6 +107,10 @@ export const sfx = {
   // on end so you can hear exactly when you're vulnerable again.
   invulnStart(){ tone(480,0.16,{type:'sine',gain:0.09,slideTo:900,attack:0.008}); },
   invulnEnd(){ tone(760,0.14,{type:'sine',gain:0.07,slideTo:340}); },
+  // ability charge refill (#54): a soft, subtle tick per individual charge…
+  chargeRefill(){ tone(660,0.06,{type:'sine',gain:0.04,slideTo:760}); },
+  // …and a fuller, more prominent cue when the last charge fills (fully recharged).
+  chargeFull(){ tone(620,0.12,{type:'triangle',gain:0.1,slideTo:960}); },
   // explosion: bright crack → broadband boom whose filter sweeps down, over a
   // clean SINE sub-thump (deliberately no sawtooth tone, so it reads as a blast,
   // not the sawtooth "hurt" buzz).
