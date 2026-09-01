@@ -802,14 +802,20 @@ function drawRunBoons(px,py,panelW){
 
 // Thin XP progress strip along the very top edge — fills left→right toward the
 // next level, resets on level-up (#38). Unobtrusive; the LVL count lives in the HUD.
-// Prominent boss health bar across the top with phase dividers (#3).
+// Boss health bar as 3 stacked bars (#3): each phase drains one full bar of a lighter
+// red, revealing the next background beneath it. Phase 1 dark-red over red, phase 2
+// red over light-red, phase 3 light-red over black; when the 3rd empties, the boss dies.
 function drawBossBar(){
   const boss=game.enemies.find(e=>e.boss); if(!boss) return;
   const bw=Math.min(560,W*0.6), bh=12, bx=(W-bw)/2, by=30;
-  const frac=clamp(boss.hp/boss.maxhp,0,1);
-  ctx.fillStyle='#181826'; ctx.fillRect(bx,by,bw,bh);
-  ctx.fillStyle=`hsl(${boss.hue},80%,55%)`; ctx.fillRect(bx,by,bw*frac,bh);
-  ctx.fillStyle='#06060b'; for(const t of [1/3,2/3]) ctx.fillRect(bx+bw*t-1,by,2,bh); // phase gates
+  const f=clamp(boss.hp/boss.maxhp,0,1);
+  const DARK='hsl(0,85%,30%)', RED='hsl(0,88%,48%)', LIGHT='hsl(0,80%,70%)', BLACK='#06060b';
+  let bg, fill, stack;
+  if(f>2/3){ bg=RED;   fill=DARK;  stack=(f-2/3)/(1/3); }   // stack 1 draining
+  else if(f>1/3){ bg=LIGHT; fill=RED;   stack=(f-1/3)/(1/3); }   // stack 2 draining
+  else { bg=BLACK; fill=LIGHT; stack=f/(1/3); }            // stack 3 → death at empty
+  ctx.fillStyle=bg;   ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=fill; ctx.fillRect(bx,by,bw*clamp(stack,0,1),bh);
   ctx.strokeStyle='#3a3a5c'; ctx.lineWidth=1.5; ctx.strokeRect(bx,by,bw,bh);
   ctx.textAlign='left'; ctx.font='bold 11px ui-monospace,monospace'; ctx.fillStyle='#e8e8f0';
   ctx.fillText('BOSS', bx, by-5);
