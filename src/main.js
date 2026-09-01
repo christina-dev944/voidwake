@@ -622,7 +622,7 @@ function update(){
   for(let i=game.coneFx.length-1;i>=0;i--){ const f=game.coneFx[i];
     f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.coneFx.splice(i,1); }
   for(let i=game.afterimages.length-1;i>=0;i--){ const a=game.afterimages[i];   // dash trail (#51)
-    a.life-=0.12; if(a.life<=0) game.afterimages.splice(i,1); }
+    a.life-=0.08; if(a.life<=0) game.afterimages.splice(i,1); }
 
   // wave clear
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
@@ -743,10 +743,12 @@ function draw(){
     ctx.restore();
   }
 
-  // dash afterimages under the ship — fading ghost hulls in the class hue (#51)
-  for(const a of game.afterimages){ ctx.globalAlpha=clamp(a.life,0,1)*0.45;
-    ctx.fillStyle=`hsl(${a.hue},85%,62%)`; shipPath(a.x,a.y,a.r); ctx.fill(); }
-  ctx.globalAlpha=1;
+  // dash afterimages under the ship — fading ghost hulls in the class hue (#51).
+  // brighter + glowing so the dash trail reads clearly.
+  for(const a of game.afterimages){ const l=clamp(a.life,0,1);
+    ctx.fillStyle=`hsl(${a.hue},90%,66%)`; ctx.shadowBlur=12; ctx.shadowColor=`hsl(${a.hue},90%,66%)`;
+    ctx.globalAlpha=l*0.8; shipPath(a.x,a.y,a.r*(0.7+0.3*l)); ctx.fill(); }
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
 
   // player (hidden during the death hold so the explosion stands alone) (#40)
   const p=game.player;
