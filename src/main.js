@@ -920,11 +920,16 @@ function syncBottomHud(){
     HUD2.statbar.style.visibility='visible';
     if(maxCh>1){                                  // one continuous energy bar split into maxCh segments (#51)
       // total charge = full charges + the fraction of the one currently recharging.
-      const totalFrac=clamp((p.charges + (p.charges>=maxCh?0:(1-p.activeCd/cd)))/maxCh,0,1);
+      const partial=p.charges>=maxCh?0:(1-p.activeCd/cd);
+      const totalFrac=clamp((p.charges+partial)/maxCh,0,1);
       HUD2.statlbl.textContent='[SPACE] '+p.active.name;
       HUD2.statlbl.style.color=p.charges>0?'#7cf7ff':'#8a8aa6';
       HUD2.statfill.style.width=(totalFrac*100)+'%';
-      HUD2.statfill.style.background=p.charges>0?'#7cf7ff':'#4a6fa0';
+      // full charges are bright; the still-recharging partial segment stays dim so
+      // it's clear it isn't ready yet (#51). Boundary is where the full charges end.
+      const bright='#7cf7ff', dim='#3d6d78';
+      const b = totalFrac>0 ? clamp((p.charges/maxCh)/totalFrac,0,1)*100 : 0;
+      HUD2.statfill.style.background=`linear-gradient(90deg, ${bright} 0, ${bright} ${b}%, ${dim} ${b}%, ${dim} 100%)`;
       HUD2.statseg.style.display='block';         // dark divider lines at each segment boundary
       const segs=[]; for(let i=1;i<maxCh;i++){ const pc=i/maxCh*100;
         segs.push(`linear-gradient(90deg,transparent calc(${pc}% - 1px),#0c0c18 calc(${pc}% - 1px),#0c0c18 calc(${pc}% + 1px),transparent calc(${pc}% + 1px))`); }
