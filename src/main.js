@@ -129,7 +129,7 @@ function makeEnemy(hp, wave, boss) {
     return { id:game.eid++, x, y, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift',
       vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:rand(90,150),
       fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
-      atkIdx:0, phase:1 };  // boss attack-scheduler cursor + current phase (#3)
+      atkIdx:0, phase:1, laserCd:220 };  // attack-scheduler cursor + phase + telegraph-laser timer (#3)
   }
   const t = pickEnemyType(wave), d = ENEMY_TYPES[t];
   const HP = Math.max(1, Math.round(hp * d.hpMul));
@@ -250,6 +250,17 @@ function enterBossPhase(e, ph){
   for(let i=game.eBullets.length-1;i>=0;i--) game.eBullets.splice(i,1); // screen-clear on transition
   burst(e.x,e.y,e.hue,44,6); addShake(16); hitStop(6); sfx.bossKill();
   game.novaFx.push({ x:e.x, y:e.y, r:12, max:280, life:1 });
+}
+// Boss telegraphed lasers (#3, reusing #46): the boss doesn't freeze — the hazard
+// origin follows it. The center beam tracks the player; phase 3 adds fixed flankers
+// you must weave between. Beams emanate from the boss and hit on the instant frames.
+function bossLaser(e){
+  const p=game.player, base=Math.atan2(p.y-e.y, p.x-e.x);
+  const n = e.phase>=3 ? 3 : 1;
+  for(let i=0;i<n;i++){ const off=(i-(n-1)/2)*0.5;
+    telegraphLine(e.x, e.y, base+off, { width:6, tele:100, active:10, dmg:16, owner:e.id, track:(i===0) }); }
+  sfx.telegraph();
+  e.laserCd = e.phase>=3 ? 150 : 240;
 }
 
 function nearestEnemy(x,y,exclude) {
@@ -503,7 +514,8 @@ function update(){
       e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4; if(e.x<40||e.x>W-40)e.vx*=-1;
     }
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
-    if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); } // HP-gated phases (#3)
+    if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); // HP-gated phases (#3)
+      if(e.phase>=2 && e.y>=e.targetY){ e.laserCd--; if(e.laserCd<=0) bossLaser(e); } }   // telegraphed lasers from phase 2
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
