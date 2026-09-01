@@ -236,7 +236,7 @@ const BOSS_SEQ = ['spiral','spiral','spiral','aimed','ring','spiral','spiral','s
 function bossAttack(e){
   const pat = BOSS_SEQ[e.atkIdx % BOSS_SEQ.length]; e.atkIdx++;
   e.pattern = pat; enemyShoot(e);
-  let gap = pat==='ring' ? 62 : pat==='spread' ? 34 : pat==='aimed' ? 22 : 8; // rings need breathing room
+  let gap = pat==='ring' ? 44 : pat==='spread' ? 22 : pat==='aimed' ? 14 : 5; // rings need breathing room
   gap *= e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;                            // more relentless each phase (#3)
   e.fireCd = Math.max(4, Math.round(gap));
 }
