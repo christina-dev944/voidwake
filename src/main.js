@@ -885,6 +885,7 @@ const HUD2 = {
   statlbl:document.getElementById('statlbl'),
   statbar:document.getElementById('statbar'),
   statfill:document.getElementById('statfill'),
+  statseg:document.getElementById('statseg'),
 };
 function syncBottomHud(){
   const p=game.player;
@@ -895,16 +896,21 @@ function syncBottomHud(){
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
   HUD2.hptext.textContent=Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp;
+  HUD2.statseg.style.display='none';              // only the multi-charge bar shows segment dividers
   if(p.active){                                   // active-ability charges/cooldown (#39, #51)
     const maxCh=p.active.maxCharges||1, cd=p.active.cooldown||1;
     HUD2.statbar.style.visibility='visible';
-    if(maxCh>1){                                  // multi-charge active: pips + next-charge recharge (#51)
-      const full=p.charges>=maxCh, prog=full?1:clamp(1-p.activeCd/cd,0,1);
-      const pips='●'.repeat(p.charges)+'○'.repeat(maxCh-p.charges);   // filled = ready charges
-      HUD2.statlbl.textContent='[SPACE] '+p.active.name+' '+pips;
+    if(maxCh>1){                                  // one continuous energy bar split into maxCh segments (#51)
+      // total charge = full charges + the fraction of the one currently recharging.
+      const totalFrac=clamp((p.charges + (p.charges>=maxCh?0:(1-p.activeCd/cd)))/maxCh,0,1);
+      HUD2.statlbl.textContent='[SPACE] '+p.active.name;
       HUD2.statlbl.style.color=p.charges>0?'#7cf7ff':'#8a8aa6';
-      HUD2.statfill.style.width=(prog*100)+'%';
+      HUD2.statfill.style.width=(totalFrac*100)+'%';
       HUD2.statfill.style.background=p.charges>0?'#7cf7ff':'#4a6fa0';
+      HUD2.statseg.style.display='block';         // dark divider lines at each segment boundary
+      const segs=[]; for(let i=1;i<maxCh;i++){ const pc=i/maxCh*100;
+        segs.push(`linear-gradient(90deg,transparent calc(${pc}% - 1px),#0c0c18 calc(${pc}% - 1px),#0c0c18 calc(${pc}% + 1px),transparent calc(${pc}% + 1px))`); }
+      HUD2.statseg.style.backgroundImage=segs.join(',');
     } else {                                      // single-charge active: ready / countdown
       const ready=p.activeCd<=0, prog=clamp(1-p.activeCd/cd,0,1);
       HUD2.statlbl.textContent='[SPACE] '+p.active.name+(ready?' READY':' '+Math.ceil(p.activeCd/60)+'s');

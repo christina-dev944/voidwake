@@ -37,8 +37,10 @@
   /* the laser label is a fixed string ('ENERGY') so the energy bar never shifts
      when the state flips (#50); min-width keeps it from reflowing either way */
   #statlbl { display:inline-block; min-width:52px; white-space:nowrap; }
-  #statbar { width:150px; height:8px; background:#26264a; border-radius:3px; overflow:hidden; }
+  #statbar { position:relative; width:150px; height:8px; background:#26264a; border-radius:3px; overflow:hidden; }
   #statfill { height:100%; width:0; background:#7cf7ff; }
+  /* overlay that divides the bar into charge segments for multi-charge actives (#51) */
+  #statseg { position:absolute; inset:0; display:none; pointer-events:none; }
   .hint { font-size:11px; color:#5c5c78; }
   .hint a { color:#8a5cff; text-decoration:none; }
   .hint a:hover { text-decoration:underline; }
@@ -55,7 +57,7 @@
     <canvas id="c"></canvas>
     <div id="hud2">
       <div id="hpbar"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
-      <div id="statwrap"><span id="statlbl"></span><div id="statbar"><div id="statfill"></div></div></div>
+      <div id="statwrap"><span id="statlbl"></span><div id="statbar"><div id="statfill"></div><div id="statseg"></div></div></div>
     </div>
   </div>
   <aside id="side">
