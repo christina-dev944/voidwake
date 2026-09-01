@@ -42,7 +42,7 @@ const game = {
   state: 'title', // title | classSelect | playing | upgrade | dying | dead
   wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], hazards: [], eid: 0,
+  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], afterimages: [], hazards: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
@@ -81,7 +81,7 @@ function newPlayer(cls=DEFAULT_CLASS) {
     hp: BASE.maxhp, maxhp: BASE.maxhp, speed: BASE.speed, focusSpeed: BASE.focusSpeed,
     lvl: 1, xp: 0, xpNext: 8,
     fireRate: BASE.fireRate, fireCd: 0, dmg: BASE.dmg, bulletSpeed: BASE.bulletSpeed, shots: 1, spread: 0,
-    pierce: 0, crit: 0.05, life: 0, iframes: 0,
+    pierce: 0, crit: 0.05, life: 0, iframes: 0, boostT: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
     // active clone (so upgrades don't mutate the class def). `charges` starts full;
     // `activeCd` recharges the next charge when below max. maxCharges defaults to 1 (#51).
@@ -332,7 +332,7 @@ function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const 
 
 // ---- flow ----
 function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.hazards=[];game.upgrades=[];
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
 // active-ability framework: trigger key fires the class's active if a charge is
@@ -350,6 +350,9 @@ function applyActive(a, p){
 // Reaper Scythe (#42): a sector blast aimed at the current target — clears enemy
 // bullets and damages enemies inside the wedge (reach + central angle), where Nova
 // hits a full ring. `angle` is the full central angle; half of it is the arc each side.
+// Scythe cast also empowers the caster (#51): a brief window of i-frames plus a
+// short speed dash (with an afterimage trail), so casting is an aggressive reposition.
+const SCYTHE_INVULN=26, SCYTHE_BOOST_T=16, SCYTHE_BOOST_MULT=2.3;   // ~0.43s i-frames, ~0.27s dash
 function coneBlast(p, range, angle, dmg){
   const target=pickTarget(p.x,p.y);
   const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
@@ -363,6 +366,7 @@ function coneBlast(p, range, angle, dmg){
   for(const e of game.enemies){ if(inWedge(e.x,e.y,e.r)) e.hp-=dmg; } // death handled in enemy loop
   burst(p.x,p.y,hue,24,5);
   addShake(13); hitStop(12); sfx.nova();   // beefier hit-stop for a weightier Scythe swing (#51)
+  p.iframes=Math.max(p.iframes,SCYTHE_INVULN); p.boostT=SCYTHE_BOOST_T;   // i-frames + dash on cast (#51)
   game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
 }
 // Nova: wipe enemy bullets near the player and damage enemies in the radius.
@@ -407,7 +411,7 @@ function telegraphLine(x,y,ang,{width=5,tele=90,active:act=9,dmg=14,hue=0,owner=
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
 function quitRun(){ game.paused=false; game.state='title'; game.player=null;
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.hazards=[]; }
+  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[]; }
 
 function gainXp(p, amt){
   p.xp+=amt;
@@ -501,12 +505,15 @@ function update(){
 
   // movement
   const focus = keys['shift'];
-  const sp = focus? p.focusSpeed : p.speed;
+  let sp = focus? p.focusSpeed : p.speed;
+  if(p.boostT>0) sp*=SCYTHE_BOOST_MULT;           // Scythe dash (#51)
   let dx=0,dy=0;
   if(keys['a']||keys['arrowleft'])dx--; if(keys['d']||keys['arrowright'])dx++;
   if(keys['w']||keys['arrowup'])dy--; if(keys['s']||keys['arrowdown'])dy++;
   if(dx&&dy){dx*=0.707;dy*=0.707;}
   p.x=clamp(p.x+dx*sp,p.r,W-p.r); p.y=clamp(p.y+dy*sp,p.r,H-p.r);
+  if(p.boostT>0){ p.boostT--;                     // leave a fading afterimage trail while dashing (#51)
+    game.afterimages.push({ x:p.x, y:p.y, r:p.r, hue:(p.cls&&p.cls.hue)||18, life:1 }); }
   const hitR = focus? p.hitR : p.hitR+3;
 
   // fire — laser is a continuous beam, everything else fires discrete bullets
@@ -614,6 +621,8 @@ function update(){
     f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.novaFx.splice(i,1); }
   for(let i=game.coneFx.length-1;i>=0;i--){ const f=game.coneFx[i];
     f.r+=(f.max-f.r)*0.25; f.life-=0.05; if(f.life<=0) game.coneFx.splice(i,1); }
+  for(let i=game.afterimages.length-1;i>=0;i--){ const a=game.afterimages[i];   // dash trail (#51)
+    a.life-=0.12; if(a.life<=0) game.afterimages.splice(i,1); }
 
   // wave clear
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
@@ -625,6 +634,10 @@ function update(){
 }
 
 // ---- render ----
+// the player ship hull (also reused for dash afterimages, #51). Builds the path only —
+// caller sets style then fills.
+function shipPath(x,y,r){ ctx.beginPath();
+  ctx.moveTo(x,y-r); ctx.lineTo(x-r*0.8,y+r*0.7); ctx.lineTo(x,y+r*0.3); ctx.lineTo(x+r*0.8,y+r*0.7); ctx.closePath(); }
 function draw(){
   syncBottomHud();   // keep the DOM HUD strip below the canvas in sync (#41)
   ctx.clearRect(0,0,W,H);
@@ -730,6 +743,11 @@ function draw(){
     ctx.restore();
   }
 
+  // dash afterimages under the ship — fading ghost hulls in the class hue (#51)
+  for(const a of game.afterimages){ ctx.globalAlpha=clamp(a.life,0,1)*0.45;
+    ctx.fillStyle=`hsl(${a.hue},85%,62%)`; shipPath(a.x,a.y,a.r); ctx.fill(); }
+  ctx.globalAlpha=1;
+
   // player (hidden during the death hold so the explosion stands alone) (#40)
   const p=game.player;
   if(p && game.state!=='dying'){
@@ -737,9 +755,7 @@ function draw(){
     if(!blink){
       const pc=`hsl(${(p.cls&&p.cls.hue)||265},70%,62%)`;
       ctx.fillStyle=pc; ctx.shadowBlur=14; ctx.shadowColor=pc;
-      ctx.beginPath();
-      ctx.moveTo(p.x,p.y-p.r); ctx.lineTo(p.x-p.r*0.8,p.y+p.r*0.7);
-      ctx.lineTo(p.x,p.y+p.r*0.3); ctx.lineTo(p.x+p.r*0.8,p.y+p.r*0.7); ctx.closePath(); ctx.fill();
+      shipPath(p.x,p.y,p.r); ctx.fill();
       ctx.shadowBlur=0;
     }
     // hitbox dot when focusing
