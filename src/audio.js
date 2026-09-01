@@ -103,6 +103,10 @@ export const sfx = {
     if(live) b.osc.frequency.setTargetAtTime(depleted?150:170, t, 0.04);
   },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
+  // invulnerability cues (#51): rising "shield up" on start, descending "shield down"
+  // on end so you can hear exactly when you're vulnerable again.
+  invulnStart(){ tone(480,0.16,{type:'sine',gain:0.09,slideTo:900,attack:0.008}); },
+  invulnEnd(){ tone(760,0.14,{type:'sine',gain:0.07,slideTo:340}); },
   // explosion: bright crack → broadband boom whose filter sweeps down, over a
   // clean SINE sub-thump (deliberately no sawtooth tone, so it reads as a blast,
   // not the sawtooth "hurt" buzz).

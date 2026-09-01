@@ -494,6 +494,11 @@ function update(){
   const p = game.player;
   if(!p) return;
   if(p.iframes>0) p.iframes--;
+  // sound cue on the invuln window opening/closing (#51)
+  const isInv=p.iframes>0;
+  if(isInv && !p._invPrev) sfx.invulnStart();
+  else if(!isInv && p._invPrev) sfx.invulnEnd();
+  p._invPrev=isInv;
   // recharge the next active charge; on full recharge, roll into the next one so
   // stacks regen one after another (Amumu-Q style) until back at max (#51).
   if(p.active && p.charges < (p.active.maxCharges||1)){
