@@ -14,7 +14,7 @@ export const UPGRADES = [
   // --- laser (Lancer) — tag marks a class-exclusive boon for the UI badge ---
   { id:'beam',   for:'laser', tag:'LANCER', name:'Beam Amplifier', desc:'+30% beam damage',        apply:p=>p.beamDps*=1.3 },
   { id:'wide',   for:'laser', tag:'LANCER', name:'Wide Lens',      desc:'+6 beam width',           apply:p=>p.beamWidth+=6 },
-  { id:'coolant',for:'laser', tag:'LANCER', name:'Coolant',        desc:'-30% heat buildup',       apply:p=>p.heatRate*=0.7 },
+  { id:'coolant',for:'laser', tag:'LANCER', name:'Efficiency',     desc:'-30% energy drain',       apply:p=>p.heatRate*=0.7 },
   { id:'vent',   for:'laser', tag:'LANCER', name:'Heat Sink',      desc:'+40% cooldown recovery',  apply:p=>p.coolRate*=1.4 },
   { id:'capac',  for:'laser', tag:'LANCER', name:'Capacitor',      desc:'+25% energy capacity',    apply:p=>p.heatMax*=1.25 },
 
