@@ -234,7 +234,7 @@ function enemyShoot(e, pattern=e.pattern, spdMul=1) {
 // sharp track (aimed/spiral) that snipes, layered over a SLOW, space-filling track
 // (rings/spreads) you weave through. Each has its own rotation, cadence and speed.
 // FAST_SPD / SLOW_SPD are the easy knobs to play with the speed contrast.
-const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.35;
+const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.15;
 const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5;
 const phaseMul = e => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
 function bossAttackFast(e){
