@@ -643,9 +643,9 @@ function draw(){
   for(const e of game.enemies){ const c=`hsl(${e.hue},70%,${e.boss?60:55}%)`;
     ctx.fillStyle=c; ctx.strokeStyle='#000'; ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.fill();ctx.stroke();
-    // hp bar
-    const w=e.r*2, h=e.boss?5:3; ctx.fillStyle='#000'; ctx.fillRect(e.x-w/2,e.y-e.r-8,w,h);
-    ctx.fillStyle=c; ctx.fillRect(e.x-w/2,e.y-e.r-8,w*clamp(e.hp/e.maxhp,0,1),h); }
+    // per-body hp bar (bosses use the big top-of-screen bar instead, #3)
+    if(!e.boss){ const w=e.r*2; ctx.fillStyle='#000'; ctx.fillRect(e.x-w/2,e.y-e.r-8,w,3);
+      ctx.fillStyle=c; ctx.fillRect(e.x-w/2,e.y-e.r-8,w*clamp(e.hp/e.maxhp,0,1),3); } }
 
   // enemy bullets
   for(const b of game.eBullets){ ctx.fillStyle=`hsl(${b.hue},95%,68%)`;
@@ -712,6 +712,7 @@ function draw(){
     ctx.fillText('[T] AIM: '+AIM_MODES[game.aimIdx].label, W-14, 20);
     if(isMuted()){ ctx.fillStyle='#565879'; ctx.fillText('[M] MUTED', W-14, 36); }   // audio muted (#7)
     ctx.textAlign='left';
+    drawBossBar();
   }
 
   if(game.state==='upgrade') drawUpgrade();
@@ -803,6 +804,20 @@ function drawRunBoons(px,py,panelW){
 
 // Thin XP progress strip along the very top edge — fills left→right toward the
 // next level, resets on level-up (#38). Unobtrusive; the LVL count lives in the HUD.
+// Prominent boss health bar across the top with phase dividers (#3).
+function drawBossBar(){
+  const boss=game.enemies.find(e=>e.boss); if(!boss) return;
+  const bw=Math.min(560,W*0.6), bh=12, bx=(W-bw)/2, by=30;
+  const frac=clamp(boss.hp/boss.maxhp,0,1);
+  ctx.fillStyle='#181826'; ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=`hsl(${boss.hue},80%,55%)`; ctx.fillRect(bx,by,bw*frac,bh);
+  ctx.fillStyle='#06060b'; for(const t of [1/3,2/3]) ctx.fillRect(bx+bw*t-1,by,2,bh); // phase gates
+  ctx.strokeStyle='#3a3a5c'; ctx.lineWidth=1.5; ctx.strokeRect(bx,by,bw,bh);
+  ctx.textAlign='left'; ctx.font='bold 11px ui-monospace,monospace'; ctx.fillStyle='#e8e8f0';
+  ctx.fillText('BOSS', bx, by-5);
+  ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText('PHASE '+boss.phase+'/3', bx+bw, by-5);
+  ctx.textAlign='left';
+}
 function drawXpBar(p){
   const frac=clamp(p.xp/p.xpNext,0,1);
   ctx.fillStyle='#181830'; ctx.fillRect(0,0,W,4);
