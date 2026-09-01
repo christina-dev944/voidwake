@@ -124,8 +124,8 @@ function pickEnemyType(wave){
 function makeEnemy(hp, wave, boss) {
   const x = rand(60, W-60), y = rand(-140,-40);
   if(boss){
-    return { id:game.eid++, x, y, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift',
-      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:rand(90,150),
+    return { id:game.eid++, x:W/2, y:-100, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift', // enter from top-center (#3)
+      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130,
       fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
       atkIdx:0, phase:1, laserCd:220 };  // attack-scheduler cursor + phase + telegraph-laser timer (#3)
   }
