@@ -47,6 +47,7 @@ const game = {
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
   aimTarget: null,      // currently-locked auto-aim target — gives HIGH-HP mode stickiness (#49)
+  aimLockTime: 0,       // game.time when the current HIGH-HP target was locked (dwell timer, #49)
   pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
@@ -284,22 +285,24 @@ function nearestEnemy(x,y,exclude) {
 // auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
 // picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
 const AIM_MODES = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
+const AIM_DWELL = 30;  // frames (~0.5s @60fps) a HIGH-HP target is held before re-evaluating (#49)
 // choose the target for the current aim mode; ties fall back to nearest.
 function pickTarget(x,y){
   if(!game.enemies.length){ game.aimTarget=null; return null; }
   let pick;
   if(AIM_MODES[game.aimIdx].id==='highhp'){
-    // focus-lock (#49): once locked, stay on the current target until it DIES.
-    // A live-HP hysteresis oscillated because the beam itself drains the target's
-    // HP below a tied enemy's, flipping the aim back and forth — locking until
-    // death is flicker-proof and matches the "commit to the tanky one" intent.
-    const cur=game.aimTarget;
-    if(cur && cur.hp>0 && game.enemies.indexOf(cur)>=0){ pick=cur; }
+    // dwell timer (#49): commit to the current target for AIM_DWELL frames before
+    // re-evaluating highest HP. Re-picking every frame flickered because the beam
+    // drains its own target below a tied enemy each tick; a dwell bounds swaps to
+    // ~twice a second so it reads smooth while still tracking the biggest enemy.
+    // (A dead/despawned target re-picks immediately — no need to wait out the dwell.)
+    const cur=game.aimTarget, alive = cur && cur.hp>0 && game.enemies.indexOf(cur)>=0;
+    if(alive && game.time - game.aimLockTime < AIM_DWELL){ pick=cur; }
     else {
       let best=null, bh=-1, bd=Infinity;
       for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
         if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
-      pick=best;   // re-pick the highest-HP enemy only when the locked one is gone
+      pick=best; game.aimLockTime=game.time;   // re-commit and restart the dwell window
     }
   } else {
     pick = nearestEnemy(x,y);
