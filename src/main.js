@@ -238,7 +238,18 @@ const BOSS_SEQ = ['spiral','spiral','spiral','aimed','ring','spiral','spiral','s
 function bossAttack(e){
   const pat = BOSS_SEQ[e.atkIdx % BOSS_SEQ.length]; e.atkIdx++;
   e.pattern = pat; enemyShoot(e);
-  e.fireCd = pat==='ring' ? 62 : pat==='spread' ? 34 : pat==='aimed' ? 22 : 8; // rings need breathing room
+  let gap = pat==='ring' ? 62 : pat==='spread' ? 34 : pat==='aimed' ? 22 : 8; // rings need breathing room
+  gap *= e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;                            // more relentless each phase (#3)
+  e.fireCd = Math.max(4, Math.round(gap));
+}
+// Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
+// menacing tint and restart the attack cycle — a clear "it's getting serious" beat.
+function enterBossPhase(e, ph){
+  e.phase=ph; e.atkIdx=0; e.fireCd=42;                       // brief regroup into the new phase
+  e.hue = ph===2 ? 322 : ph===3 ? 274 : e.hue;
+  for(let i=game.eBullets.length-1;i>=0;i--) game.eBullets.splice(i,1); // screen-clear on transition
+  burst(e.x,e.y,e.hue,44,6); addShake(16); hitStop(6); sfx.bossKill();
+  game.novaFx.push({ x:e.x, y:e.y, r:12, max:280, life:1 });
 }
 
 function nearestEnemy(x,y,exclude) {
@@ -492,6 +503,7 @@ function update(){
       e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4; if(e.x<40||e.x>W-40)e.vx*=-1;
     }
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
+    if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); } // HP-gated phases (#3)
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
