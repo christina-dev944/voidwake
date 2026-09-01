@@ -86,7 +86,7 @@ function newPlayer(cls=DEFAULT_CLASS) {
     active: cls.active ? {...cls.active} : null, activeCd: 0, // clone so upgrades don't mutate the class def
 
     beamDps: cls.beamDps||0, beamWidth: 6, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
-    heat: 0, overheated: false, beam: null,
+    heat: 0, depleted: false, beam: null,
   };
   if (cls.stats) Object.assign(p, cls.stats); // class profile overrides base
   return p;
@@ -188,14 +188,15 @@ function playerShoot(p) {
 }
 
 // Lancer beam: auto-aims the nearest enemy and damages EVERY enemy along the ray
-// each tick (piercing). A heat gauge throttles it — sustained fire overheats and
-// forces a cooldown, so it can't just be held forever.
+// each tick (piercing). An energy gauge throttles it — sustained fire drains the
+// energy to empty and forces a recharge lockout, so it can't be held forever.
+// (Internally still tracked as `heat` rising to heatMax; the HUD shows the inverse.)
 function updateLaser(p){
   const target = pickTarget(p.x,p.y,true);   // laser passes dwell=true for HIGH-HP target stickiness (#49)
-  const firing = !!target && !p.overheated;
+  const firing = !!target && !p.depleted;
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
-    if(p.heat>=p.heatMax) p.overheated = true;
+    if(p.heat>=p.heatMax) p.depleted = true;
     const base = Math.atan2(target.y-p.y, target.x-p.x);
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs=[];
@@ -212,7 +213,7 @@ function updateLaser(p){
   } else {
     p.beam = { active:false, angs:[] };
     p.heat = Math.max(0, p.heat - p.coolRate);
-    if(p.overheated && p.heat<=0) p.overheated = false;
+    if(p.depleted && p.heat<=0) p.depleted = false;
   }
 }
 
@@ -889,15 +890,15 @@ function syncBottomHud(){
     HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
   } else if(p.weapon==='laser'){                   // Lancer energy bar (#50)
     // energy = the inverse of internal heat: full when idle, DRAINS as you fire,
-    // refills when you stop; empty (heat maxed) = the overheat lockout. Label is a
+    // refills when you stop; empty (heat maxed) = the depleted lockout. Label is a
     // fixed string so the bar never shifts when the state flips (#50 point 1).
     const energy=clamp(1 - p.heat/p.heatMax,0,1);
     HUD2.statlbl.textContent='ENERGY';
-    HUD2.statlbl.style.color=p.overheated?'#ff4d6d':'#8a8aa6';
+    HUD2.statlbl.style.color=p.depleted?'#ff4d6d':'#8a8aa6';
     HUD2.statbar.style.visibility='visible';
     HUD2.statfill.style.width=(energy*100)+'%';
     // green (full) → red (empty); solid red during the empty lockout.
-    HUD2.statfill.style.background=p.overheated?'#ff4d6d':`hsl(${energy*120},85%,55%)`;
+    HUD2.statfill.style.background=p.depleted?'#ff4d6d':`hsl(${energy*120},85%,55%)`;
   } else {                                         // no status bar for plain-bullet classes
     HUD2.statlbl.textContent=''; HUD2.statbar.style.visibility='hidden';
   }
@@ -1057,7 +1058,7 @@ function loop(now){
   // pause / death / upgrade — states where the sim, and updateLaser, don't run (#43)
   const p=game.player;
   const beamOn = !game.paused && game.state==='playing' && p && p.weapon==='laser' && p.beam && p.beam.active;
-  sfx.laser(beamOn, p && p.overheated);
+  sfx.laser(beamOn, p && p.depleted);
   draw();
   requestAnimationFrame(loop);
 }

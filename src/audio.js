@@ -91,16 +91,16 @@ export const sfx = {
     tone(80, 0.55,{type:'sine',    gain:0.30,slideTo:34});  // deep sub-thump (sine, NOT sawtooth)
     tone(180,0.5, {type:'triangle',gain:0.14,slideTo:520}); // rising flourish — the distinguishing cue
   },
-  // Hold the beam sound while firing; overheating drops the pitch as a warning growl.
-  laser(on, overheated=false){
+  // Hold the beam sound while firing; energy depletion drops the pitch as a warning growl.
+  laser(on, depleted=false){
     const b = (on && !muted) ? beamEnsure() : beam;   // don't spin up nodes just to silence
     if(!b || !ctx) return;
     const t=ctx.currentTime, live = on && !muted;
     // quieter overall, and the tonal hum kept well under the airy sizzle so the pitch
-    // barely registers; overheat nudges pitch only slightly (was a loud 170→115 drop).
+    // barely registers; depletion nudges pitch only slightly (was a loud 170→115 drop).
     b.oscG.gain.setTargetAtTime(live?0.006:0, t, 0.02);
     b.nG.gain.setTargetAtTime(live?0.011:0, t, 0.02);
-    if(live) b.osc.frequency.setTargetAtTime(overheated?150:170, t, 0.04);
+    if(live) b.osc.frequency.setTargetAtTime(depleted?150:170, t, 0.04);
   },
   levelUp(){ tone(523,0.12,{type:'square',gain:0.11}); setTimeout(()=>tone(784,0.16,{type:'square',gain:0.11}),90); },
   // explosion: bright crack → broadband boom whose filter sweeps down, over a

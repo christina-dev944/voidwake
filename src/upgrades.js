@@ -16,7 +16,7 @@ export const UPGRADES = [
   { id:'wide',   for:'laser', tag:'LANCER', name:'Wide Lens',      desc:'+6 beam width',           apply:p=>p.beamWidth+=6 },
   { id:'coolant',for:'laser', tag:'LANCER', name:'Coolant',        desc:'-30% heat buildup',       apply:p=>p.heatRate*=0.7 },
   { id:'vent',   for:'laser', tag:'LANCER', name:'Heat Sink',      desc:'+40% cooldown recovery',  apply:p=>p.coolRate*=1.4 },
-  { id:'capac',  for:'laser', tag:'LANCER', name:'Capacitor',      desc:'+25% overheat threshold', apply:p=>p.heatMax*=1.25 },
+  { id:'capac',  for:'laser', tag:'LANCER', name:'Capacitor',      desc:'+25% energy capacity',    apply:p=>p.heatMax*=1.25 },
 
   // --- Mage (Nova) — gated on having the Nova active, so only the Mage rolls these ---
   { id:'novarng', for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Radius',   desc:'+35% nova radius',    apply:p=>p.active.radius*=1.35 },
