@@ -127,7 +127,7 @@ function makeEnemy(hp, wave, boss) {
     return { id:game.eid++, x:W/2, y:-100, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift', // enter from top-center (#3)
       vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130,
       fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
-      atkIdx:0, phase:1, laserCd:220 };  // attack-scheduler cursor + phase + telegraph-laser timer (#3)
+      atkIdx:0, atkIdx2:0, fireCd2:70, phase:1, laserCd:220 };  // two attack-track cursors/timers + phase + laser timer (#3)
   }
   const t = pickEnemyType(wave), d = ENEMY_TYPES[t];
   const HP = Math.max(1, Math.round(hp * d.hpMul));
@@ -210,12 +210,13 @@ function updateLaser(p){
   }
 }
 
-function enemyShoot(e) {
+// pattern/spdMul overrides let the boss fire two layers at once at different speeds (#3)
+function enemyShoot(e, pattern=e.pattern, spdMul=1) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
-  const spd = D.bulletSpeed(game.wave) * (e.boss?1.2:1);   // boss bullets fly faster (#3)
+  const spd = D.bulletSpeed(game.wave) * (e.boss?1.2:1) * spdMul;
   const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue:e.hue });
-  switch(e.pattern) {
+  switch(pattern) {
     case 'aimed': {
       push(aim);
       const flank = e.boss ? 2 : D.aimedExtra(game.wave);   // boss fans a wider aimed volley
@@ -229,16 +230,22 @@ function enemyShoot(e) {
   }
 }
 
-// Boss attack scheduler (#3): instead of a monotone spiral, a boss weaves through a
-// sequence of volleys — spinning spiral streams, aimed bursts, spreads and full rings
-// — each with its own recovery gap so the fight breathes. Sets its own next fireCd.
-const BOSS_SEQ = ['spiral','spiral','ring','aimed','spread','spiral','ring','spread','aimed','spiral'];
-function bossAttack(e){
-  const pat = BOSS_SEQ[e.atkIdx % BOSS_SEQ.length]; e.atkIdx++;
-  e.pattern = pat; enemyShoot(e);
-  let gap = pat==='ring' ? 34 : pat==='spread' ? 16 : pat==='aimed' ? 11 : 4; // rings need breathing room
-  gap *= e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;                            // more relentless each phase (#3)
-  e.fireCd = Math.max(4, Math.round(gap));
+// Boss runs TWO simultaneous attack tracks at different bullet speeds (#3): a FAST,
+// sharp track (aimed/spiral) that snipes, layered over a SLOW, space-filling track
+// (rings/spreads) you weave through. Each has its own rotation, cadence and speed.
+// FAST_SPD / SLOW_SPD are the easy knobs to play with the speed contrast.
+const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.35;
+const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5;
+const phaseMul = e => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
+function bossAttackFast(e){
+  const pat = BOSS_FAST_SEQ[e.atkIdx % BOSS_FAST_SEQ.length]; e.atkIdx++;
+  enemyShoot(e, pat, FAST_SPD);
+  e.fireCd = Math.max(3, Math.round((pat==='aimed'?12:4) * phaseMul(e)));
+}
+function bossAttackSlow(e){
+  const pat = BOSS_SLOW_SEQ[e.atkIdx2 % BOSS_SLOW_SEQ.length]; e.atkIdx2++;
+  enemyShoot(e, pat, SLOW_SPD);
+  e.fireCd2 = Math.max(6, Math.round((pat==='ring'?52:26) * phaseMul(e)));
 }
 // Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
 // menacing tint and restart the attack cycle — a clear "it's getting serious" beat.
@@ -513,7 +520,8 @@ function update(){
     }
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); // HP-gated phases (#3)
-      if(e.phase>=2 && e.y>=e.targetY){ e.laserCd--; if(e.laserCd<=0) bossLaser(e); } }   // telegraphed lasers from phase 2
+      if(e.phase>=2 && e.y>=e.targetY){ e.laserCd--; if(e.laserCd<=0) bossLaser(e); }      // telegraphed lasers from phase 2
+      if(e.y>=e.targetY){ e.fireCd2--; if(e.fireCd2<=0) bossAttackSlow(e); } }              // slow track (fast track runs below)
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
@@ -524,7 +532,7 @@ function update(){
           e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
         }
-      } else if(e.boss){ bossAttack(e); }                    // multi-pattern boss scheduler (#3)
+      } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
       else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
