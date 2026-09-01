@@ -46,6 +46,7 @@ const game = {
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
+  aimTarget: null,      // currently-locked auto-aim target — gives HIGH-HP mode stickiness (#49)
   pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
@@ -281,14 +282,21 @@ function nearestEnemy(x,y,exclude) {
 const AIM_MODES = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
 // choose the target for the current aim mode; ties fall back to nearest.
 function pickTarget(x,y){
-  if(!game.enemies.length) return null;
+  if(!game.enemies.length){ game.aimTarget=null; return null; }
+  let pick;
   if(AIM_MODES[game.aimIdx].id==='highhp'){
     let best=null, bh=-1, bd=Infinity;
     for(const e of game.enemies){ const d=dist2(x,y,e.x,e.y);
       if(e.hp>bh || (e.hp===bh && d<bd)){ bh=e.hp; bd=d; best=e; } }
-    return best;
+    // stickiness (#49): keep the current target unless another is MEANINGFULLY
+    // higher HP (>15%). Equal/near-equal ties no longer flip the aim frame-to-frame.
+    const cur=game.aimTarget;
+    pick = (cur && cur.hp>0 && game.enemies.indexOf(cur)>=0 && bh <= cur.hp*1.15) ? cur : best;
+  } else {
+    pick = nearestEnemy(x,y);
   }
-  return nearestEnemy(x,y);
+  game.aimTarget=pick;
+  return pick;
 }
 
 // ---- game feel (#5) ----
