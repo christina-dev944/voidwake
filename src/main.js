@@ -83,7 +83,10 @@ function newPlayer(cls=DEFAULT_CLASS) {
     fireRate: BASE.fireRate, fireCd: 0, dmg: BASE.dmg, bulletSpeed: BASE.bulletSpeed, shots: 1, spread: 0,
     pierce: 0, crit: 0.05, life: 0, iframes: 0,
     cls, weapon: cls.weapon||'bullet', range: cls.range||0,
-    active: cls.active ? {...cls.active} : null, activeCd: 0, // clone so upgrades don't mutate the class def
+    // active clone (so upgrades don't mutate the class def). `charges` starts full;
+    // `activeCd` recharges the next charge when below max. maxCharges defaults to 1 (#51).
+    active: cls.active ? {...cls.active} : null, activeCd: 0,
+    charges: cls.active ? (cls.active.maxCharges||1) : 0,
 
     beamDps: cls.beamDps||0, beamWidth: 6, heatRate: 1.2, coolRate: 1.6, heatMax: 100,
     heat: 0, depleted: false, beam: null,
@@ -332,9 +335,13 @@ function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.
   game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.hazards=[];game.upgrades=[];
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
-// active-ability framework: trigger key fires the class's active if off cooldown.
-function useActive(p){ if(!p||!p.active||p.activeCd>0) return;
-  applyActive(p.active, p); p.activeCd=p.active.cooldown; }
+// active-ability framework: trigger key fires the class's active if a charge is
+// available. Charges regen one after another off a single recharge timer (#51) —
+// spending from full starts the timer; further spends ride the in-progress one.
+function useActive(p){ if(!p||!p.active||p.charges<=0) return;
+  const maxCh=p.active.maxCharges||1, wasFull=p.charges===maxCh;
+  applyActive(p.active, p); p.charges--;
+  if(wasFull) p.activeCd=p.active.cooldown; }
 // map an active's `effect` string to its behavior (keeps classes.js import-free)
 function applyActive(a, p){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
@@ -483,7 +490,14 @@ function update(){
   const p = game.player;
   if(!p) return;
   if(p.iframes>0) p.iframes--;
-  if(p.activeCd>0) p.activeCd--;
+  // recharge the next active charge; on full recharge, roll into the next one so
+  // stacks regen one after another (Amumu-Q style) until back at max (#51).
+  if(p.active && p.charges < (p.active.maxCharges||1)){
+    if(--p.activeCd<=0){
+      p.charges++;
+      p.activeCd = p.charges < (p.active.maxCharges||1) ? p.active.cooldown : 0;
+    }
+  }
 
   // movement
   const focus = keys['shift'];
@@ -881,13 +895,23 @@ function syncBottomHud(){
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
   HUD2.hptext.textContent=Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp;
-  if(p.active){                                   // active-ability cooldown (#39)
-    const ready=p.activeCd<=0, cd=p.active.cooldown||1, prog=clamp(1-p.activeCd/cd,0,1);
-    HUD2.statlbl.textContent='[SPACE] '+p.active.name+(ready?' READY':' '+Math.ceil(p.activeCd/60)+'s');
-    HUD2.statlbl.style.color=ready?'#7cf7ff':'#8a8aa6';
+  if(p.active){                                   // active-ability charges/cooldown (#39, #51)
+    const maxCh=p.active.maxCharges||1, cd=p.active.cooldown||1;
     HUD2.statbar.style.visibility='visible';
-    HUD2.statfill.style.width=(prog*100)+'%';
-    HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
+    if(maxCh>1){                                  // multi-charge active: pips + next-charge recharge (#51)
+      const full=p.charges>=maxCh, prog=full?1:clamp(1-p.activeCd/cd,0,1);
+      const pips='●'.repeat(p.charges)+'○'.repeat(maxCh-p.charges);   // filled = ready charges
+      HUD2.statlbl.textContent='[SPACE] '+p.active.name+' '+pips;
+      HUD2.statlbl.style.color=p.charges>0?'#7cf7ff':'#8a8aa6';
+      HUD2.statfill.style.width=(prog*100)+'%';
+      HUD2.statfill.style.background=p.charges>0?'#7cf7ff':'#4a6fa0';
+    } else {                                      // single-charge active: ready / countdown
+      const ready=p.activeCd<=0, prog=clamp(1-p.activeCd/cd,0,1);
+      HUD2.statlbl.textContent='[SPACE] '+p.active.name+(ready?' READY':' '+Math.ceil(p.activeCd/60)+'s');
+      HUD2.statlbl.style.color=ready?'#7cf7ff':'#8a8aa6';
+      HUD2.statfill.style.width=(prog*100)+'%';
+      HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
+    }
   } else if(p.weapon==='laser'){                   // Lancer energy bar (#50)
     // energy = the inverse of internal heat: full when idle, DRAINS as you fire,
     // refills when you stop; empty (heat maxed) = the depleted lockout. Label is a
