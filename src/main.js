@@ -522,7 +522,7 @@ function update(){
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); // HP-gated phases (#3)
       if(e.phase>=2 && e.y>=e.targetY){ e.laserCd--; if(e.laserCd<=0) bossLaser(e); }      // telegraphed lasers from phase 2
-      if(e.y>=e.targetY){ e.fireCd2--; if(e.fireCd2<=0) bossAttackSlow(e); } }              // slow track (fast track runs below)
+      if(e.y>0){ e.fireCd2--; if(e.fireCd2<=0) bossAttackSlow(e); } }                        // slow track fires from entry, same as the fast track
     e.fireCd--; if(e.fireCd<=0 && e.y>0){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
