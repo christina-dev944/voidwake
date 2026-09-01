@@ -34,6 +34,9 @@
   #hpfill { position:absolute; inset:0 auto 0 0; width:100%; background:#3fb84f; }
   #hptext { position:absolute; left:8px; top:0; line-height:18px; font-weight:bold; color:#f0f0f8; }
   #statwrap { display:flex; align-items:center; gap:8px; }
+  /* the laser label is a fixed string ('ENERGY') so the energy bar never shifts
+     when the state flips (#50); min-width keeps it from reflowing either way */
+  #statlbl { display:inline-block; min-width:52px; white-space:nowrap; }
   #statbar { width:150px; height:8px; background:#26264a; border-radius:3px; overflow:hidden; }
   #statfill { height:100%; width:0; background:#7cf7ff; }
   .hint { font-size:11px; color:#5c5c78; }

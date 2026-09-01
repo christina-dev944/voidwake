@@ -887,13 +887,17 @@ function syncBottomHud(){
     HUD2.statbar.style.visibility='visible';
     HUD2.statfill.style.width=(prog*100)+'%';
     HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
-  } else if(p.weapon==='laser'){                   // Lancer heat gauge
-    const h=clamp(p.heat/p.heatMax,0,1);
-    HUD2.statlbl.textContent=p.overheated?'OVERHEATED':'HEAT';
+  } else if(p.weapon==='laser'){                   // Lancer energy bar (#50)
+    // energy = the inverse of internal heat: full when idle, DRAINS as you fire,
+    // refills when you stop; empty (heat maxed) = the overheat lockout. Label is a
+    // fixed string so the bar never shifts when the state flips (#50 point 1).
+    const energy=clamp(1 - p.heat/p.heatMax,0,1);
+    HUD2.statlbl.textContent='ENERGY';
     HUD2.statlbl.style.color=p.overheated?'#ff4d6d':'#8a8aa6';
     HUD2.statbar.style.visibility='visible';
-    HUD2.statfill.style.width=(h*100)+'%';
-    HUD2.statfill.style.background=p.overheated?'#ff4d6d':`hsl(${190-h*40},85%,58%)`;
+    HUD2.statfill.style.width=(energy*100)+'%';
+    // green (full) → red (empty); solid red during the empty lockout.
+    HUD2.statfill.style.background=p.overheated?'#ff4d6d':`hsl(${energy*120},85%,55%)`;
   } else {                                         // no status bar for plain-bullet classes
     HUD2.statlbl.textContent=''; HUD2.statbar.style.visibility='hidden';
   }
