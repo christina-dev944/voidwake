@@ -352,7 +352,7 @@ function applyActive(a, p){
 // hits a full ring. `angle` is the full central angle; half of it is the arc each side.
 // Scythe cast also empowers the caster (#51): a brief window of i-frames plus a
 // short speed dash (with an afterimage trail), so casting is an aggressive reposition.
-const SCYTHE_INVULN=36, SCYTHE_BOOST_T=18, SCYTHE_BOOST_MULT=2.0;   // 0.6s i-frames, 0.3s dash @2x
+const SCYTHE_INVULN=45, SCYTHE_BOOST_T=18, SCYTHE_BOOST_MULT=2.0;   // 0.75s i-frames, 0.3s dash @2x
 function coneBlast(p, range, angle, dmg){
   const target=pickTarget(p.x,p.y);
   const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
@@ -365,7 +365,7 @@ function coneBlast(p, range, angle, dmg){
     if(inWedge(b.x,b.y)){ burst(b.x,b.y,hue,2,1.6); game.eBullets.splice(i,1); } }
   for(const e of game.enemies){ if(inWedge(e.x,e.y,e.r)) e.hp-=dmg; } // death handled in enemy loop
   burst(p.x,p.y,hue,24,5);
-  addShake(13); hitStop(7); sfx.nova();   // slight hit-stop for weight without stalling the dash (#51)
+  addShake(13); hitStop(5); sfx.nova();   // slight hit-stop for weight without stalling the dash (#51)
   p.iframes=Math.max(p.iframes,SCYTHE_INVULN); p.boostT=SCYTHE_BOOST_T;   // i-frames + dash on cast (#51)
   game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
 }
