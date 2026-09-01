@@ -26,10 +26,10 @@ export function bossHp(wave) {
   return enemyHp(wave) * 70;
 }
 
-// Enemy bullet speed. v0.1's 0.05/wave was nearly flat; 0.12/wave keeps late
-// bullets genuinely hard to dodge, capped at 7.5 so it never becomes unfair.
+// Enemy bullet speed. Lowered across the board (#55) for readability — base
+// 2.2->1.7, ramp 0.12->0.10/wave, cap 7.5->6.5 — while still climbing with wave.
 export function bulletSpeed(wave) {
-  return Math.min(7.5, 2.2 + wave * 0.12);
+  return Math.min(6.5, 1.7 + wave * 0.10);
 }
 
 // Frames between an enemy's shots. Ramps down (more aggressive) with wave, with
