@@ -128,7 +128,8 @@ function makeEnemy(hp, wave, boss) {
   if(boss){
     return { id:game.eid++, x, y, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift',
       vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:rand(90,150),
-      fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1 };
+      fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
+      atkIdx:0, phase:1 };  // boss attack-scheduler cursor + current phase (#3)
   }
   const t = pickEnemyType(wave), d = ENEMY_TYPES[t];
   const HP = Math.max(1, Math.round(hp * d.hpMul));
@@ -228,6 +229,16 @@ function enemyShoot(e) {
     case 'ring': { const k=D.ringCount(game.wave, e.boss); for(let i=0;i<k;i++) push(i/k*TAU); break; }
     case 'spiral': { const arms=e.boss?4:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
   }
+}
+
+// Boss attack scheduler (#3): instead of a monotone spiral, a boss weaves through a
+// sequence of volleys — spinning spiral streams, aimed bursts, spreads and full rings
+// — each with its own recovery gap so the fight breathes. Sets its own next fireCd.
+const BOSS_SEQ = ['spiral','spiral','spiral','aimed','ring','spiral','spiral','spread','aimed'];
+function bossAttack(e){
+  const pat = BOSS_SEQ[e.atkIdx % BOSS_SEQ.length]; e.atkIdx++;
+  e.pattern = pat; enemyShoot(e);
+  e.fireCd = pat==='ring' ? 62 : pat==='spread' ? 34 : pat==='aimed' ? 22 : 8; // rings need breathing room
 }
 
 function nearestEnemy(x,y,exclude) {
@@ -491,7 +502,8 @@ function update(){
           e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
         }
-      } else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
+      } else if(e.boss){ bossAttack(e); }                    // multi-pattern boss scheduler (#3)
+      else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); } else sfx.enemyKill();   // shake/hit-stop on boss (#5), kill SFX (#7)
