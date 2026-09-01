@@ -536,7 +536,7 @@ function update(){
       else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
-      if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); } else sfx.enemyKill();   // shake/hit-stop on boss (#5), kill SFX (#7)
+      if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); game.eBullets.length=0; } else sfx.enemyKill();   // boss death clears the screen of bullets (#3); shake/kill SFX (#5/#7)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
   }
