@@ -51,6 +51,10 @@ const game = {
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.
   pBulletAlpha: 0.25,
+  // the Lancer beam is a bright, always-on line, so its max opacity is capped
+  // BELOW a discrete player bullet's — the ever-present beam sits quieter and
+  // enemy fire stays readable (#48). Core = this; glow = a fraction of it.
+  beamAlpha: 0.16,
 };
 
 // which upgrade categories each weapon draws from (besides 'all')
@@ -689,11 +693,11 @@ function draw(){
     ctx.save(); ctx.shadowBlur=16; ctx.shadowColor=`hsl(${pl.cls.hue},90%,65%)`;
     for(const ang of pl.beam.angs){
       const ex=pl.x+Math.cos(ang)*len, ey=pl.y+Math.sin(ang)*len;
-      // dimmed to game.pBulletAlpha so the beam reads at the same weight as player
-      // bullets and doesn't wash out enemy fire (#45); core kept a touch brighter.
-      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.pBulletAlpha;
+      // capped below a player bullet's opacity so the always-on beam sits quieter
+      // than discrete fire and enemy patterns stay readable (#48). Glow dimmer still.
+      ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.beamAlpha*0.6;
       ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
-      ctx.globalAlpha=Math.min(1,game.pBulletAlpha*1.6); ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
+      ctx.globalAlpha=game.beamAlpha; ctx.lineWidth=coreW; ctx.strokeStyle='#eaffff';
       ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(ex,ey); ctx.stroke();
     }
     ctx.restore();
