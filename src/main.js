@@ -1001,9 +1001,9 @@ function drawUpgrade(){
 // ---- class select ----
 // Carousel: fixed-width cards; the selected index sits centered, others flank it.
 // `classScroll` eases toward `classIdx` (in drawClassSelect) for a smooth slide.
-const CARD_W=350, CARD_GAP=22, CARD_H=340;
+const CARD_W=350, CARD_GAP=22, CARD_H=384;
 function classCardRect(i){
-  return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-170, w:CARD_W, h:CARD_H };
+  return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-CARD_H/2, w:CARD_W, h:CARD_H };
 }
 function chevronRect(dir){ const w=36,h=90; return dir<0 ? {x:10,y:H/2-h/2,w,h} : {x:W-10-w,y:H/2-h/2,w,h}; }
 function inRect(mx,my,r){ return mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h; }
@@ -1041,10 +1041,10 @@ function drawClassSelect(){
     ctx.textAlign='center'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 20px ui-monospace,monospace';
     ctx.fillText((i+1)+'. '+cls.name, cx, r.y+108);
     // description — LEFT-aligned inside the card padding
-    wrapText(cls.desc, r.x+18, r.y+134, r.w-36, 16, '#b4b4d0', 12);
+    wrapText(cls.desc, r.x+18, r.y+136, r.w-36, 18, '#b4b4d0', 14);
     // stats — horizontal bar charts; fixed rows, aligned across all cards
     const padL=r.x+16, labelW=104, valW=54, barX=padL+labelW, barW=r.w-16*2-labelW-valW, barH=8;
-    let sy=r.y+168;
+    let sy=r.y+196;
     for(const b of classStatBars(cls)){
       ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace';
       ctx.fillStyle='#8a8aa6'; ctx.fillText(b.label, padL, sy+8);
@@ -1063,19 +1063,20 @@ function drawClassSelect(){
   // chevrons + position dots (only meaningful with more than one class)
   drawChevron(-1, game.classIdx>0);
   drawChevron(1, game.classIdx<CLASSES.length-1);
-  const dn=CLASSES.length, dgap=16, dy=H/2+192, dx0=W/2-(dn-1)*dgap/2;
+  const cardBottom=H/2+CARD_H/2;
+  const dn=CLASSES.length, dgap=16, dy=cardBottom+22, dx0=W/2-(dn-1)*dgap/2;
   for(let i=0;i<dn;i++){ ctx.beginPath(); ctx.arc(dx0+i*dgap, dy, i===game.classIdx?4:2.5, 0, TAU);
     ctx.fillStyle = i===game.classIdx?'#e8e8f0':'#44465f'; ctx.fill(); }
   // ability-detail panel for the selected class — explains how its active works (#56)
   const selCls=CLASSES[game.classIdx];
   if(selCls.active && selCls.activeDesc){
-    const ph=120, pw=Math.min(700, W-48), px=W/2-pw/2, py=Math.min(H/2+206, H-ph-40), pad=16, hue=selCls.hue;
+    const ph=118, pw=Math.min(700, W-48), px=W/2-pw/2, py=Math.min(dy+16, H-ph-40), pad=16, hue=selCls.hue;
     ctx.fillStyle='rgba(12,12,26,0.92)'; roundRect(px,py,pw,ph,10); ctx.fill();
     ctx.strokeStyle=`hsl(${hue},60%,55%)`; ctx.lineWidth=1.5; roundRect(px,py,pw,ph,10); ctx.stroke();
     const maxCh=selCls.active.maxCharges||1;
-    ctx.textAlign='left'; ctx.font='bold 14px ui-monospace,monospace'; ctx.fillStyle=`hsl(${hue},82%,68%)`;
-    ctx.fillText('◆ '+selCls.active.name.toUpperCase()+(maxCh>1?'   ·   '+maxCh+' CHARGES':''), px+pad, py+26);
-    wrapText(selCls.activeDesc, px+pad, py+48, pw-pad*2, 16, '#c4c4dc', 12);
+    ctx.textAlign='left'; ctx.font='bold 15px ui-monospace,monospace'; ctx.fillStyle=`hsl(${hue},82%,68%)`;
+    ctx.fillText('◆ '+selCls.active.name.toUpperCase()+(maxCh>1?'   ·   '+maxCh+' CHARGES':''), px+pad, py+28);
+    wrapText(selCls.activeDesc, px+pad, py+52, pw-pad*2, 18, '#c4c4dc', 14);
     ctx.textAlign='left';
   }
   frameFooter();
