@@ -1105,3 +1105,9 @@ function loop(now){
 }
 addEventListener('resize', resize); resize();
 requestAnimationFrame(loop);
+
+// Test seam: expose the live game object only when a harness opts in via a global
+// flag. The real page never sets it, so this stays inert (and out of the way) in
+// production; the headless smoke test flips it on to assert the sim advances.
+const dbg = typeof window !== 'undefined' ? /** @type {any} */ (window) : null;
+if (dbg && dbg.__VOIDWAKE_DEBUG) dbg.__voidwake = { game };
