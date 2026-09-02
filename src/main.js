@@ -225,7 +225,7 @@ function updateLaser(p){
 function enemyShoot(e, pattern=e.pattern, spdMul=1, hue=e.hue) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
-  const spd = D.bulletSpeed(game.wave) * (e.boss?1.2:1) * spdMul;
+  const spd = D.bulletSpeed(game.wave) * (e.boss?0.9:1) * spdMul;   // boss bullets slowed (#55): was 1.2, now below normal so its dense patterns stay readable for a dive-in
   const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
   switch(pattern) {
     case 'aimed': {
