@@ -8,7 +8,7 @@ try { muted = localStorage.getItem('voidwake.muted')==='1'; } catch {}
 
 function ensure(){
   if(ctx) return ctx;
-  const AC = window.AudioContext || window.webkitAudioContext;
+  const AC = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
   if(!AC) return null;
   ctx = new AC();
   master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);

@@ -4,7 +4,8 @@ import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from '.
 import * as D from './difficulty.js';
 import { sfx, resumeAudio, toggleMute, isMuted } from './audio.js';
 
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const cv = /** @type {HTMLCanvasElement} */ (document.getElementById('c'));
+const ctx = /** @type {CanvasRenderingContext2D} */ (cv.getContext('2d'));
 // Responsive playfield: the canvas fills the viewport (square, capped), and the
 // backing store scales with devicePixelRatio so it stays crisp at any browser zoom.
 // W/H are the game-unit size (CSS px); drawing is done in game units via setTransform.
@@ -636,9 +637,9 @@ function update(){
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
 
   // hud
-  document.getElementById('h-wave').textContent=game.wave;
-  document.getElementById('h-lvl').textContent=p.lvl;
-  document.getElementById('h-score').textContent=game.score;
+  document.getElementById('h-wave').textContent=String(game.wave);
+  document.getElementById('h-lvl').textContent=String(p.lvl);
+  document.getElementById('h-score').textContent=String(game.score);
 }
 
 // ---- render ----
