@@ -3,6 +3,7 @@ import { UPGRADES } from './upgrades.js';
 import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from './classes.js';
 import * as D from './difficulty.js';
 import { sfx, resumeAudio, toggleMute, isMuted } from './audio.js';
+import { game, WEAPON_UPGRADES, best, recordBest, UP_NAME } from './state.js';
 
 const cv = /** @type {HTMLCanvasElement} */ (document.getElementById('c'));
 const ctx = /** @type {CanvasRenderingContext2D} */ (cv.getContext('2d'));
@@ -37,44 +38,6 @@ addEventListener('keydown', e => {
   if (k0==='m') toggleMute();   // mute toggle (#7)
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-
-// ---- game state ----
-const game = {
-  state: 'title', // title | classSelect | playing | upgrade | dying | dead
-  wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
-  player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], afterimages: [], hazards: [], eid: 0,
-  cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
-  shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
-  aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
-  aimTarget: null,      // currently-locked auto-aim target — gives HIGH-HP mode stickiness (#49)
-  aimLockTime: 0,       // game.time when the current HIGH-HP target was locked (dwell timer, #49)
-  pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
-  // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
-  // a settings slider will drive this once the settings menu (#28) lands.
-  pBulletAlpha: 0.25,
-  // the Lancer beam is a bright, always-on line, so its max opacity is capped
-  // BELOW a discrete player bullet's — the ever-present beam sits quieter and
-  // enemy fire stays readable (#48). Core = this; glow = a fraction of it.
-  beamAlpha: 0.16,
-};
-
-// which upgrade categories each weapon draws from (besides 'all')
-const WEAPON_UPGRADES = { bullet:['bullet'], homing:['bullet'], laser:['laser'] };
-
-// persistent best run across sessions (#8) — best wave and best score, each kept
-// independently so a long run and a high-scoring run both leave their mark.
-const BEST_KEY='voidwake.best';
-function loadBest(){ try{ const b=JSON.parse(localStorage.getItem(BEST_KEY));
-  if(b && typeof b.wave==='number' && typeof b.score==='number') return b; }catch{} return {wave:0,score:0}; }
-let best=loadBest();
-function recordBest(){ let changed=false;
-  if(game.wave>best.wave){ best.wave=game.wave; changed=true; }
-  if(game.score>best.score){ best.score=game.score; changed=true; }
-  if(changed){ try{ localStorage.setItem(BEST_KEY, JSON.stringify(best)); }catch{} } }
-
-// id → display name, for showing the run's acquired boons in the pause menu (#31)
-const UP_NAME = Object.fromEntries(UPGRADES.map(u=>[u.id,u.name]));
 
 function newPlayer(cls=DEFAULT_CLASS) {
   const p = {
