@@ -18,7 +18,9 @@ addEventListener('keydown', e => {
   resumeAudio();   // first gesture unlocks WebAudio (#7)
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
-  if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)) game.paused = !game.paused;
+  if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
+    // restore a normal cursor for the pause menu; hide it again for manual aim on resume (#11)
+    cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'none' : 'default'; }
   if (k0==='m') toggleMute();   // mute toggle (#7)
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -37,7 +39,7 @@ addEventListener('keydown', e=>{
   }
   if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
   if(game.state==='playing' && !game.paused && k==='t'){ game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle aim mode (#35); MANUAL = aim at cursor (#11)
-    cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }
+    cv.style.cursor = manualAim() ? 'none' : 'default'; }   // hide OS cursor in manual — the drawn reticle is the pointer
 });
 function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
@@ -52,14 +54,18 @@ function upgradeAt(mx: number,my: number){ for(let i=0;i<game.upgradeChoices.len
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
   const [mx,my]=canvasXY(e);
-  game.mouseX=mx; game.mouseY=my;                    // keep the game-unit cursor current for MANUAL aim (#11)
   if(game.paused){                                   // hover-highlight pause buttons (#36)
-    const b=pauseButtons();
+    const b=pauseButtons();                          // don't move the manual aim while paused (#11)
     game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.quit)?'quit':null;
     cv.style.cursor = game.pauseHover?'pointer':'default'; return;
   }
   if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
-  if(game.state!=='classSelect'){ cv.style.cursor = (game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; return; }
+  if(game.state!=='classSelect'){
+    if(game.state==='playing'){ game.mouseX=mx; game.mouseY=my;   // track the game-unit cursor for MANUAL aim (#11)
+      cv.style.cursor = manualAim() ? 'none' : 'default'; }       // hide OS cursor so it doesn't double up with the reticle
+    else cv.style.cursor='default';
+    return;
+  }
   game.hoverIdx=classAt(mx,my);
   const overChevron = (game.classIdx>0 && inRect(mx,my,chevronRect(-1))) ||
                       (game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1)));

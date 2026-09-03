@@ -160,7 +160,8 @@ export function draw(){
     ctx.textAlign='left';
     drawBossBar();
     // MANUAL aim (#11): crosshair reticle at the cursor so the exact aim point is clear
-    if(manualAim() && game.state==='playing') drawReticle(game.mouseX, game.mouseY, game.player);
+    // (not while paused — the reticle shouldn't track the cursor over the pause menu)
+    if(manualAim() && game.state==='playing' && !game.paused) drawReticle(game.mouseX, game.mouseY, game.player);
   }
 
   if(game.state==='upgrade') drawUpgrade();
