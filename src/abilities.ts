@@ -1,0 +1,54 @@
+// abilities.ts — active abilities: the charge/cooldown framework and the two blast
+// shapes it maps to (Nova ring, Reaper Scythe cone). Kept import-free of classes.js
+// by mapping an active's `effect` string to behavior here.
+import { dist2 } from './util.js';
+import { game } from './state.js';
+import { sfx } from './audio.js';
+import { addShake, hitStop, burst } from './effects.js';
+import { pickTarget } from './targeting.js';
+
+// active-ability framework: trigger key fires the class's active if a charge is
+// available. Charges regen one after another off a single recharge timer (#51) —
+// spending from full starts the timer; further spends ride the in-progress one.
+export function useActive(p){ if(!p||!p.active||p.charges<=0) return;
+  const maxCh=p.active.maxCharges||1, wasFull=p.charges===maxCh;
+  applyActive(p.active, p); p.charges--;
+  if(wasFull) p.activeCd=p.active.cooldown; }
+// map an active's `effect` string to its behavior (keeps classes.js import-free)
+function applyActive(a, p){
+  if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
+  else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
+}
+// Reaper Scythe (#42): a sector blast aimed at the current target — clears enemy
+// bullets and damages enemies inside the wedge (reach + central angle), where Nova
+// hits a full ring. `angle` is the full central angle; half of it is the arc each side.
+// Scythe cast also empowers the caster (#51): a brief window of i-frames plus a
+// short speed dash (with an afterimage trail), so casting is an aggressive reposition.
+const SCYTHE_INVULN=45, SCYTHE_BOOST_T=18;
+export const SCYTHE_BOOST_MULT=2.0;   // 0.75s i-frames, 0.3s dash @2x (dash mult read by the sim)
+function coneBlast(p, range, angle, dmg){
+  const target=pickTarget(p.x,p.y);
+  const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
+  const half=angle/2, hue=(p.cls&&p.cls.hue)||18;
+  const inWedge=(x,y,pad=0)=>{ const dx=x-p.x, dy=y-p.y, d=Math.hypot(dx,dy);
+    if(d>range+pad) return false; if(d<8) return true;                  // point-blank always caught
+    let da=Math.atan2(dy,dx)-aim; da=Math.atan2(Math.sin(da),Math.cos(da)); // wrap to [-PI,PI]
+    return Math.abs(da)<=half; };
+  for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
+    if(inWedge(b.x,b.y)){ burst(b.x,b.y,hue,2,1.6); game.eBullets.splice(i,1); } }
+  for(const e of game.enemies){ if(inWedge(e.x,e.y,e.r)) e.hp-=dmg; } // death handled in enemy loop
+  burst(p.x,p.y,hue,24,5);
+  addShake(13); hitStop(5); sfx.nova();   // slight hit-stop for weight without stalling the dash (#51)
+  p.iframes=Math.max(p.iframes,SCYTHE_INVULN); p.boostT=SCYTHE_BOOST_T;   // i-frames + dash on cast (#51)
+  game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
+}
+// Nova: wipe enemy bullets near the player and damage enemies in the radius.
+function novaBlast(p, radius, dmg){
+  const r2=radius*radius;
+  for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
+    if(dist2(b.x,b.y,p.x,p.y)<=r2){ burst(b.x,b.y,285,2,1.6); game.eBullets.splice(i,1); } }
+  for(const e of game.enemies){ if(dist2(e.x,e.y,p.x,p.y)<=(radius+e.r)**2) e.hp-=dmg; } // death handled in enemy loop
+  burst(p.x,p.y,285,32,5);
+  addShake(11); hitStop(5); sfx.nova();   // nova lands with a shockwave (#5)
+  game.novaFx.push({ x:p.x, y:p.y, r:12, max:radius, life:1 });
+}
