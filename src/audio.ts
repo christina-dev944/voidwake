@@ -3,7 +3,7 @@
 // block audio before that). Every sound is synthesized from oscillators and
 // short noise bursts, so the game ships zero binary audio.
 
-let ctx=null, master=null, muted=false;
+let ctx: AudioContext | null = null, master: GainNode | null = null, muted = false;
 try { muted = localStorage.getItem('voidwake.muted')==='1'; } catch {}
 
 function ensure(){
@@ -21,7 +21,7 @@ export function toggleMute(){ muted=!muted; try{ localStorage.setItem('voidwake.
 export function isMuted(){ return muted; }
 
 // a pitched blip with a quick attack + exponential decay; optional pitch slide
-function tone(freq, dur, {type='triangle', gain=0.2, slideTo=null, attack=0.005}={}){
+function tone(freq: number, dur: number, {type='triangle', gain=0.2, slideTo=null, attack=0.005}: {type?: OscillatorType; gain?: number; slideTo?: number|null; attack?: number} = {}){
   if(muted) return; const c=ensure(); if(!c) return;
   const t=c.currentTime, o=c.createOscillator(), g=c.createGain();
   o.type=type; o.frequency.setValueAtTime(freq,t);
@@ -29,14 +29,14 @@ function tone(freq, dur, {type='triangle', gain=0.2, slideTo=null, attack=0.005}
   g.gain.setValueAtTime(0.0001,t);
   g.gain.exponentialRampToValueAtTime(gain, t+attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.02);
+  o.connect(g); g.connect(master!); o.start(t); o.stop(t+dur+0.02);
 }
 
 // One 1-second white-noise buffer, generated once and shared by every noise() call
 // (playing a random slice). Avoids allocating + filling a fresh buffer per SFX, which
 // hitched when many fired at once (e.g. a screen full of marksman shots, #46).
-let noiseBuf=null;
-function sharedNoise(c){
+let noiseBuf: AudioBuffer | null = null;
+function sharedNoise(c: AudioContext){
   if(noiseBuf && noiseBuf.length===c.sampleRate) return noiseBuf;
   const n=c.sampleRate; noiseBuf=c.createBuffer(1,n,c.sampleRate);
   const d=noiseBuf.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
@@ -44,7 +44,7 @@ function sharedNoise(c){
 }
 // a filtered white-noise burst — the basis for hits/explosions. `freqTo` sweeps
 // the filter cutoff over the burst (e.g. high→low = a "boom" closing down).
-function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}={}){
+function noise(dur: number, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}: {gain?: number; freq?: number; q?: number; type?: BiquadFilterType; freqTo?: number|null} = {}){
   if(muted) return; const c=ensure(); if(!c) return;
   const t=c.currentTime;
   const src=c.createBufferSource(); src.buffer=sharedNoise(c);
@@ -53,14 +53,14 @@ function noise(dur, {gain=0.2, freq=1200, q=1, type='lowpass', freqTo=null}={}){
   f.frequency.setValueAtTime(freq,t);
   if(freqTo) f.frequency.exponentialRampToValueAtTime(Math.max(1,freqTo), t+dur);
   const g=c.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  src.connect(f); f.connect(g); g.connect(master); src.start(t, off, dur); // start(when, offset, duration) auto-stops
+  src.connect(f); f.connect(g); g.connect(master!); src.start(t, off, dur); // start(when, offset, duration) auto-stops
 }
 
 // Lancer beam: a sustained hum + sizzle held while the laser fires (#43). The nodes
 // are persistent (built once on first fire) and never stop — instead their gains ramp
 // in/out via setTargetAtTime so starting/stopping the beam doesn't click. laser(on)
 // is called every frame from the loop; it drives the ramp toward on/off.
-let beam=null;
+let beam: {oscG: GainNode; nG: GainNode; osc: OscillatorNode} | null = null;
 function beamEnsure(){
   const c=ensure(); if(!c) return null;
   if(beam) return beam;
@@ -72,8 +72,8 @@ function beamEnsure(){
   const nsrc=c.createBufferSource(); nsrc.buffer=b; nsrc.loop=true;          // looping sizzle
   const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2600; bp.Q.value=0.7;
   const nG=c.createGain(); nG.gain.value=0;
-  osc.connect(oscG); sub.connect(oscG); oscG.connect(master);
-  nsrc.connect(bp); bp.connect(nG); nG.connect(master);
+  osc.connect(oscG); sub.connect(oscG); oscG.connect(master!);
+  nsrc.connect(bp); bp.connect(nG); nG.connect(master!);
   osc.start(); sub.start(); nsrc.start();
   beam={oscG,nG,osc};
   return beam;
@@ -92,7 +92,7 @@ export const sfx = {
     tone(180,0.5, {type:'triangle',gain:0.14,slideTo:520}); // rising flourish — the distinguishing cue
   },
   // Hold the beam sound while firing; energy depletion drops the pitch as a warning growl.
-  laser(on, depleted=false){
+  laser(on: boolean, depleted=false){
     const b = (on && !muted) ? beamEnsure() : beam;   // don't spin up nodes just to silence
     if(!b || !ctx) return;
     const t=ctx.currentTime, live = on && !muted;

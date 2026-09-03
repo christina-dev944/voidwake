@@ -104,7 +104,7 @@ export function update(){
       if(e.telegraph){                                     // marksman: mark a beam line at the player, then instant-fire (#46)
         if(e.y < e.targetY){ e.fireCd = 10; }              // don't aim until fully settled on screen
         else {
-          const pl=game.player, ang=Math.atan2(pl.y-e.y, pl.x-e.x);
+          const ang=Math.atan2(p.y-e.y, p.x-e.x);
           const trk = game.wave>=10, teleFrames = trk?120:90; // harder variant winds up ~2s and tracks
           telegraphLine(e.x, e.y, ang, { width:5, tele:teleFrames, active:9, dmg:14, owner:e.id, track:trk });
           e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
@@ -163,7 +163,7 @@ export function update(){
   if(game.enemies.length===0 && game.state==='playing'){ startWave(game.wave+1); game.score+=100; }
 
   // hud
-  document.getElementById('h-wave').textContent=String(game.wave);
-  document.getElementById('h-lvl').textContent=String(p.lvl);
-  document.getElementById('h-score').textContent=String(game.score);
+  document.getElementById('h-wave')!.textContent=String(game.wave);
+  document.getElementById('h-lvl')!.textContent=String(p.lvl);
+  document.getElementById('h-score')!.textContent=String(game.score);
 }

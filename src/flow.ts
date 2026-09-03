@@ -21,7 +21,7 @@ export function gainXp(p: Player, amt: number){
 }
 
 export function pickUpgrade(i: number){
-  const u=game.upgradeChoices[i]; if(!u)return;
+  const u=game.upgradeChoices[i]; if(!u || !game.player)return;
   u.apply(game.player); game.upgrades.push(u.id);
   if(game.state==='upgrade'){ game.state='playing'; cv.style.cursor='default'; }
 }

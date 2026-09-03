@@ -8,7 +8,7 @@ import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget } from './targeting.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
-import type { Player, Enemy } from './types.js';
+import type { Player, Enemy, BossEnemy } from './types.js';
 
 // Split-shot fan: shot 0 is dead-on the aim; extras alternate out around it
 // (0, +1, -1, +2, -2 …). Keeping a center shot means a single enemy on the aim
@@ -42,7 +42,7 @@ export function playerShoot(p: Player) {
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
       ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0,
-      homing, homeDelay: homeD });
+      hitCd: 0, homing, homeDelay: homeD });
   }
   sfx.shoot();
 }
@@ -80,7 +80,7 @@ export function updateLaser(p: Player){
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds
 // AND different colors, so the player can read fast vs slow shots by hue (#3)
 export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: number=e.hue) {
-  const p = game.player;
+  const p = game.player; if(!p) return;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
   const spd = D.bulletSpeed(game.wave) * (e.boss?1.0:1) * spdMul;   // boss bullets no longer get a speed premium (#55): was 1.2, now same as normal enemies
   const push = (a: number,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
@@ -104,20 +104,20 @@ export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: n
 // FAST_SPD / SLOW_SPD are the easy knobs to play with the speed contrast.
 const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.0, FAST_HUE=40;  // fast = warm amber
 const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5, SLOW_HUE=200; // slow = cool cyan
-const phaseMul = (e: Enemy) => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
-export function bossAttackFast(e: Enemy){
+const phaseMul = (e: BossEnemy) => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
+export function bossAttackFast(e: BossEnemy){
   const pat = BOSS_FAST_SEQ[e.atkIdx % BOSS_FAST_SEQ.length]; e.atkIdx++;
   enemyShoot(e, pat, FAST_SPD, FAST_HUE);
   e.fireCd = Math.max(3, Math.round((pat==='aimed'?13:5) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
-export function bossAttackSlow(e: Enemy){
+export function bossAttackSlow(e: BossEnemy){
   const pat = BOSS_SLOW_SEQ[e.atkIdx2 % BOSS_SLOW_SEQ.length]; e.atkIdx2++;
   enemyShoot(e, pat, SLOW_SPD, SLOW_HUE);
   e.fireCd2 = Math.max(6, Math.round((pat==='ring'?57:29) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 // Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
 // menacing tint and restart the attack cycle — a clear "it's getting serious" beat.
-export function enterBossPhase(e: Enemy, ph: number){
+export function enterBossPhase(e: BossEnemy, ph: number){
   e.phase=ph; e.atkIdx=0; e.fireCd=42;                       // brief regroup into the new phase
   e.hue = ph===2 ? 322 : ph===3 ? 274 : e.hue;
   for(let i=game.eBullets.length-1;i>=0;i--) game.eBullets.splice(i,1); // screen-clear on transition
@@ -127,8 +127,8 @@ export function enterBossPhase(e: Enemy, ph: number){
 // Boss telegraphed lasers (#3, reusing #46): the boss doesn't freeze — the hazard
 // origin follows it. The center beam tracks the player; phase 3 adds fixed flankers
 // you must weave between. Beams emanate from the boss and hit on the instant frames.
-export function bossLaser(e: Enemy){
-  const p=game.player, base=Math.atan2(p.y-e.y, p.x-e.x);
+export function bossLaser(e: BossEnemy){
+  const p=game.player; if(!p) return; const base=Math.atan2(p.y-e.y, p.x-e.x);
   const n = e.phase>=3 ? 3 : 1;
   for(let i=0;i<n;i++){ const off=(i-(n-1)/2)*0.5;
     telegraphLine(e.x, e.y, base+off, { width:6, tele:100, active:10, dmg:16, owner:e.id, track:(i===0) }); }

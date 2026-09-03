@@ -24,7 +24,7 @@ function tick(){
   else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
   else if(game.state==='dying'){ animateParticles(); if(--game.dying<=0) game.state='dead'; } // hold, then game over (#40)
 }
-function loop(now){
+function loop(now: number){
   let frame = now - last; last = now;
   if(frame > 250) frame = STEP;   // tab was hidden / long stall → resume, don't fast-forward
   acc += frame;
@@ -35,7 +35,7 @@ function loop(now){
   // pause / death / upgrade — states where the sim, and updateLaser, don't run (#43)
   const p=game.player;
   const beamOn = !game.paused && game.state==='playing' && p && p.weapon==='laser' && p.beam && p.beam.active;
-  sfx.laser(beamOn, p && p.depleted);
+  sfx.laser(!!beamOn, p?.depleted ?? false);
   draw();
   requestAnimationFrame(loop);
 }

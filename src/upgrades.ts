@@ -21,11 +21,11 @@ export const UPGRADES: Upgrade[] = [
   { id:'capac',  for:'laser', tag:'LANCER', name:'Capacitor',      desc:'+25% energy capacity',    apply:p=>p.heatMax*=1.25 },
 
   // --- Mage (Nova) — gated on having the Nova active, so only the Mage rolls these ---
-  { id:'novarng', for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Radius',   desc:'+35% nova radius',    apply:p=>p.active.radius*=1.35 },
-  { id:'novacd',  for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Recharge', desc:'-20% nova cooldown',  apply:p=>p.active.cooldown=Math.round(p.active.cooldown*0.8) },
+  { id:'novarng', for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Radius',   desc:'+35% nova radius',    apply:p=>{ if(p.active) p.active.radius=(p.active.radius||0)*1.35; } },
+  { id:'novacd',  for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Recharge', desc:'-20% nova cooldown',  apply:p=>{ if(p.active) p.active.cooldown=Math.round(p.active.cooldown*0.8); } },
 
   // --- Reaper (Scythe) — gated on the cone active, so only the Reaper rolls this ---
-  { id:'scythe',  for:'all', tag:'REAPER', req:p=>p.active&&p.active.effect==='cone', name:'Scythe Sweep',   desc:'+20% Scythe reach & +15% arc', apply:p=>{ p.active.range*=1.20; p.active.angle=Math.min(Math.PI*1.2, p.active.angle*1.15); } },
+  { id:'scythe',  for:'all', tag:'REAPER', req:p=>p.active&&p.active.effect==='cone', name:'Scythe Sweep',   desc:'+20% Scythe reach & +15% arc', apply:p=>{ if(p.active){ p.active.range=(p.active.range||0)*1.20; p.active.angle=Math.min(Math.PI*1.2, (p.active.angle||0)*1.15); } } },
 
   // --- shared (any weapon) ---
   { id:'swift',  for:'all', name:'Swift Feet', desc:'+18% move speed',       apply:p=>{p.speed*=1.18; p.focusSpeed*=1.18;} },
@@ -38,7 +38,7 @@ export const UPGRADES: Upgrade[] = [
   { id:'ward',   for:'all', name:'Aegis',      desc:'+longer invuln on hit (cap 1.5s)', req:p=>(p.iframeMax||40)<90,
     // descFn (main.js drawUpgrade) shows the live number: current i-frame window and
     // what this pick brings it to. Frames→seconds at 60fps; delta shrinks near the cap.
-    descFn:p=>{ const cur=p.iframeMax||40, nxt=Math.min(90,cur+18), s=f=>(f/60).toFixed(2)+'s';
+    descFn:p=>{ const cur=p.iframeMax||40, nxt=Math.min(90,cur+18), s=(f: number)=>(f/60).toFixed(2)+'s';
       return nxt>cur ? `invuln ${s(cur)} → ${s(nxt)} (+${((nxt-cur)/60).toFixed(2)}s)` : `invuln ${s(cur)} (maxed)`; },
     apply:p=>p.iframeMax=Math.min(90,(p.iframeMax||40)+18) },
 ];

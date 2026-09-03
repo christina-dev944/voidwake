@@ -96,7 +96,8 @@ export function draw(){
   for(const f of game.coneFx){ ctx.globalAlpha=clamp(f.life,0,1)*0.5;
     ctx.fillStyle='hsl(18,90%,58%)'; ctx.strokeStyle='hsl(18,95%,68%)'; ctx.lineWidth=3;
     ctx.shadowBlur=14; ctx.shadowColor='hsl(18,90%,62%)';
-    ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,f.r,f.aim-f.half,f.aim+f.half); ctx.closePath();
+    const aim=f.aim||0, half=f.half||0;
+    ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,f.r,aim-half,aim+half); ctx.closePath();
     ctx.fill(); ctx.stroke(); }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
 
@@ -277,14 +278,15 @@ function drawXpBar(p: Player){
 
 // Sync the DOM HUD strip below the canvas (HP + active/heat), so these bars live
 // OUTSIDE the playfield and never obscure the bottom while dodging (#41).
+const el = (id: string) => document.getElementById(id) as HTMLElement;
 const HUD2 = {
-  root:   document.getElementById('hud2'),
-  hpfill: document.getElementById('hpfill'),
-  hptext: document.getElementById('hptext'),
-  statlbl:document.getElementById('statlbl'),
-  statbar:document.getElementById('statbar'),
-  statfill:document.getElementById('statfill'),
-  statseg:document.getElementById('statseg'),
+  root:   el('hud2'),
+  hpfill: el('hpfill'),
+  hptext: el('hptext'),
+  statlbl:el('statlbl'),
+  statbar:el('statbar'),
+  statfill:el('statfill'),
+  statseg:el('statseg'),
 };
 function syncBottomHud(){
   const p=game.player;
@@ -357,7 +359,7 @@ function drawUpgrade(){
     ctx.fillText((i+1)+'. '+u.name, x+24, y+48);   // tighter number↔name gap (single space)
     ctx.fillStyle='#c8c8e0'; ctx.font='16px ui-monospace,monospace';
     // dynamic desc (e.g. Aegis shows live invuln duration); flush-left with the name
-    ctx.fillText(u.descFn?u.descFn(game.player):u.desc, x+24, y+82);
+    ctx.fillText(u.descFn&&game.player?u.descFn(game.player):u.desc, x+24, y+82);
     if(u.tag){
       const label=u.tag+' EXCLUSIVE'; ctx.font='bold 11px ui-monospace,monospace';
       const bw=ctx.measureText(label).width+20, bx=x+w-bw-16, by=y+14, bh=20;

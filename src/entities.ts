@@ -30,8 +30,9 @@ export function newPlayer(cls: ClassDef = DEFAULT_CLASS): Player {
 }
 
 export function rollUpgrades() {
-  const cats = WEAPON_UPGRADES[game.player.weapon] || []; // boons valid for this weapon
-  const pool = UPGRADES.filter(u => (u.for==='all' || cats.includes(u.for)) && (!u.req || u.req(game.player)));
+  const p = game.player; if(!p) return;
+  const cats = WEAPON_UPGRADES[p.weapon] || []; // boons valid for this weapon
+  const pool = UPGRADES.filter(u => (u.for==='all' || cats.includes(u.for)) && (!u.req || u.req(p)));
   const out = [];
   for (let i=0;i<3 && pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   game.upgradeChoices = out;
@@ -69,7 +70,7 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
   const x = rand(60, W-60), y = rand(-140,-40);
   if(boss){
     return { id:game.eid++, x:W/2, y:-100, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift', // enter from top-center (#3)
-      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130,
+      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130, aimCd:0,
       fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
       atkIdx:0, atkIdx2:0, fireCd2:70, phase:1, laserCd:220 };  // two attack-track cursors/timers + phase + laser timer (#3)
   }
@@ -79,6 +80,7 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     id: game.eid++,
     x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
     telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
+    aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
     fireCd: d.telegraph ? rand(80,130) : rand(30,90), // marksman waits longer before its first shot

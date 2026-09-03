@@ -52,23 +52,30 @@ export interface Player {
   leech?: number; iframeMax?: number; _invPrev?: boolean;
 }
 
-export interface Enemy {
+// Shared enemy shape. `boss` discriminates the two arms so boss-only attack-track
+// fields are only reachable after an `if(e.boss)` narrow — a grunt can't read .phase.
+interface EnemyBase {
   id: number; x: number; y: number; r: number; hp: number; maxhp: number;
-  boss: boolean; kind: string; move: string; fireMul: number;
+  kind: string; move: string; fireMul: number;
   vx: number; vy: number; targetY: number; fireCd: number;
   pattern: string; ang: number; wave: number; hue: number;
+  aimCd: number;                // marksman telegraph freeze (0 = free to act)
   telegraph?: boolean;
-  mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading)
-  aimCd?: number;               // marksman telegraph freeze
-  // boss-only tracks
-  atkIdx?: number; atkIdx2?: number; fireCd2?: number; phase?: number; laserCd?: number;
+  mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading), set each tick
 }
+export interface NormalEnemy extends EnemyBase { boss: false; }
+export interface BossEnemy extends EnemyBase {
+  boss: true;
+  atkIdx: number; atkIdx2: number; fireCd2: number; phase: number; laserCd: number;
+}
+export type Enemy = NormalEnemy | BossEnemy;
 
 // Player projectile.
 export interface PBullet {
   x: number; y: number; vx: number; vy: number; r: number; dmg: number;
   crit: boolean; pierce: number; ttl: number; homing: boolean; homeDelay: number;
-  hitCd?: number; hits?: Set<number>;
+  hitCd: number;            // re-hit lockout after a pierce (0 = can hit)
+  hits?: Set<number>;
 }
 
 // Enemy projectile.
