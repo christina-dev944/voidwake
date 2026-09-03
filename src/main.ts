@@ -19,8 +19,8 @@ addEventListener('keydown', e => {
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
-    // restore a normal cursor for the pause menu; hide it again for manual aim on resume (#11)
-    cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'none' : 'default'; }
+    // default cursor for the pause menu; back to the crosshair for manual aim on resume (#11)
+    cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; }
   if (k0==='m') toggleMute();   // mute toggle (#7)
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -39,7 +39,7 @@ addEventListener('keydown', e=>{
   }
   if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
   if(game.state==='playing' && !game.paused && k==='t'){ game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle aim mode (#35); MANUAL = aim at cursor (#11)
-    cv.style.cursor = manualAim() ? 'none' : 'default'; }   // hide OS cursor in manual — the drawn reticle is the pointer
+    cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }   // OS crosshair marks the aim point in manual (#11)
 });
 function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
@@ -62,7 +62,7 @@ cv.addEventListener('pointermove', e=>{
   if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
   if(game.state!=='classSelect'){
     if(game.state==='playing'){ game.mouseX=mx; game.mouseY=my;   // track the game-unit cursor for MANUAL aim (#11)
-      cv.style.cursor = manualAim() ? 'none' : 'default'; }       // hide OS cursor so it doesn't double up with the reticle
+      cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }  // OS crosshair pointer in manual aim (#11)
     else cv.style.cursor='default';
     return;
   }
