@@ -12,11 +12,13 @@
 //             the cooldown gate + HUD. No active-bearing class ships yet — Mage
 //             (#24) and Time-stop (#25) are the first to use it.
 
+import type { ClassDef, StatBlock } from './types.js';
+
 // Base player loadout — single source of truth, shared by newPlayer() (main.js)
 // and the class-select stat readout so displayed numbers can never drift.
-export const BASE = { dmg: 10, fireRate: 10, bulletSpeed: 9, maxhp: 100, speed: 4.4, focusSpeed: 2.0, range: 0 };
+export const BASE: StatBlock = { dmg: 10, fireRate: 10, bulletSpeed: 9, maxhp: 100, speed: 4.4, focusSpeed: 2.0, range: 0 };
 
-export const CLASSES = [
+export const CLASSES: ClassDef[] = [
   {
     id: 'vanguard',
     name: 'Vanguard',
@@ -67,14 +69,14 @@ export const CLASSES = [
 ];
 
 export const DEFAULT_CLASS = CLASSES[0];
-export const classById = id => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;
+export const classById = (id: string): ClassDef => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;
 
 // Numeric stats shown as horizontal bars on the class-select cards. Fixed order
 // so rows line up across cards for comparison; each bar is normalized against the
 // max value across all classes, so the bars stay meaningful as classes are added.
 const RANGE_CAP = 720; // unlimited range renders as a full bar; finite is a fraction
-const effective = cls => Object.assign({}, BASE, cls.stats || {});
-const STAT_DEFS = [
+const effective = (cls: ClassDef): StatBlock => Object.assign({}, BASE, cls.stats || {});
+const STAT_DEFS: { label: string; get: (s: StatBlock, c: ClassDef) => number }[] = [
   { label:'DMG',          get:(s)   => s.dmg },
   { label:'FIRE RATE',    get:(s)   => 60 / s.fireRate },   // shots/sec — higher is faster
   { label:'BULLET SPEED', get:(s)   => s.bulletSpeed },
@@ -83,7 +85,7 @@ const STAT_DEFS = [
   { label:'RANGE',        get:(s,c) => c.range || RANGE_CAP },
 ];
 
-export function classStatBars(cls){
+export function classStatBars(cls: ClassDef){
   const laser = cls.weapon === 'laser';
   return STAT_DEFS.map(def=>{
     // laser has no discrete shots/bullet-speed — show beam-appropriate readouts
@@ -103,4 +105,4 @@ export function classStatBars(cls){
 }
 
 // Non-numeric extras rendered as a text line under the bars.
-export const classActiveLabel = cls => cls.active ? cls.active.name : '—';
+export const classActiveLabel = (cls: ClassDef) => cls.active ? cls.active.name : '—';

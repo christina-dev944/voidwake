@@ -9,11 +9,12 @@ import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
 import { keys } from './input.js';
 import * as D from './difficulty.js';
+import type { Player } from './types.js';
 
 // ---- render ----
 // the player ship hull (also reused for dash afterimages, #51). Builds the path only —
 // caller sets style then fills.
-function shipPath(x,y,r){ ctx.beginPath();
+function shipPath(x: number,y: number,r: number){ ctx.beginPath();
   ctx.moveTo(x,y-r); ctx.lineTo(x-r*0.8,y+r*0.7); ctx.lineTo(x,y+r*0.3); ctx.lineTo(x+r*0.8,y+r*0.7); ctx.closePath(); }
 export function draw(){
   syncBottomHud();   // keep the DOM HUD strip below the canvas in sync (#41)
@@ -184,13 +185,13 @@ export function draw(){
 }
 
 // shared bordered panel backdrop for the pause-menu panels
-function panelBox(x,y,w,h){
+function panelBox(x: number,y: number,w: number,h: number){
   ctx.fillStyle='rgba(18,18,42,0.55)'; roundRect(x,y,w,h,10); ctx.fill();
   ctx.strokeStyle='#2a2a48'; ctx.lineWidth=1.5; roundRect(x,y,w,h,10); ctx.stroke();
 }
 
 // player stat readout — right column of the pause menu; returns its bottom Y
-function drawPauseStats(x,y,w){
+function drawPauseStats(x: number,y: number,w: number){
   const p=game.player; if(!p) return y;
   const laser=p.weapon==='laser';
   const rows=[
@@ -208,7 +209,7 @@ function drawPauseStats(x,y,w){
   ctx.fillText('STATS', x+18, y+28);
   let yy=y+52; ctx.font='12px ui-monospace,monospace';
   for(const [k,v] of rows){
-    ctx.textAlign='left';  ctx.fillStyle='#8a8aa6'; ctx.fillText(k, x+18, yy);
+    ctx.textAlign='left';  ctx.fillStyle='#8a8aa6'; ctx.fillText(String(k), x+18, yy);
     ctx.textAlign='right'; ctx.fillStyle='#e8e8f0'; ctx.fillText(String(v), x+w-18, yy);
     yy+=lh;
   }
@@ -219,7 +220,7 @@ function drawPauseStats(x,y,w){
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
 export function pauseButtons(){ const w=230,h=46, x=Math.max(40,W*0.10), y0=Math.max(120,H*0.30);
   return { resume:{x,y:y0,w,h}, quit:{x,y:y0+60,w,h} }; }
-function drawButton(r,label,hover){
+function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean){
   ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
   ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
@@ -228,9 +229,9 @@ function drawButton(r,label,hover){
 
 // pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",
 // in a bordered panel below the STATS panel in the RIGHT column of the pause screen.
-function drawRunBoons(px,py,panelW){
+function drawRunBoons(px: number,py: number,panelW: number){
   const p=game.player; if(!p) return;
-  const counts=new Map();
+  const counts=new Map<string,number>();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
   const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
   const cols = entries.length>18 ? 3 : entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
@@ -268,7 +269,7 @@ function drawBossBar(){
   ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText('PHASE '+boss.phase+'/3', bx+bw, by-5);
   ctx.textAlign='left';
 }
-function drawXpBar(p){
+function drawXpBar(p: Player){
   const frac=clamp(p.xp/p.xpNext,0,1);
   ctx.fillStyle='#181830'; ctx.fillRect(0,0,W,4);
   ctx.fillStyle='hsl(258,100%,70%)'; ctx.fillRect(0,0,W*frac,4);
@@ -371,11 +372,11 @@ function drawUpgrade(){
 // Carousel: fixed-width cards; the selected index sits centered, others flank it.
 // `classScroll` eases toward `classIdx` (in drawClassSelect) for a smooth slide.
 const CARD_W=350, CARD_GAP=22, CARD_H=384;
-export function classCardRect(i){
+export function classCardRect(i: number){
   return { x: W/2 - CARD_W/2 + (i - game.classScroll)*(CARD_W+CARD_GAP), y:H/2-CARD_H/2, w:CARD_W, h:CARD_H };
 }
-export function chevronRect(dir){ const w=36,h=90; return dir<0 ? {x:10,y:H/2-h/2,w,h} : {x:W-10-w,y:H/2-h/2,w,h}; }
-export function inRect(mx,my,r){ return mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h; }
+export function chevronRect(dir: number){ const w=36,h=90; return dir<0 ? {x:10,y:H/2-h/2,w,h} : {x:W-10-w,y:H/2-h/2,w,h}; }
+export function inRect(mx: number,my: number,r: {x:number;y:number;w:number;h:number}){ return mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h; }
 function drawClassSelect(){
   ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
   // ease the carousel toward the selected card
@@ -450,7 +451,7 @@ function drawClassSelect(){
   }
   frameFooter();
 }
-function drawChevron(dir, active){
+function drawChevron(dir: number, active: boolean){
   const r=chevronRect(dir), cx=r.x+r.w/2, cy=r.y+r.h/2, s=12;
   ctx.strokeStyle = active?'#c8c8e0':'#242440'; ctx.lineWidth=4; ctx.lineCap='round';
   ctx.beginPath();
@@ -459,7 +460,7 @@ function drawChevron(dir, active){
   ctx.stroke(); ctx.lineCap='butt';
 }
 // left-aligned word wrap; x is the left edge.
-function wrapText(text,x,y,maxw,lineH,color,size){
+function wrapText(text: string,x: number,y: number,maxw: number,lineH: number,color: string,size: number){
   ctx.fillStyle=color; ctx.font=size+'px ui-monospace,monospace'; ctx.textAlign='left';
   const words=text.split(' '); let line='', yy=y;
   for(const w of words){ const test=line?line+' '+w:w;
@@ -468,9 +469,9 @@ function wrapText(text,x,y,maxw,lineH,color,size){
   if(line) ctx.fillText(line,x,yy);
 }
 
-function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
+function roundRect(x: number,y: number,w: number,h: number,r: number){ ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-function center(t,size,color,y){ ctx.textAlign='center'; ctx.fillStyle=color;
+function center(t: string,size: number,color: string,y: number){ ctx.textAlign='center'; ctx.fillStyle=color;
   ctx.font=`bold ${size}px ui-monospace,monospace`; ctx.fillText(t,W/2,y); ctx.textAlign='left'; }
 function frameFooter(){ center('v0.2', 12, '#3a3a55', H-24); }

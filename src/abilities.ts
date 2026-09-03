@@ -6,16 +6,17 @@ import { game } from './state.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget } from './targeting.js';
+import type { Player, ActiveDef } from './types.js';
 
 // active-ability framework: trigger key fires the class's active if a charge is
 // available. Charges regen one after another off a single recharge timer (#51) —
 // spending from full starts the timer; further spends ride the in-progress one.
-export function useActive(p){ if(!p||!p.active||p.charges<=0) return;
+export function useActive(p: Player|null){ if(!p||!p.active||p.charges<=0) return;
   const maxCh=p.active.maxCharges||1, wasFull=p.charges===maxCh;
   applyActive(p.active, p); p.charges--;
   if(wasFull) p.activeCd=p.active.cooldown; }
 // map an active's `effect` string to its behavior (keeps classes.js import-free)
-function applyActive(a, p){
+function applyActive(a: ActiveDef, p: Player){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
   else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
 }
@@ -26,11 +27,11 @@ function applyActive(a, p){
 // short speed dash (with an afterimage trail), so casting is an aggressive reposition.
 const SCYTHE_INVULN=45, SCYTHE_BOOST_T=18;
 export const SCYTHE_BOOST_MULT=2.0;   // 0.75s i-frames, 0.3s dash @2x (dash mult read by the sim)
-function coneBlast(p, range, angle, dmg){
+function coneBlast(p: Player, range: number, angle: number, dmg: number){
   const target=pickTarget(p.x,p.y);
   const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
   const half=angle/2, hue=(p.cls&&p.cls.hue)||18;
-  const inWedge=(x,y,pad=0)=>{ const dx=x-p.x, dy=y-p.y, d=Math.hypot(dx,dy);
+  const inWedge=(x: number,y: number,pad=0)=>{ const dx=x-p.x, dy=y-p.y, d=Math.hypot(dx,dy);
     if(d>range+pad) return false; if(d<8) return true;                  // point-blank always caught
     let da=Math.atan2(dy,dx)-aim; da=Math.atan2(Math.sin(da),Math.cos(da)); // wrap to [-PI,PI]
     return Math.abs(da)<=half; };
@@ -43,7 +44,7 @@ function coneBlast(p, range, angle, dmg){
   game.coneFx.push({ x:p.x, y:p.y, aim, half, r:12, max:range, life:1 });
 }
 // Nova: wipe enemy bullets near the player and damage enemies in the radius.
-function novaBlast(p, radius, dmg){
+function novaBlast(p: Player, radius: number, dmg: number){
   const r2=radius*radius;
   for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
     if(dist2(b.x,b.y,p.x,p.y)<=r2){ burst(b.x,b.y,285,2,1.6); game.eBullets.splice(i,1); } }

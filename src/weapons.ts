@@ -8,13 +8,14 @@ import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget } from './targeting.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
+import type { Player, Enemy } from './types.js';
 
 // Split-shot fan: shot 0 is dead-on the aim; extras alternate out around it
 // (0, +1, -1, +2, -2 …). Keeping a center shot means a single enemy on the aim
 // line is always covered, even with an even split. Units are multiples of the fan.
-function shotOffset(i){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
+function shotOffset(i: number){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 
-export function playerShoot(p) {
+export function playerShoot(p: Player) {
   const target = pickTarget(p.x,p.y);
   let baseAng = -Math.PI/2;
   if (target) {
@@ -50,7 +51,7 @@ export function playerShoot(p) {
 // each tick (piercing). An energy gauge throttles it — sustained fire drains the
 // energy to empty and forces a recharge lockout, so it can't be held forever.
 // (Internally still tracked as `heat` rising to heatMax; the HUD shows the inverse.)
-export function updateLaser(p){
+export function updateLaser(p: Player){
   const target = pickTarget(p.x,p.y,true);   // laser passes dwell=true for HIGH-HP target stickiness (#49)
   const firing = !!target && !p.depleted;
   if(firing){
@@ -58,7 +59,7 @@ export function updateLaser(p){
     if(p.heat>=p.heatMax) p.depleted = true;
     const base = Math.atan2(target.y-p.y, target.x-p.x);
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
-    const angs=[];
+    const angs: number[]=[];
     for(let s=0;s<n;s++){
       const ang = base + shotOffset(s)*spr; angs.push(ang);   // beams fan around target (center beam stays on aim)
       const dx=Math.cos(ang), dy=Math.sin(ang);
@@ -78,11 +79,11 @@ export function updateLaser(p){
 
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds
 // AND different colors, so the player can read fast vs slow shots by hue (#3)
-export function enemyShoot(e, pattern=e.pattern, spdMul=1, hue=e.hue) {
+export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: number=e.hue) {
   const p = game.player;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
   const spd = D.bulletSpeed(game.wave) * (e.boss?1.0:1) * spdMul;   // boss bullets no longer get a speed premium (#55): was 1.2, now same as normal enemies
-  const push = (a,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
+  const push = (a: number,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
   switch(pattern) {
     case 'aimed': {
       push(aim);
@@ -103,20 +104,20 @@ export function enemyShoot(e, pattern=e.pattern, spdMul=1, hue=e.hue) {
 // FAST_SPD / SLOW_SPD are the easy knobs to play with the speed contrast.
 const BOSS_FAST_SEQ=['spiral','aimed','spiral','aimed','spiral'], FAST_SPD=1.0, FAST_HUE=40;  // fast = warm amber
 const BOSS_SLOW_SEQ=['ring','spread','ring','spread'],            SLOW_SPD=0.5, SLOW_HUE=200; // slow = cool cyan
-const phaseMul = e => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
-export function bossAttackFast(e){
+const phaseMul = (e: Enemy) => e.phase===3 ? 0.6 : e.phase===2 ? 0.8 : 1;   // more relentless each phase
+export function bossAttackFast(e: Enemy){
   const pat = BOSS_FAST_SEQ[e.atkIdx % BOSS_FAST_SEQ.length]; e.atkIdx++;
   enemyShoot(e, pat, FAST_SPD, FAST_HUE);
   e.fireCd = Math.max(3, Math.round((pat==='aimed'?13:5) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
-export function bossAttackSlow(e){
+export function bossAttackSlow(e: Enemy){
   const pat = BOSS_SLOW_SEQ[e.atkIdx2 % BOSS_SLOW_SEQ.length]; e.atkIdx2++;
   enemyShoot(e, pat, SLOW_SPD, SLOW_HUE);
   e.fireCd2 = Math.max(6, Math.round((pat==='ring'?57:29) * phaseMul(e))); // wider gaps = ~9% fewer bullets
 }
 // Boss phase change (#3): wipe the screen's bullets, slam the screen, shift to a more
 // menacing tint and restart the attack cycle — a clear "it's getting serious" beat.
-export function enterBossPhase(e, ph){
+export function enterBossPhase(e: Enemy, ph: number){
   e.phase=ph; e.atkIdx=0; e.fireCd=42;                       // brief regroup into the new phase
   e.hue = ph===2 ? 322 : ph===3 ? 274 : e.hue;
   for(let i=game.eBullets.length-1;i>=0;i--) game.eBullets.splice(i,1); // screen-clear on transition
@@ -126,7 +127,7 @@ export function enterBossPhase(e, ph){
 // Boss telegraphed lasers (#3, reusing #46): the boss doesn't freeze — the hazard
 // origin follows it. The center beam tracks the player; phase 3 adds fixed flankers
 // you must weave between. Beams emanate from the boss and hit on the instant frames.
-export function bossLaser(e){
+export function bossLaser(e: Enemy){
   const p=game.player, base=Math.atan2(p.y-e.y, p.x-e.x);
   const n = e.phase>=3 ? 3 : 1;
   for(let i=0;i<n;i++){ const off=(i-(n-1)/2)*0.5;

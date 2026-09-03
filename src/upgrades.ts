@@ -2,7 +2,9 @@
 // `for` gates which weapon can roll it: 'all' | 'bullet' | 'laser'.
 // rollUpgrades() (main.js) filters by the player's weapon so a Lancer never gets
 // offered bullet-only boons (fire rate, extra projectiles, pierce, bullet speed…).
-export const UPGRADES = [
+import type { Upgrade } from './types.js';
+
+export const UPGRADES: Upgrade[] = [
   // --- bullet weapons ---
   { id:'rapid',  for:'bullet', name:'Rapid Fire',   desc:'+30% fire rate',          apply:p=>p.fireRate=Math.max(3,p.fireRate*0.77) },
   { id:'multi',  for:'all',    name:'Split Shot',   desc:'+1 projectile / beam',    apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);} },

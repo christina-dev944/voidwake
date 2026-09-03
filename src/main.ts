@@ -38,13 +38,13 @@ addEventListener('keydown', e=>{
   if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
   if(game.state==='playing' && !game.paused && k==='t') game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle auto-aim mode (#35)
 });
-function canvasXY(e){ const rect=cv.getBoundingClientRect();
+function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
-function classAt(mx,my){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
+function classAt(mx: number,my: number){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
   if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
 // exact level-up card bounds (must match drawUpgrade's layout) so clicks land
 // only on a card, not the gaps between them (#34)
-function upgradeAt(mx,my){ for(let i=0;i<game.upgradeChoices.length;i++){
+function upgradeAt(mx: number,my: number){ for(let i=0;i<game.upgradeChoices.length;i++){
   const y=220+i*150, x=W/2-260; if(mx>=x&&mx<=x+520&&my>=y&&my<=y+120) return i; } return -1; }
 
 // hover highlights the card under the cursor (no scroll — carousel scroll follows

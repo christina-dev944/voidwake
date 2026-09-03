@@ -3,8 +3,9 @@
 // buried in main.js) makes the source of truth for a run explicit.
 import { UPGRADES } from './upgrades.js';
 import { DEFAULT_CLASS } from './classes.js';
+import type { GameState } from './types.js';
 
-export const game = {
+export const game: GameState = {
   state: 'title', // title | classSelect | playing | upgrade | dying | dead
   wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
@@ -25,12 +26,13 @@ export const game = {
 };
 
 // which upgrade categories each weapon draws from (besides 'all')
-export const WEAPON_UPGRADES = { bullet:['bullet'], homing:['bullet'], laser:['laser'] };
+export const WEAPON_UPGRADES: Record<string, string[]> = { bullet:['bullet'], homing:['bullet'], laser:['laser'] };
 
 // persistent best run across sessions (#8) — best wave and best score, each kept
 // independently so a long run and a high-scoring run both leave their mark.
 const BEST_KEY='voidwake.best';
-function loadBest(){ try{ const b=JSON.parse(localStorage.getItem(BEST_KEY));
+interface Best { wave: number; score: number; }
+function loadBest(): Best { try{ const b=JSON.parse(localStorage.getItem(BEST_KEY) || 'null');
   if(b && typeof b.wave==='number' && typeof b.score==='number') return b; }catch{} return {wave:0,score:0}; }
 export const best=loadBest();
 export function recordBest(){ let changed=false;

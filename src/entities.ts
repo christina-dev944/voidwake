@@ -7,9 +7,10 @@ import { UPGRADES } from './upgrades.js';
 import { game, WEAPON_UPGRADES } from './state.js';
 import * as D from './difficulty.js';
 import { W, H } from './canvas.js';
+import type { ClassDef, Player, Enemy } from './types.js';
 
-export function newPlayer(cls=DEFAULT_CLASS) {
-  const p = {
+export function newPlayer(cls: ClassDef = DEFAULT_CLASS): Player {
+  const p: Player = {
     x: W/2, y: H*0.75, r: 12, hitR: 4,
     hp: BASE.maxhp, maxhp: BASE.maxhp, speed: BASE.speed, focusSpeed: BASE.focusSpeed,
     lvl: 1, xp: 0, xpNext: 8,
@@ -37,7 +38,7 @@ export function rollUpgrades() {
 }
 
 // ---- spawning ----
-export function startWave(n) {
+export function startWave(n: number) {
   game.wave = n;
   if(n%10===0){ game.enemies.push(makeEnemy(D.bossHp(n), n, true)); return; } // every 10th wave = a solo boss (#3)
   const count = D.enemyCount(n);
@@ -48,7 +49,8 @@ export function startWave(n) {
 // fire cadence (fireMul, <1 = faster), colour and movement style. `minWave` gates
 // when a type starts appearing; `weight` biases the random pick, so grunts stay the
 // backbone while tougher/faster types trickle in as a run deepens.
-const ENEMY_TYPES = {
+interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; }
+const ENEMY_TYPES: Record<string, EnemyType> = {
   grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
   weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
   darter: { r:12, hpMul:0.45, spd:1.6,  patterns:['aimed'],                          move:'dart',  fireMul:0.7, hue:()=>rand(40,62),  minWave:4, weight:2 },
@@ -57,13 +59,13 @@ const ENEMY_TYPES = {
   // beam (#46). `telegraph` routes it to the hazard system instead of enemyShoot.
   marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(300,318), minWave:4, weight:2, telegraph:true },
 };
-function pickEnemyType(wave){
-  const pool=[];
+function pickEnemyType(wave: number): string {
+  const pool: string[]=[];
   for(const [id,d] of Object.entries(ENEMY_TYPES)) if(wave>=d.minWave) for(let i=0;i<d.weight;i++) pool.push(id);
   return pool[Math.floor(Math.random()*pool.length)] || 'grunt';
 }
 
-function makeEnemy(hp, wave, boss) {
+function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
   const x = rand(60, W-60), y = rand(-140,-40);
   if(boss){
     return { id:game.eid++, x:W/2, y:-100, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift', // enter from top-center (#3)
