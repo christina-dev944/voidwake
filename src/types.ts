@@ -3,6 +3,14 @@
 // across every module instead of each file inferring its own loose object literals.
 // No runtime code lives here — types only.
 
+// ---- string-literal unions (compile-time checked, zero runtime cost) ----
+export type GameStateName = 'title' | 'classSelect' | 'playing' | 'upgrade' | 'dying' | 'dead';
+export type Weapon = 'bullet' | 'homing' | 'laser';
+export type PauseButton = 'resume' | 'quit';
+export type HazardKind = 'line' | 'circle';
+export type ActiveEffect = 'nova' | 'cone';
+export type AimModeId = 'nearest' | 'highhp';
+
 // ---- stats / classes ----
 // The tunable stat block a class profile overrides onto the base player loadout.
 export interface StatBlock {
@@ -14,13 +22,13 @@ export interface StatBlock {
 // An active ability definition (Nova, Scythe). `effect` maps to behavior in
 // abilities.ts; the numeric fields are the tunables upgrades mutate on the clone.
 export interface ActiveDef {
-  name: string; cooldown: number; effect: string;
+  name: string; cooldown: number; effect: ActiveEffect;
   radius?: number; dmg?: number; range?: number; angle?: number; maxCharges?: number;
 }
 
 // A selectable class/vessel (CLASSES entries).
 export interface ClassDef {
-  id: string; name: string; desc: string; hue: number; weapon: string;
+  id: string; name: string; desc: string; hue: number; weapon: Weapon;
   stats: Partial<StatBlock>; active: ActiveDef | null;
   range?: number; beamDps?: number; activeDesc?: string;
 }
@@ -44,7 +52,7 @@ export interface Player {
   lvl: number; xp: number; xpNext: number;
   fireRate: number; fireCd: number; dmg: number; bulletSpeed: number; shots: number; spread: number;
   pierce: number; crit: number; life: number; iframes: number; boostT: number;
-  cls: ClassDef; weapon: string; range: number;
+  cls: ClassDef; weapon: Weapon; range: number;
   active: ActiveDef | null; activeCd: number; charges: number;
   beamDps: number; beamWidth: number; heatRate: number; coolRate: number; heatMax: number;
   heat: number; depleted: boolean; beam: Beam | null;
@@ -83,7 +91,7 @@ export interface EBullet { x: number; y: number; vx: number; vy: number; r: numb
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).
 export interface Hazard {
-  kind: string; x: number; y: number; ang: number; width: number;
+  kind: HazardKind; x: number; y: number; ang: number; width: number;
   tele: number; maxTele: number; active: number; dmg: number; hue: number;
   owner: number | null; track: boolean; pulse: number; pulsePhase: number;
   radius?: number;
@@ -104,7 +112,7 @@ export interface Afterimage { x: number; y: number; r: number; hue: number; life
 
 // ---- the single shared game-state object ----
 export interface GameState {
-  state: string;
+  state: GameStateName;
   wave: number; score: number; paused: boolean; dying: number;
   player: Player | null;
   enemies: Enemy[]; pBullets: PBullet[]; eBullets: EBullet[]; particles: Particle[];
@@ -113,6 +121,6 @@ export interface GameState {
   cls: ClassDef; classIdx: number; classScroll: number; hoverIdx: number;
   shake: number; hitStop: number;
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
-  pauseHover: string | null;
+  pauseHover: PauseButton | null;
   pBulletAlpha: number; beamAlpha: number;
 }

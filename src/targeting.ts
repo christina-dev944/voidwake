@@ -2,7 +2,7 @@
 // weapon aims at based on the current aim mode; the sim and HUD read game.aimTarget.
 import { dist2 } from './util.js';
 import { game } from './state.js';
-import type { Enemy } from './types.js';
+import type { Enemy, AimModeId } from './types.js';
 
 export function nearestEnemy(x: number,y: number,exclude?: Set<number>|null): Enemy|null {
   let best: Enemy|null=null, bd=Infinity;
@@ -13,7 +13,7 @@ export function nearestEnemy(x: number,y: number,exclude?: Set<number>|null): En
 
 // auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
 // picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
-export const AIM_MODES = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
+export const AIM_MODES: { id: AimModeId; label: string }[] = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
 const AIM_DWELL = 24;  // frames (~0.4s @60fps) a HIGH-HP laser target is held before re-evaluating (#49)
 // choose the target for the current aim mode; ties fall back to nearest.
 export function pickTarget(x: number,y: number,dwell=false): Enemy|null {
