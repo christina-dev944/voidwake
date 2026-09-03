@@ -4,28 +4,7 @@ import { CLASSES, DEFAULT_CLASS, BASE, classStatBars, classActiveLabel } from '.
 import * as D from './difficulty.js';
 import { sfx, resumeAudio, toggleMute, isMuted } from './audio.js';
 import { game, WEAPON_UPGRADES, best, recordBest, UP_NAME } from './state.js';
-
-const cv = /** @type {HTMLCanvasElement} */ (document.getElementById('c'));
-const ctx = /** @type {CanvasRenderingContext2D} */ (cv.getContext('2d'));
-// Responsive playfield: the canvas fills the viewport (square, capped), and the
-// backing store scales with devicePixelRatio so it stays crisp at any browser zoom.
-// W/H are the game-unit size (CSS px); drawing is done in game units via setTransform.
-let W = 720, H = 720;
-function resize(){
-  const dpr = window.devicePixelRatio || 1;
-  // canvas is centered with the side panel floating over the right margin, so keep
-  // symmetric horizontal room for it (~500px) plus the thin top/bottom HUD rows
-  const side = Math.max(400, Math.min(window.innerWidth - 500, window.innerHeight - 100, 1200));
-  W = side; H = side;
-  cv.style.width = side + 'px'; cv.style.height = side + 'px';
-  cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // tuck the side panel right up against the centered canvas's right edge
-  const sideEl = document.getElementById('side');
-  if(sideEl){ sideEl.style.left = Math.round(window.innerWidth/2 + side/2 + 14) + 'px'; sideEl.style.right = 'auto'; }
-  if (game && game.player){ game.player.x = clamp(game.player.x, game.player.r, W-game.player.r);
-    game.player.y = clamp(game.player.y, game.player.r, H-game.player.r); }
-}
+import { cv, ctx, W, H } from './canvas.js';
 
 // ---- input ----
 const keys = {};
@@ -1103,7 +1082,6 @@ function loop(now){
   draw();
   requestAnimationFrame(loop);
 }
-addEventListener('resize', resize); resize();
 requestAnimationFrame(loop);
 
 // Test seam: expose the live game object only when a harness opts in via a global
