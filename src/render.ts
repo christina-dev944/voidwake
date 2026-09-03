@@ -304,7 +304,9 @@ function syncBottomHud(){
   const p=game.player;
   const show = p && (game.state==='playing'||game.state==='upgrade'||game.state==='dying');
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
-  if(!show) return;
+  // statbar carries an explicit visibility:visible during play, which overrides the
+  // root's inherited hidden when the run ends — so clear it here too (#59).
+  if(!show){ HUD2.statbar.style.visibility='hidden'; return; }
   const frac=clamp(p.hp/p.maxhp,0,1);
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
