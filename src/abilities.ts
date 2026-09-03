@@ -5,7 +5,7 @@ import { dist2 } from './util.js';
 import { game } from './state.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
-import { pickTarget } from './targeting.js';
+import { pickTarget, manualAim } from './targeting.js';
 import type { Player, ActiveDef } from './types.js';
 
 // active-ability framework: trigger key fires the class's active if a charge is
@@ -28,8 +28,11 @@ function applyActive(a: ActiveDef, p: Player){
 const SCYTHE_INVULN=45, SCYTHE_BOOST_T=18;
 export const SCYTHE_BOOST_MULT=2.0;   // 0.75s i-frames, 0.3s dash @2x (dash mult read by the sim)
 function coneBlast(p: Player, range: number, angle: number, dmg: number){
-  const target=pickTarget(p.x,p.y);
-  const aim = target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2; // default: straight up
+  const manual = manualAim();
+  const target = manual ? null : pickTarget(p.x,p.y);
+  // MANUAL (#11): the Scythe carves toward the cursor; auto: toward the target, else up.
+  const aim = manual ? Math.atan2(game.mouseY-p.y, game.mouseX-p.x)
+            : target ? Math.atan2(target.y-p.y, target.x-p.x) : -Math.PI/2;
   const half=angle/2, hue=(p.cls&&p.cls.hue)||18;
   const inWedge=(x: number,y: number,pad=0)=>{ const dx=x-p.x, dy=y-p.y, d=Math.hypot(dx,dy);
     if(d>range+pad) return false; if(d<8) return true;                  // point-blank always caught
