@@ -11,7 +11,7 @@ export const UPGRADES: Upgrade[] = [
   // on a straight-firing class. Homing removes that downside entirely, making it too
   // strong on the Mage — so weight it down to ~1/3 as likely there (#53).
   { id:'multi',  for:'all',    name:'Split Shot',   desc:'+1 projectile / beam',    apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);}, weight:p=>p.weapon==='homing'?0.35:1 },
-  { id:'heavy',  for:'bullet', name:'Heavy Rounds', desc:'+40% bullet damage',      apply:p=>p.dmg*=1.4 },
+  { id:'heavy',  for:'bullet', name:'Heavy Rounds', desc:'+35% bullet damage',      apply:p=>p.dmg*=1.35 },
   { id:'pierce', for:'bullet', name:'Piercing',     desc:'bullets pierce +1 enemy', apply:p=>p.pierce++ },
   { id:'crit',   for:'bullet', name:'Deadeye',      desc:'+12% crit chance (x2)',   apply:p=>p.crit+=0.12 },
   { id:'velo',   for:'bullet', name:'Velocity',     desc:'+25% bullet speed',       apply:p=>p.bulletSpeed*=1.25 },
