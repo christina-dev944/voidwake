@@ -5,6 +5,7 @@ import * as D from './difficulty.js';
 import { sfx, resumeAudio, toggleMute, isMuted } from './audio.js';
 import { game, WEAPON_UPGRADES, best, recordBest, UP_NAME } from './state.js';
 import { cv, ctx, W, H } from './canvas.js';
+import { addShake, hitStop, burst, animateParticles } from './effects.js';
 
 // ---- input ----
 const keys = {};
@@ -258,20 +259,6 @@ function pickTarget(x,y,dwell=false){
   return pick;
 }
 
-// ---- game feel (#5) ----
-// screen shake: keep the strongest recent impulse; decays each tick in update().
-function addShake(m){ game.shake=Math.min(22,Math.max(game.shake,m)); }
-// hit-stop: freeze the sim for a few frames on a big impact for extra weight.
-function hitStop(frames){ game.hitStop=Math.max(game.hitStop,frames); }
-
-// ---- particles ----
-// `dim` scales a particle's opacity (1 = full). Short-range bullet fizzle passes
-// game.pBulletAlpha so its puffs match the dimmed player bullets (#29).
-function burst(x,y,hue,n=10,sp=3,dim=1){ for(let i=0;i<n;i++){ const a=rand(0,TAU),s=rand(0.5,sp);
-  game.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(14,30),hue,dim}); } }
-function animateParticles(){ for(let i=game.particles.length-1;i>=0;i--){ const pt=game.particles[i];
-  pt.x+=pt.vx;pt.y+=pt.vy;pt.vx*=0.94;pt.vy*=0.94;pt.life--;
-  if(pt.life<=0)game.particles.splice(i,1); } }
 
 // ---- flow ----
 function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
