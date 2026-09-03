@@ -13,7 +13,10 @@ export function nearestEnemy(x: number,y: number,exclude?: Set<number>|null): En
 
 // auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
 // picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
-export const AIM_MODES: { id: AimModeId; label: string }[] = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'} ];
+export const AIM_MODES: { id: AimModeId; label: string }[] = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'}, {id:'manual', label:'MANUAL'} ];
+// MANUAL aim (#11): fire toward the mouse cursor instead of auto-targeting. Auto-aim
+// stays the default (index 0); [T] cycles into this like any other mode.
+export function manualAim(): boolean { return AIM_MODES[game.aimIdx].id === 'manual'; }
 const AIM_DWELL = 24;  // frames (~0.4s @60fps) a HIGH-HP laser target is held before re-evaluating (#49)
 // choose the target for the current aim mode; ties fall back to nearest.
 export function pickTarget(x: number,y: number,dwell=false): Enemy|null {

@@ -5,7 +5,7 @@ import { TAU, clamp, rand } from './util.js';
 import { ctx, W, H } from './canvas.js';
 import { game, best, UP_NAME } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel } from './classes.js';
-import { AIM_MODES } from './targeting.js';
+import { AIM_MODES, manualAim } from './targeting.js';
 import { isMuted } from './audio.js';
 import { keys } from './input.js';
 import * as D from './difficulty.js';
@@ -159,6 +159,8 @@ export function draw(){
     if(isMuted()){ ctx.fillStyle='#565879'; ctx.fillText('[M] MUTED', W-14, 36); }   // audio muted (#7)
     ctx.textAlign='left';
     drawBossBar();
+    // MANUAL aim (#11): crosshair reticle at the cursor so the exact aim point is clear
+    if(manualAim() && game.state==='playing') drawReticle(game.mouseX, game.mouseY, game.player);
   }
 
   if(game.state==='upgrade') drawUpgrade();
@@ -269,6 +271,16 @@ function drawBossBar(){
   ctx.fillText('BOSS', bx, by-5);
   ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText('PHASE '+boss.phase+'/3', bx+bw, by-5);
   ctx.textAlign='left';
+}
+// MANUAL-aim reticle (#11): a small ring + gapped crosshair in the class hue at the cursor.
+function drawReticle(mx: number, my: number, p: Player){
+  const pc=`hsl(${(p.cls&&p.cls.hue)||265},80%,66%)`;
+  ctx.strokeStyle=pc; ctx.lineWidth=1.5; ctx.globalAlpha=0.9;
+  ctx.beginPath(); ctx.arc(mx,my,9,0,TAU); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(mx-14,my); ctx.lineTo(mx-4,my); ctx.moveTo(mx+4,my); ctx.lineTo(mx+14,my);
+  ctx.moveTo(mx,my-14); ctx.lineTo(mx,my-4); ctx.moveTo(mx,my+4); ctx.lineTo(mx,my+14);
+  ctx.stroke(); ctx.globalAlpha=1;
 }
 function drawXpBar(p: Player){
   const frac=clamp(p.xp/p.xpNext,0,1);

@@ -6,7 +6,7 @@ import { CLASSES } from './classes.js';
 import { resumeAudio, toggleMute } from './audio.js';
 import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
-import { AIM_MODES } from './targeting.js';
+import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
 import { classCardRect, chevronRect, inRect, pauseButtons } from './render.js';
 import { keys } from './input.js';
@@ -36,7 +36,8 @@ addEventListener('keydown', e=>{
     return;
   }
   if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
-  if(game.state==='playing' && !game.paused && k==='t') game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle auto-aim mode (#35)
+  if(game.state==='playing' && !game.paused && k==='t'){ game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle aim mode (#35); MANUAL = aim at cursor (#11)
+    cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }
 });
 function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
@@ -51,13 +52,14 @@ function upgradeAt(mx: number,my: number){ for(let i=0;i<game.upgradeChoices.len
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
   const [mx,my]=canvasXY(e);
+  game.mouseX=mx; game.mouseY=my;                    // keep the game-unit cursor current for MANUAL aim (#11)
   if(game.paused){                                   // hover-highlight pause buttons (#36)
     const b=pauseButtons();
     game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.quit)?'quit':null;
     cv.style.cursor = game.pauseHover?'pointer':'default'; return;
   }
   if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
-  if(game.state!=='classSelect'){ cv.style.cursor='default'; return; }
+  if(game.state!=='classSelect'){ cv.style.cursor = (game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; return; }
   game.hoverIdx=classAt(mx,my);
   const overChevron = (game.classIdx>0 && inRect(mx,my,chevronRect(-1))) ||
                       (game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1)));

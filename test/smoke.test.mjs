@@ -60,4 +60,16 @@ test('built game boots, starts a run, and the simulation advances', async () => 
 
   // HUD is wired to the live state (also covers the number->textContent fix)
   assert.equal(dom.els['h-wave'].textContent, '1', 'HUD wave should reflect game state');
+
+  // MANUAL aim (#11): [T] cycles nearest -> highhp -> manual. In manual the ship fires
+  // toward the cursor (game.mouseX/Y), not the auto-target. Enemies spawn ABOVE, so an
+  // auto shot heads up (vx~0); a cursor placed to the LEFT makes bullets head left.
+  dom.fire('keydown', { key: 't' });          // -> highhp
+  dom.fire('keydown', { key: 't' });          // -> manual
+  game.mouseX = game.player.x - 120;          // cursor directly left of the ship
+  game.mouseY = game.player.y;
+  game.pBullets.length = 0;                    // drop pre-manual shots
+  dom.advanceFrames(30);
+  assert.ok(game.pBullets.length > 0, 'manual aim should still auto-fire');
+  assert.ok(game.pBullets.every(b => b.vx < 0), 'manual-aim bullets should head toward the cursor (left)');
 });

@@ -9,7 +9,7 @@ export type Weapon = 'bullet' | 'homing' | 'laser';
 export type PauseButton = 'resume' | 'quit';
 export type HazardKind = 'line' | 'circle';
 export type ActiveEffect = 'nova' | 'cone';
-export type AimModeId = 'nearest' | 'highhp';
+export type AimModeId = 'nearest' | 'highhp' | 'manual';
 
 // ---- stats / classes ----
 // The tunable stat block a class profile overrides onto the base player loadout.
@@ -124,6 +124,7 @@ export interface GameState {
   cls: ClassDef; classIdx: number; classScroll: number; hoverIdx: number;
   shake: number; hitStop: number;
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
+  mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
   pauseHover: PauseButton | null;
   pBulletAlpha: number; beamAlpha: number;
 }

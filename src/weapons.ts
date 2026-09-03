@@ -5,7 +5,7 @@ import { TAU, dist2 } from './util.js';
 import { game } from './state.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
-import { pickTarget } from './targeting.js';
+import { pickTarget, manualAim } from './targeting.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
 import type { Player, Enemy, BossEnemy } from './types.js';
@@ -16,17 +16,21 @@ import type { Player, Enemy, BossEnemy } from './types.js';
 function shotOffset(i: number){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 
 export function playerShoot(p: Player) {
-  const target = pickTarget(p.x,p.y);
   let baseAng = -Math.PI/2;
-  if (target) {
-    let tx=target.x, ty=target.y;
-    if(p.weapon!=='homing'){                 // lead a moving target so far/small enemies still get hit
-      // use the enemy's ACTUAL per-tick movement (mvx/mvy), not its static vx/vy
-      // fields — while descending it moves straight down, so vx would aim us off.
-      const tt = Math.hypot(tx-p.x, ty-p.y)/p.bulletSpeed;
-      tx += (target.mvx||0)*tt; ty += (target.mvy||0)*tt;
+  if (manualAim()) {                         // MANUAL (#11): aim straight at the cursor, no leading
+    baseAng = Math.atan2(game.mouseY-p.y, game.mouseX-p.x);
+  } else {
+    const target = pickTarget(p.x,p.y);
+    if (target) {
+      let tx=target.x, ty=target.y;
+      if(p.weapon!=='homing'){               // lead a moving target so far/small enemies still get hit
+        // use the enemy's ACTUAL per-tick movement (mvx/mvy), not its static vx/vy
+        // fields — while descending it moves straight down, so vx would aim us off.
+        const tt = Math.hypot(tx-p.x, ty-p.y)/p.bulletSpeed;
+        tx += (target.mvx||0)*tt; ty += (target.mvy||0)*tt;
+      }
+      baseAng = Math.atan2(ty-p.y, tx-p.x);
     }
-    baseAng = Math.atan2(ty-p.y, tx-p.x);
   }
   const n = p.shots;
   // homing bolts leave the ship in a WIDE fan and fly straight for a moment before
@@ -52,12 +56,14 @@ export function playerShoot(p: Player) {
 // energy to empty and forces a recharge lockout, so it can't be held forever.
 // (Internally still tracked as `heat` rising to heatMax; the HUD shows the inverse.)
 export function updateLaser(p: Player){
-  const target = pickTarget(p.x,p.y,true);   // laser passes dwell=true for HIGH-HP target stickiness (#49)
-  const firing = !!target && !p.depleted;
+  const manual = manualAim();                // MANUAL (#11): beam follows the cursor
+  const target = manual ? null : pickTarget(p.x,p.y,true); // dwell=true for HIGH-HP stickiness (#49)
+  const firing = !p.depleted && (manual ? game.enemies.length>0 : !!target);
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
     if(p.heat>=p.heatMax) p.depleted = true;
-    const base = Math.atan2(target.y-p.y, target.x-p.x);
+    const base = manual ? Math.atan2(game.mouseY-p.y, game.mouseX-p.x)
+                        : Math.atan2(target!.y-p.y, target!.x-p.x);
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs: number[]=[];
     for(let s=0;s<n;s++){
