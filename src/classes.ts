@@ -64,7 +64,9 @@ export const CLASSES: ClassDef[] = [
     // active `effect` is resolved to a function in main.js (applyActive) to avoid a
     // circular import; cooldown is in sim ticks (60/s). 480 = 8s.
     active: { name: 'Nova', cooldown: 480, effect: 'nova', radius: 160, dmg: 45 },
-    stats: { dmg: 7, fireRate: 12, bulletSpeed: 4.5, maxhp: 85, hp: 85, speed: 4.2, pierce: 1 },
+    // fireRate 12->15 (#52): homing never misses, so 5/s felt too strong. 15 = 4.0/s
+    // (~20% DPS cut). First-pass nerf — tune iteratively.
+    stats: { dmg: 7, fireRate: 15, bulletSpeed: 4.5, maxhp: 85, hp: 85, speed: 4.2, pierce: 1 },
   },
 ];
 
