@@ -7,7 +7,7 @@ import { UPGRADES } from './upgrades.js';
 import { game, WEAPON_UPGRADES } from './state.js';
 import * as D from './difficulty.js';
 import { W, H } from './canvas.js';
-import type { ClassDef, Player, Enemy } from './types.js';
+import type { ClassDef, Player, Enemy, Upgrade } from './types.js';
 
 export function newPlayer(cls: ClassDef = DEFAULT_CLASS): Player {
   const p: Player = {
@@ -33,9 +33,19 @@ export function rollUpgrades() {
   const p = game.player; if(!p) return;
   const cats = WEAPON_UPGRADES[p.weapon] || []; // boons valid for this weapon
   const pool = UPGRADES.filter(u => (u.for==='all' || cats.includes(u.for)) && (!u.req || u.req(p)));
-  const out = [];
-  for (let i=0;i<3 && pool.length;i++) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+  const weights = pool.map(u => u.weight ? u.weight(p) : 1); // per-boon roll bias (#53)
+  const out: Upgrade[] = [];
+  for (let i=0;i<3 && pool.length;i++){
+    const idx = weightedPick(weights);
+    out.push(pool[idx]); pool.splice(idx,1); weights.splice(idx,1); // sample without replacement
+  }
   game.upgradeChoices = out;
+}
+// weighted index pick over parallel weights[]; falls back to the last on rounding drift.
+function weightedPick(weights: number[]): number {
+  let r = Math.random() * weights.reduce((a,b)=>a+b,0);
+  for (let i=0;i<weights.length;i++){ r-=weights[i]; if(r<=0) return i; }
+  return weights.length-1;
 }
 
 // ---- spawning ----

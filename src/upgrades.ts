@@ -7,7 +7,10 @@ import type { Upgrade } from './types.js';
 export const UPGRADES: Upgrade[] = [
   // --- bullet weapons ---
   { id:'rapid',  for:'bullet', name:'Rapid Fire',   desc:'+30% fire rate',          apply:p=>p.fireRate=Math.max(3,p.fireRate*0.77) },
-  { id:'multi',  for:'all',    name:'Split Shot',   desc:'+1 projectile / beam',    apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);} },
+  // Split Shot is a flat ~2x DPS but the extra shots fan out, so it's harder to focus
+  // on a straight-firing class. Homing removes that downside entirely, making it too
+  // strong on the Mage — so weight it down to ~1/3 as likely there (#53).
+  { id:'multi',  for:'all',    name:'Split Shot',   desc:'+1 projectile / beam',    apply:p=>{p.shots++; p.spread=Math.max(p.spread,0.12);}, weight:p=>p.weapon==='homing'?0.35:1 },
   { id:'heavy',  for:'bullet', name:'Heavy Rounds', desc:'+40% bullet damage',      apply:p=>p.dmg*=1.4 },
   { id:'pierce', for:'bullet', name:'Piercing',     desc:'bullets pierce +1 enemy', apply:p=>p.pierce++ },
   { id:'crit',   for:'bullet', name:'Deadeye',      desc:'+12% crit chance (x2)',   apply:p=>p.crit+=0.12 },

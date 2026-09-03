@@ -40,6 +40,9 @@ export interface Upgrade {
   tag?: string;
   req?: (p: Player) => boolean | undefined | null | ActiveDef;
   descFn?: (p: Player) => string;
+  // relative roll weight (default 1); higher = more likely to be offered. A function
+  // so it can depend on the build, e.g. Split Shot is rarer on homing weapons (#53).
+  weight?: (p: Player) => number;
 }
 
 // ---- entities ----
