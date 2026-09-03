@@ -13,6 +13,7 @@ import { playerShoot, updateLaser, enemyShoot, bossAttackFast, bossAttackSlow, e
 import { useActive, SCYTHE_BOOST_MULT } from './abilities.js';
 import { draw, classCardRect, chevronRect, inRect, pauseButtons } from './render.js';
 import { keys } from './input.js';
+import { reset, quitRun, gainXp, pickUpgrade } from './flow.js';
 
 // ---- input ----
 addEventListener('keydown', e => {
@@ -27,34 +28,6 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 
 
-
-// ---- flow ----
-function reset(cls=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[];game.upgrades=[];
-  game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
-
-// active-ability framework: trigger key fires the class's active if a charge is
-// available. Charges regen one after another off a single recharge timer (#51) —
-// spending from full starts the timer; further spends ride the in-progress one.
-// central player-damage path (bullets + hazards, #46): honours i-frames, jolts the
-// screen, and runs the death hold when HP hits 0. Callers gate on iframes themselves
-// where they need to, but this re-checks so it's always safe to call.
-
-// abandon the current run and return to the title screen (pause-menu quit, #27).
-function quitRun(){ game.paused=false; game.state='title'; game.player=null;
-  game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[]; }
-
-function gainXp(p, amt){
-  p.xp+=amt;
-  while(p.xp>=p.xpNext){ p.xp-=p.xpNext; p.lvl++; p.xpNext=Math.floor(p.xpNext*1.35+3);
-    rollUpgrades(); game.state='upgrade'; sfx.levelUp(); }
-}
-
-function pickUpgrade(i){
-  const u=game.upgradeChoices[i]; if(!u)return;
-  u.apply(game.player); game.upgrades.push(u.id);
-  if(game.state==='upgrade'){ game.state='playing'; cv.style.cursor='default'; }
-}
 
 addEventListener('keydown', e=>{
   const k=e.key.toLowerCase();
