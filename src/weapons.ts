@@ -16,8 +16,9 @@ import type { Player, Enemy, BossEnemy } from './types.js';
 function shotOffset(i: number){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 
 export function playerShoot(p: Player) {
+  const manual = manualAim();
   let baseAng = -Math.PI/2;
-  if (manualAim()) {                         // MANUAL (#11): aim straight at the cursor, no leading
+  if (manual) {                              // MANUAL (#11): aim straight at the cursor, no leading
     baseAng = Math.atan2(game.mouseY-p.y, game.mouseX-p.x);
   } else {
     const target = pickTarget(p.x,p.y);
@@ -41,7 +42,10 @@ export function playerShoot(p: Player) {
   // straight phase (~3.5× player radius, in ticks) so the fan is visible before it converges.
   const homeD = homing ? Math.max(8, Math.round((p.r*3.5)/p.bulletSpeed)) : 0;
   for (let i=0;i<n;i++) {
-    const a = baseAng + shotOffset(i)*fan;
+    // auto-aim keeps a shot dead-center on the target (shotOffset); manual aim spreads
+    // the fan symmetrically around the cursor so it's centered on where you point (#11).
+    const off = manual ? (i - (n-1)/2) : shotOffset(i);
+    const a = baseAng + off*fan;
     const crit = Math.random() < p.crit;
     game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
       r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
@@ -67,7 +71,8 @@ export function updateLaser(p: Player){
     const n=p.shots, spr=p.spread*1.7, width=p.beamWidth, perTick=p.beamDps/60; // Split Shot → angled beams
     const angs: number[]=[];
     for(let s=0;s<n;s++){
-      const ang = base + shotOffset(s)*spr; angs.push(ang);   // beams fan around target (center beam stays on aim)
+      const off = manual ? (s - (n-1)/2) : shotOffset(s);      // manual: symmetric fan centered on the cursor (#11)
+      const ang = base + off*spr; angs.push(ang);              // beams fan around aim (center beam stays on aim in auto)
       const dx=Math.cos(ang), dy=Math.sin(ang);
       for(const e of game.enemies){               // damage enemies on this ray (death handled in enemy loop)
         const t=(e.x-p.x)*dx + (e.y-p.y)*dy; if(t<0) continue;
