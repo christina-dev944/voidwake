@@ -126,20 +126,21 @@ export function update(){
       gainXp(p, e.boss?6:2); }
   }
 
-  // Lancer Skylance (#60): wind up, then fire a heavy burst straight UP from the
-  // player — hits everything in the vertical column above it (deaths resolve in the
-  // enemy loop next tick, like Nova/Scythe). Can't be aimed: line up under the target.
+  // Lancer Skylance (#60): wind up, then a SUSTAINED vertical beam straight UP from the
+  // player for ~0.6s, dealing damage per tick to everything in the column above it (like
+  // the normal laser; deaths resolve in the enemy loop next tick). Tracks the player's
+  // live x — hold under a target to land the full damage. Can't be aimed (always up).
   const sl=game.skylance;
   if(sl){
     if(sl.charge>0){ sl.charge--;
-      if(sl.charge===0){                              // release: lock the column at the player's x and strike
-        const half=sl.width/2, tipY=p.y-p.r; sl.hitX=p.x;   // column starts at the ship's nose (matches the render, #60)
-        for(const e of game.enemies){ if(e.y<=tipY && Math.abs(e.x-p.x)<=half+e.r){ e.hp-=sl.dmg; burst(e.x,e.y,190,12,3.2); } }
-        for(let j=game.eBullets.length-1;j>=0;j--){ const b=game.eBullets[j];   // vaporize enemy fire caught in the lance
-          if(b.y<=tipY && Math.abs(b.x-p.x)<=half){ burst(b.x,b.y,190,2,1.4); game.eBullets.splice(j,1); } }
-        sl.active=12; addShake(15); hitStop(7); sfx.skylance();
-      }
-    } else if(sl.active>0){ sl.active--; } else game.skylance=null;
+      if(sl.charge===0){ sl.active=sl.activeMax; addShake(12); sfx.skylance(sl.activeMax/60); }   // beam ON (held SFX)
+    } else if(sl.active>0){ sl.active--;
+      const half=sl.width/2, tipY=p.y-p.r;            // column starts at the ship's nose (matches the render)
+      for(const e of game.enemies){ if(e.y<=tipY && Math.abs(e.x-p.x)<=half+e.r){ e.hp-=sl.perTick; if(Math.random()<0.35) burst(e.x,e.y,190,2,2.2); } }
+      for(let j=game.eBullets.length-1;j>=0;j--){ const b=game.eBullets[j];   // continuously vaporize enemy fire in the lane
+        if(b.y<=tipY && Math.abs(b.x-p.x)<=half){ burst(b.x,b.y,190,1,1.3); game.eBullets.splice(j,1); } }
+      if(sl.active<=0) game.skylance=null;
+    } else game.skylance=null;
   }
 
   // enemy bullets — frozen bullets hang inert in the air (no travel, no collision)

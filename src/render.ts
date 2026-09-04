@@ -150,11 +150,13 @@ export function draw(){
       ctx.fillStyle='hsl(190,95%,82%)'; ctx.shadowBlur=12; ctx.shadowColor='hsl(190,95%,75%)';
       ctx.beginPath(); ctx.arc(plr.x,tipY,3+f*6,0,TAU); ctx.fill();   // muzzle charge bead at the nose
     } else if(sl.active>0){
-      const f=sl.active/12;                                     // fade out
-      ctx.globalAlpha=0.5*f; ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.5;
-      ctx.beginPath(); ctx.moveTo(sl.hitX,tipY); ctx.lineTo(sl.hitX,0); ctx.stroke();
-      ctx.globalAlpha=f; ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.55;
-      ctx.beginPath(); ctx.moveTo(sl.hitX,tipY); ctx.lineTo(sl.hitX,0); ctx.stroke();
+      // sustained beam at the ship's live x — full lane width, held bright with a
+      // subtle pulse, only fading over the last few ticks as it winks out.
+      const f=clamp(sl.active/6,0,1), pulse=0.85+0.15*Math.sin(game.time*0.9);
+      ctx.globalAlpha=0.45*f*pulse; ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.4;
+      ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
+      ctx.globalAlpha=f*pulse; ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.6;
+      ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
     }
     ctx.restore(); ctx.globalAlpha=1; ctx.shadowBlur=0;
   }

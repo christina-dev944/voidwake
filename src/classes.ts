@@ -52,16 +52,17 @@ export const CLASSES: ClassDef[] = [
     id: 'lancer',
     name: 'Lancer',
     desc: 'Continuous piercing beam. Mind the heat.',
-    activeDesc: 'Skylance — charge briefly, then fire a huge burst STRAIGHT UP, hitting everything in the column above you. It can\'t be aimed, so line yourself up beneath a boss or heavy target and commit. Its damage scales with your Beam Amplifier picks, so it grows with the beam.',
+    activeDesc: 'Skylance — charge briefly, then unleash a huge beam STRAIGHT UP for a short burst, shredding everything in the column above you. It can\'t be aimed, so line yourself up beneath a boss or heavy target and hold. Its damage AND width scale with your beam upgrades, so it grows with the Lancer.',
     hue: 190,
     weapon: 'laser',
     beamDps: 60,    // damage/sec dealt to EVERY enemy the beam line crosses
     stats: { maxhp: 90, hp: 90, speed: 4.2, dmg: 15 }, // dmg shown on card = indicative
-    // Skylance (#60): a vertical burst for bosses/high-HP targets the sustained beam
-    // can't burn down fast enough. Damage = 15s of the player's beam DPS (scales with
-    // Beam Amplifier, #60 feedback), 14s cooldown, 44px lane. effect resolved in
-    // abilities.ts (wind-up + strike in update.ts).
-    active: { name: 'Skylance', cooldown: 840, effect: 'skylance', width: 44 },
+    // Skylance (#60): a vertical beam burst for bosses/high-HP targets the sustained
+    // beam can't burn down fast enough. Held ~0.6s dealing per-tick damage; TOTAL = 15s
+    // of the player's beam DPS (scales with Beam Amplifier), lane scales with beam width
+    // (Wide Lens), 14s cooldown. effect resolved in abilities.ts (wind-up + beam in
+    // update.ts). Numeric tunables (duration/total/width/cooldown) live in abilities.ts.
+    active: { name: 'Skylance', cooldown: 840, effect: 'skylance' },
   },
   {
     id: 'mage',

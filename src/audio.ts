@@ -135,11 +135,24 @@ export const sfx = {
   // Lancer Skylance (#60): a rising charge whine during the wind-up…
   skylanceCharge(){ tone(200,0.42,{type:'sawtooth',gain:0.06,slideTo:1000,attack:0.06});
     tone(400,0.42,{type:'sine',gain:0.04,slideTo:1600,attack:0.06}); },
-  // …then a heavy DISCHARGE that reads as a POWERFUL LASER (#60 feedback): a strong
-  // sawtooth beam core sweeping down, a square harmonic under it, an airy bandpass
-  // sizzle, and a short sub for weight — tonal/beam-forward, not an explosion boom.
-  skylance(){ tone(1500,0.4,{type:'sawtooth',gain:0.17,slideTo:280});
-    tone(750,0.4,{type:'square',gain:0.09,slideTo:190});
-    noise(0.32,{gain:0.13,freq:6500,freqTo:1500,q:0.9,type:'bandpass'});
-    tone(90,0.28,{type:'sine',gain:0.11,slideTo:48}); },
+  // …then a SUSTAINED powerful-laser beam held for the ability's whole duration (#60
+  // feedback): a sawtooth core + square harmonic + airy bandpass sizzle, all with an
+  // attack→sustain→release envelope over `dur` seconds, so it's on the entire time.
+  skylance(dur=0.6){
+    if(muted) return; const c=ensure(); if(!c) return;
+    const t=c.currentTime, rel=Math.min(0.08,dur*0.2);
+    const osc=(freq: number, type: OscillatorType, gain: number)=>{
+      const o=c.createOscillator(), g=c.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,t); o.frequency.linearRampToValueAtTime(freq*0.82, t+dur);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+0.03);   // attack
+      g.gain.setValueAtTime(gain,t+dur-rel); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); // sustain→release
+      o.connect(g); g.connect(master!); o.start(t); o.stop(t+dur+0.02);
+    };
+    osc(760,'sawtooth',0.15); osc(384,'square',0.06); osc(90,'sine',0.05);   // core + harmonic + weight
+    const src=c.createBufferSource(); src.buffer=sharedNoise(c); src.loop=true;   // held sizzle
+    const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=4200; bp.Q.value=0.9;
+    const ng=c.createGain(); ng.gain.setValueAtTime(0.0001,t); ng.gain.exponentialRampToValueAtTime(0.07,t+0.03);
+    ng.gain.setValueAtTime(0.07,t+dur-rel); ng.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    src.connect(bp); bp.connect(ng); ng.connect(master!); src.start(t); src.stop(t+dur+0.02);
+  },
 };

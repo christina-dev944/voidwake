@@ -115,12 +115,15 @@ export interface Fx {
 // Fading dash ghost hull.
 export interface Afterimage { x: number; y: number; r: number; hue: number; life: number; }
 
-// Lancer Skylance (#60): a windup-then-fire vertical burst. Non-null while the lance
-// is charging (`charge`>0) or flashing after the hit (`active`>0). Can't be aimed —
-// the column is always straight up from the player.
+// Lancer Skylance (#60): a wind-up, then a SUSTAINED vertical beam that deals its
+// damage per-tick over ~0.6s (like the normal laser), not one instant hit. Non-null
+// while charging (`charge`>0) or while the beam is on (`active`>0). Can't be aimed —
+// the column is always straight up from the player's live x.
 export interface Skylance {
-  charge: number; maxCharge: number; active: number;
-  dmg: number; width: number; hitX: number;   // hitX = the column x locked at the fire frame
+  charge: number; maxCharge: number;
+  active: number; activeMax: number;   // beam-on ticks remaining / total
+  perTick: number;                     // damage to each in-column enemy per tick
+  width: number;                       // full lane width (scales with beam width)
 }
 
 // ---- the single shared game-state object ----
