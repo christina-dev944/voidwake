@@ -5,18 +5,21 @@
 import { clamp } from './util.js';
 import { game } from './state.js';
 
-export interface Settings { bulletOpacity: number; beamOpacity: number; }
+export interface Settings { bulletOpacity: number; }
 
 // Defaults mirror the historical game.* starting values so a fresh player is unchanged.
-const DEFAULTS: Settings = { bulletOpacity: 0.25, beamOpacity: 0.16 };
+const DEFAULTS: Settings = { bulletOpacity: 0.25 };
 export const OPACITY_MIN = 0.05;   // never let projectiles go fully invisible
+// The Lancer beam is always-on, so it reads quieter than discrete bullets: its opacity
+// tracks the bullet setting at a fixed 0.64 ratio (25% -> 16%, 100% -> 64%). One slider.
+const BEAM_RATIO = 0.64;
 const KEY = 'voidwake.settings';
 
 function load(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (s && typeof s.bulletOpacity === 'number' && typeof s.beamOpacity === 'number')
-      return { bulletOpacity: clamp(s.bulletOpacity, OPACITY_MIN, 1), beamOpacity: clamp(s.beamOpacity, OPACITY_MIN, 1) };
+    if (s && typeof s.bulletOpacity === 'number')
+      return { bulletOpacity: clamp(s.bulletOpacity, OPACITY_MIN, 1) };
   } catch {}
   return { ...DEFAULTS };
 }
@@ -28,7 +31,7 @@ export function saveSettings(){ try { localStorage.setItem(KEY, JSON.stringify(s
 // push the current settings into the live game state (the renderer reads game.*).
 export function applySettings(){
   game.pBulletAlpha = settings.bulletOpacity;
-  game.beamAlpha = settings.beamOpacity;
+  game.beamAlpha = settings.bulletOpacity * BEAM_RATIO;   // beam derived from the one slider
 }
 
 applySettings();   // sync saved values into game state at module load

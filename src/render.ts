@@ -32,7 +32,7 @@ export function draw(){
     center('a roguelike bullet hell', 18, '#8a5cff', H/2+6);
     center('press SPACE / click to choose a vessel', 15, '#7a7a98', H/2+50);
     if(best.wave>0) center('best run: wave '+best.wave+' - score '+best.score, 13, '#6a6a88', H/2+82);
-    drawButton(titleSettingsRect(), '⚙  Settings  [S]', false);   // settings entry (#28)
+    center('press S for settings', 12, '#565879', H/2+112);   // settings entry (#28)
     frameFooter();
     if(game.settingsOpen) drawSettings();
     return; }
@@ -243,13 +243,10 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
 // maps straight to a numeric Settings field; the toggle + close are separate rects.
 const SETTINGS_SLIDERS: { key: keyof Settings; label: string }[] = [
   { key:'bulletOpacity', label:'Bullet opacity' },
-  { key:'beamOpacity',   label:'Beam opacity' },
 ];
-// title-screen entry button (also hit-tested in main.ts)
-export function titleSettingsRect(){ const w=190,h=40; return { x:W/2-w/2, y:H/2+112, w, h }; }
 // geometry shared by drawSettings() and the pointer hit-testing in main.ts
 export function settingsRects(){
-  const w=Math.min(480, W*0.82), h=340, x=W/2-w/2, y=H/2-h/2, pad=30;
+  const w=Math.min(480, W*0.82), h=260, x=W/2-w/2, y=H/2-h/2, pad=30;
   const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label,
     track:{ x:x+pad, y:y+100+i*64, w:w-pad*2, h:6 } }));
   const sound = { x:x+pad, y:y+100+SETTINGS_SLIDERS.length*64, w:w-pad*2, h:30 };

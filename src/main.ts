@@ -8,7 +8,7 @@ import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
 import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
-import { classCardRect, chevronRect, inRect, pauseButtons, titleSettingsRect, settingsRects, sliderValue } from './render.js';
+import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue } from './render.js';
 import { keys } from './input.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
 import { settings, saveSettings, applySettings } from './settings.js';
@@ -112,7 +112,6 @@ cv.addEventListener('pointerdown', e=>{
     game.pauseHover=null; cv.style.cursor='default';
     return;
   }
-  if(game.state==='title' && inRect(mx,my,titleSettingsRect())){ openSettings(); return; }   // settings from title (#28)
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     // chevrons page the selection; keeps far-off classes reachable by mouse
