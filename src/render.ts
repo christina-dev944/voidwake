@@ -32,7 +32,6 @@ export function draw(){
     center('a roguelike bullet hell', 18, '#8a5cff', H/2+6);
     center('press SPACE / click to choose a vessel', 15, '#7a7a98', H/2+50);
     if(best.wave>0) center('best run: wave '+best.wave+' - score '+best.score, 13, '#6a6a88', H/2+82);
-    center('press S for settings', 12, '#565879', H/2+112);   // settings entry (#28)
     frameFooter();
     if(game.settingsOpen) drawSettings();
     return; }
