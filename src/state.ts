@@ -16,6 +16,7 @@ export const game: GameState = {
   aimTarget: null,      // currently-locked auto-aim target — gives HIGH-HP mode stickiness (#49)
   aimLockTime: 0,       // game.time when the current HIGH-HP target was locked (dwell timer, #49)
   mouseX: 360, mouseY: 360, // cursor in game units for MANUAL aim mode (#11); updated on pointermove
+  settingsOpen: false,      // settings overlay open over the title or pause menu (#28)
   pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;
   // a settings slider will drive this once the settings menu (#28) lands.

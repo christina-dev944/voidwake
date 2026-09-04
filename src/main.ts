@@ -8,9 +8,20 @@ import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
 import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
-import { classCardRect, chevronRect, inRect, pauseButtons } from './render.js';
+import { classCardRect, chevronRect, inRect, pauseButtons, titleSettingsRect, settingsRects, sliderValue } from './render.js';
 import { keys } from './input.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
+import { settings, saveSettings, applySettings } from './settings.js';
+
+// settings overlay (#28): open/close + which slider (if any) the pointer is dragging
+function openSettings(){ game.settingsOpen=true; cv.style.cursor='default'; }
+function closeSettings(){ game.settingsOpen=false; cv.style.cursor='default'; }
+let sliderGrab = -1;   // index into settingsRects().sliders, or -1
+function setSliderFromX(i: number, mx: number){
+  const s=settingsRects().sliders[i]; if(!s) return;
+  const key=s.key, frac=(mx-s.track.x)/s.track.w;
+  settings[key]=sliderValue(frac); applySettings(); saveSettings();
+}
 
 // ---- input ----
 addEventListener('keydown', e => {
@@ -18,6 +29,7 @@ addEventListener('keydown', e => {
   resumeAudio();   // first gesture unlocks WebAudio (#7)
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
+  if (game.settingsOpen) return;   // settings swallows gameplay keys (Esc/S close it, handled below)
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
     // default cursor for the pause menu; back to the crosshair for manual aim on resume (#11)
     cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; }
@@ -27,6 +39,8 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 addEventListener('keydown', e=>{
   const k=e.key.toLowerCase();
+  if(game.settingsOpen){ if(k==='escape'||k==='s') closeSettings(); return; }   // settings overlay (#28)
+  if((game.state==='title' || game.paused) && k==='s'){ openSettings(); return; } // open from title/pause
   if(game.paused && k==='q'){ quitRun(); return; } // quit-to-title from pause menu
   if(game.state==='upgrade'){ const n=parseInt(e.key); if(n>=1&&n<=3) pickUpgrade(n-1); }
   if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
@@ -54,9 +68,16 @@ function upgradeAt(mx: number,my: number){ for(let i=0;i<game.upgradeChoices.len
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
   const [mx,my]=canvasXY(e);
+  if(game.settingsOpen){                             // settings overlay takes pointer priority (#28)
+    if(sliderGrab>=0) setSliderFromX(sliderGrab, mx);
+    const s=settingsRects();
+    const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || sliderGrab>=0 ||
+      s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
+    cv.style.cursor = hot?'pointer':'default'; return;
+  }
   if(game.paused){                                   // hover-highlight pause buttons (#36)
     const b=pauseButtons();                          // don't move the manual aim while paused (#11)
-    game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.quit)?'quit':null;
+    game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.settings)?'settings':inRect(mx,my,b.quit)?'quit':null;
     cv.style.cursor = game.pauseHover?'pointer':'default'; return;
   }
   if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
@@ -74,13 +95,24 @@ cv.addEventListener('pointermove', e=>{
 cv.addEventListener('pointerdown', e=>{
   resumeAudio();   // first gesture unlocks WebAudio (#7)
   const [mx,my]=canvasXY(e);
+  if(game.settingsOpen){                             // settings overlay: sliders / sound / close (#28)
+    const s=settingsRects();
+    if(inRect(mx,my,s.close)){ closeSettings(); return; }
+    const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
+    if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); return; }   // grab to drag, and jump to the click point
+    if(inRect(mx,my,s.sound)){ toggleMute(); return; }
+    if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
+    return;
+  }
   if(game.paused){                                   // clickable pause menu (#36)
     const b=pauseButtons();
     if(inRect(mx,my,b.resume)) game.paused=false;
+    else if(inRect(mx,my,b.settings)) openSettings();
     else if(inRect(mx,my,b.quit)) quitRun();
     game.pauseHover=null; cv.style.cursor='default';
     return;
   }
+  if(game.state==='title' && inRect(mx,my,titleSettingsRect())){ openSettings(); return; }   // settings from title (#28)
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     // chevrons page the selection; keeps far-off classes reachable by mouse
@@ -93,6 +125,9 @@ cv.addEventListener('pointerdown', e=>{
     const idx=upgradeAt(mx,my); if(idx>=0) pickUpgrade(idx);
   }
 });
+
+// release a settings slider drag anywhere the pointer comes up (incl. off-canvas) (#28)
+addEventListener('pointerup', ()=>{ sliderGrab=-1; });
 
 // starting the loop (its own module) kicks off the fixed-timestep heartbeat
 import './loop.js';

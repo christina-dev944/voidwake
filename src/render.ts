@@ -10,6 +10,8 @@ import { isMuted } from './audio.js';
 import { keys } from './input.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
+import { settings, OPACITY_MIN } from './settings.js';
+import type { Settings } from './settings.js';
 
 // ---- render ----
 // the player ship hull (also reused for dash afterimages, #51). Builds the path only —
@@ -30,7 +32,10 @@ export function draw(){
     center('a roguelike bullet hell', 18, '#8a5cff', H/2+6);
     center('press SPACE / click to choose a vessel', 15, '#7a7a98', H/2+50);
     if(best.wave>0) center('best run: wave '+best.wave+' - score '+best.score, 13, '#6a6a88', H/2+82);
-    frameFooter(); return; }
+    drawButton(titleSettingsRect(), '⚙  Settings  [S]', false);   // settings entry (#28)
+    frameFooter();
+    if(game.settingsOpen) drawSettings();
+    return; }
 
   if(game.state==='classSelect'){ drawClassSelect(); return; }
 
@@ -179,12 +184,15 @@ export function draw(){
     ctx.fillText('PAUSED', lx, Math.max(72,H*0.16));                        // title top-left
     const b=pauseButtons();
     drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');           // left column
+    drawButton(b.settings,'⚙  Settings', game.pauseHover==='settings');
     drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
     // right column: STATS panel on top, UPGRADES THIS RUN panel below it
     const panelW=Math.min(360,Math.max(260,W*0.34));
     const rx=W-panelW-Math.max(40,W*0.08), ry=b.resume.y;
     const statsBottom=drawPauseStats(rx, ry, panelW);
     drawRunBoons(rx, statsBottom+14, panelW); }
+
+  if(game.settingsOpen) drawSettings();   // overlay (title returns earlier, so this covers pause/etc)
 }
 
 // shared bordered panel backdrop for the pause-menu panels
@@ -222,12 +230,53 @@ function drawPauseStats(x: number,y: number,w: number){
 
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
 export function pauseButtons(){ const w=230,h=46, x=Math.max(40,W*0.10), y0=Math.max(120,H*0.30);
-  return { resume:{x,y:y0,w,h}, quit:{x,y:y0+60,w,h} }; }
+  return { resume:{x,y:y0,w,h}, settings:{x,y:y0+60,w,h}, quit:{x,y:y0+120,w,h} }; }
 function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean){
   ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
   ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
   ctx.fillText(label, r.x+18, r.y+r.h/2+6);
+}
+
+// ---- settings menu (#28) ----
+// Slider rows are data-driven so adding an option later is one array entry. `key`
+// maps straight to a numeric Settings field; the toggle + close are separate rects.
+const SETTINGS_SLIDERS: { key: keyof Settings; label: string }[] = [
+  { key:'bulletOpacity', label:'Bullet opacity' },
+  { key:'beamOpacity',   label:'Beam opacity' },
+];
+// title-screen entry button (also hit-tested in main.ts)
+export function titleSettingsRect(){ const w=190,h=40; return { x:W/2-w/2, y:H/2+112, w, h }; }
+// geometry shared by drawSettings() and the pointer hit-testing in main.ts
+export function settingsRects(){
+  const w=Math.min(480, W*0.82), h=340, x=W/2-w/2, y=H/2-h/2, pad=30;
+  const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label,
+    track:{ x:x+pad, y:y+100+i*64, w:w-pad*2, h:6 } }));
+  const sound = { x:x+pad, y:y+100+SETTINGS_SLIDERS.length*64, w:w-pad*2, h:30 };
+  const close = { x:x+w/2-75, y:y+h-56, w:150, h:40 };
+  return { panel:{x,y,w,h}, sliders, sound, close };
+}
+// map a fraction (0..1 along the track) to/from the OPACITY_MIN..1 value range
+export const sliderFrac = (v: number) => (v-OPACITY_MIN)/(1-OPACITY_MIN);
+export const sliderValue = (f: number) => OPACITY_MIN + clamp(f,0,1)*(1-OPACITY_MIN);
+function drawSettings(){
+  const r=settingsRects();
+  ctx.fillStyle='rgba(6,6,11,.82)'; ctx.fillRect(0,0,W,H);
+  panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
+  center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
+  for(const s of r.sliders){
+    const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val),0,1);
+    ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText(s.label, t.x, t.y-12);
+    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w, t.y-12);
+    ctx.fillStyle='#26264a'; roundRect(t.x,t.y,t.w,t.h,3); ctx.fill();                         // track
+    ctx.fillStyle='hsl(258,90%,66%)'; roundRect(t.x,t.y,Math.max(t.h,fw),t.h,3); ctx.fill();   // fill
+    ctx.beginPath(); ctx.arc(t.x+fw, t.y+t.h/2, 8, 0, TAU); ctx.fillStyle='#e8e8f0'; ctx.fill(); // knob
+  }
+  const on=!isMuted();
+  ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
+  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w, r.sound.y+18);
+  drawButton(r.close, 'Close  [Esc]', false);
+  ctx.textAlign='left';
 }
 
 // pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",

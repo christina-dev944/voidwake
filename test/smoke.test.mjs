@@ -36,6 +36,15 @@ test('built game boots, starts a run, and the simulation advances', async () => 
   assert.ok(game, 'game object not exposed — test seam missing (window.__voidwake)');
   assert.equal(game.state, 'title');
 
+  // Settings menu (#28): [S] opens the overlay at the title; Esc closes it; the game
+  // state underneath is untouched. Also confirm settings drive the live opacity fields.
+  dom.fire('keydown', { key: 's' });
+  assert.equal(game.settingsOpen, true, '[S] should open settings at the title');
+  assert.equal(game.state, 'title', 'settings is an overlay — state stays title');
+  assert.equal(typeof game.pBulletAlpha, 'number', 'bullet opacity should be applied from settings');
+  dom.fire('keydown', { key: 'Escape' });
+  assert.equal(game.settingsOpen, false, 'Esc should close settings');
+
   // Enter -> class select, Enter -> lock in a class and start the run
   dom.fire('keydown', { key: 'Enter' });
   assert.equal(game.state, 'classSelect', 'Enter at title should open class select');
