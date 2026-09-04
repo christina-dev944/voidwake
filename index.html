@@ -20,10 +20,11 @@
   #hud { display:flex; gap:18px; justify-content:flex-end; font-size:13px; letter-spacing:.5px; color:#a9a9c8; }
   #hud b { color:var(--fg); }
   /* positioned in JS (resize) so it sits just right of the centered canvas */
-  #side { position:absolute; top:50%; transform:translateY(-50%);
+  /* full-height rail beside the canvas; level-up sits up top, controls pinned bottom */
+  #side { position:absolute; top:0; height:100%; padding:18px 0;
     display:flex; flex-direction:column; gap:14px; width:232px; }
   #side .hint { line-height:1.85; }
-  #controls { white-space:nowrap; }   /* keep each control on a single line */
+  #controls { white-space:nowrap; margin-top:auto; }   /* one control per line; pinned to the bottom */
   .hint b { color:#8a8aa6; font-weight:600; }
   .shdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; margin-bottom:5px; }
   /* bottom HUD strip — sits OUTSIDE the canvas so status bars never block the
@@ -47,19 +48,19 @@
   /* non-blocking level-up panel (#26) — lives in the side rail, OUTSIDE the playfield */
   #levelup { display:none; background:rgba(18,18,42,0.6); border:1px solid #2a2a48;
     border-radius:8px; padding:10px; }
-  #levelup .lu-hdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; font-size:13px; }
-  #levelup .lu-q { color:#ffd24d; font-size:11px; margin-left:6px; letter-spacing:0; }
-  #levelup .lu-sub { color:#7a7a98; font-size:10px; margin:2px 0 8px; }
+  #levelup .lu-hdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; font-size:17px; }
+  #levelup .lu-q { color:#ffd24d; font-size:13px; margin-left:6px; letter-spacing:0; }
+  #levelup .lu-sub { color:#7a7a98; font-size:12px; margin:3px 0 10px; }
   #levelup .lu-card { display:block; width:100%; text-align:left; background:#14142a;
-    border:1.5px solid #3a3a5c; border-radius:7px; padding:8px 10px; margin-bottom:8px;
+    border:1.5px solid #3a3a5c; border-radius:7px; padding:10px 12px; margin-bottom:9px;
     color:var(--fg); cursor:pointer; font-family:inherit; }
   #levelup .lu-card:last-child { margin-bottom:0; }
   #levelup .lu-card:hover { border-color:#8a5cff; background:#1a1a34; }
   #levelup .lu-ex { border-color:#c9a24a; }
-  #levelup .lu-name { font-weight:bold; font-size:13px; color:#8a5cff; margin-bottom:3px; }
+  #levelup .lu-name { font-weight:bold; font-size:16px; color:#8a5cff; margin-bottom:4px; }
   #levelup .lu-ex .lu-name { color:#e0b24a; }
-  #levelup .lu-desc { font-size:11px; color:#b4b4d0; line-height:1.3; }
-  #levelup .lu-tag { font-size:9px; color:#c9a24a; margin-left:6px; font-weight:600; }
+  #levelup .lu-desc { font-size:14px; color:#b4b4d0; line-height:1.35; }
+  #levelup .lu-tag { font-size:11px; color:#c9a24a; margin-left:6px; font-weight:600; }
 </style>
 </head>
 <body>
