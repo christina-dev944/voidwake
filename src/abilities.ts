@@ -20,13 +20,17 @@ function applyActive(a: ActiveDef, p: Player){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
   else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
   else if(a.effect==='timestop') timeStop(p, a.duration||150);
-  else if(a.effect==='skylance') skylanceCast(p, a.dmg||600, a.width||44);
+  else if(a.effect==='skylance') skylanceCast(p, a.width||44);
 }
 // Lancer Skylance (#60): begin a short wind-up; the actual burst resolves in update.ts
 // when `charge` reaches 0 (hits everything in the vertical column above the player).
 // Can't be aimed — the fixed-up direction is the skill check. Wind-up = SKY_CHARGE ticks.
-const SKY_CHARGE=26;
-function skylanceCast(p: Player, dmg: number, width: number){
+// Damage SCALES with the beam's power (#60 feedback): it's SKY_SECONDS worth of the
+// player's current beam DPS delivered instantly, so Beam Amplifier picks buff the lance
+// too. Base beamDps 60 × 15 = 900; grows with every +30% beam-damage upgrade.
+const SKY_CHARGE=26, SKY_SECONDS=15;
+function skylanceCast(p: Player, width: number){
+  const dmg=Math.round(p.beamDps*SKY_SECONDS);
   game.skylance={ charge:SKY_CHARGE, maxCharge:SKY_CHARGE, active:0, dmg, width, hitX:p.x };
   addShake(4); sfx.skylanceCharge();   // the fire hit/flash + SFX land in update.ts on release
 }
