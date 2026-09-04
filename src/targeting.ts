@@ -11,7 +11,8 @@ export function nearestEnemy(x: number,y: number,exclude?: Set<number>|null): En
   return best;
 }
 
-// the n nearest distinct enemies, closest first — the Auto-Gunner locks one per shot (#21).
+// the n nearest distinct enemies, closest first — backs the SHELVED Auto-Gunner's
+// per-shot locking (#21). Currently dormant (no live class uses it); kept for revival.
 export function nearestN(x: number,y: number,n: number): Enemy[] {
   return game.enemies
     .map(e => ({ e, d: dist2(x,y,e.x,e.y) }))

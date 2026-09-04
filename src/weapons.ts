@@ -26,8 +26,10 @@ function fireBulletAt(p: Player, tx: number, ty: number){
 
 export function playerShoot(p: Player) {
   const manual = manualAim();
-  // Auto-Gunner (#21): lock the N nearest enemies and put one leading shot on each,
-  // so Split Shot widens coverage instead of fanning. Manual aim overrides to the cursor.
+  // Auto-Gunner (#21, SHELVED): lock the N nearest enemies and put one leading shot on
+  // each, so Split Shot widens coverage instead of fanning. Manual aim overrides to the
+  // cursor. DORMANT — no live class uses weapon:'auto' (see classes.ts AUTO_GUNNER);
+  // kept intact in case the class is revived.
   if(p.weapon==='auto' && !manual){
     const targets = nearestN(p.x, p.y, p.shots);
     for(const t of targets){

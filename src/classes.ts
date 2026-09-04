@@ -68,19 +68,24 @@ export const CLASSES: ClassDef[] = [
     // (~20% DPS cut). First-pass nerf — tune iteratively.
     stats: { dmg: 7, fireRate: 15, bulletSpeed: 4.5, maxhp: 85, hp: 85, speed: 4.2, pierce: 1 },
   },
-  {
-    id: 'gunner',
-    name: 'Auto-Gunner',
-    desc: 'Auto-locks a different enemy per shot. Split Shot adds targets, not spread.',
-    hue: 55,
-    weapon: 'auto',   // each shot fires at a distinct nearest enemy (see playerShoot)
-    // starts firing at TWO targets at once; lower per-shot damage, fast cadence — a
-    // crowd-clearer that trades single-target focus for coverage. Split Shot raises the
-    // simultaneous-target count.
-    stats: { dmg: 8, fireRate: 9, bulletSpeed: 9, maxhp: 90, hp: 90, speed: 4.3, shots: 2 },
-    active: null,
-  },
 ];
+
+// --- SHELVED: Auto-Gunner (#21, closed not-planned 2026-09-04) ---------------------
+// A multi-target auto-aim class: each shot auto-locks a distinct nearest enemy
+// (weapon:'auto', handled in weapons.ts playerShoot; uses targeting.nearestN). It played
+// fine but wasn't distinct enough — "spray many enemies" overlaps the existing AoE
+// wave-clearers (Lancer/Mage). Kept in-code but DISABLED (not shown in class select) in
+// case it's revived with a more unique identity. Flip ENABLE_AUTO_GUNNER to re-enable;
+// the weapon:'auto' firing path and nearestN() stay intact but are otherwise unused.
+const ENABLE_AUTO_GUNNER = false;
+const AUTO_GUNNER: ClassDef = {
+  id: 'gunner', name: 'Auto-Gunner',
+  desc: 'Auto-locks a different enemy per shot. Split Shot adds targets, not spread.',
+  hue: 55, weapon: 'auto',
+  stats: { dmg: 8, fireRate: 9, bulletSpeed: 9, maxhp: 90, hp: 90, speed: 4.3, shots: 2 },
+  active: null,
+};
+if (ENABLE_AUTO_GUNNER) CLASSES.push(AUTO_GUNNER);
 
 export const DEFAULT_CLASS = CLASSES[0];
 export const classById = (id: string): ClassDef => CLASSES.find(c => c.id === id) || DEFAULT_CLASS;

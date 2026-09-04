@@ -81,19 +81,4 @@ test('built game boots, starts a run, and the simulation advances', async () => 
   dom.advanceFrames(30);
   assert.ok(game.pBullets.length > 0, 'manual aim should still auto-fire');
   assert.ok(game.pBullets.every(b => b.vx < 0), 'manual-aim bullets should head toward the cursor (left)');
-
-  // Auto-Gunner (#21): quit, restart as the gunner, and confirm it multi-targets —
-  // one auto-locked shot per nearest enemy (starts at 2 simultaneous targets).
-  dom.fire('keydown', { key: 'p' });            // pause
-  dom.fire('keydown', { key: 'q' });            // quit to title
-  assert.equal(game.state, 'title');
-  dom.fire('keydown', { key: 'Enter' });         // -> class select
-  dom.fire('keydown', { key: '5' });             // pick the 5th class (Auto-Gunner)
-  assert.equal(game.state, 'playing');
-  assert.equal(game.player.weapon, 'auto', 'class 5 should be the Auto-Gunner');
-  assert.equal(game.player.shots, 2, 'Auto-Gunner starts with 2 simultaneous targets');
-  game.aimIdx = 0;                               // aim mode persists across runs — force NEAREST (not manual)
-  game.pBullets.length = 0;
-  dom.advanceFrames(2);
-  assert.ok(game.pBullets.length >= 2, 'Auto-Gunner should fire at multiple targets in one volley');
 });
