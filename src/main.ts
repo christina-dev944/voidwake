@@ -8,7 +8,7 @@ import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
 import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
-import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue, upgradePanelRects } from './render.js';
+import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue } from './render.js';
 import { keys } from './input.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
 import { settings, saveSettings, applySettings } from './settings.js';
@@ -61,11 +61,6 @@ function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
 function classAt(mx: number,my: number){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
   if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
-// which non-blocking level-up card (if any) is under the cursor (#26); geometry lives
-// in render.upgradePanelRects so draw + hit-testing stay in sync.
-function upgradeAt(mx: number,my: number){ const cards=upgradePanelRects();
-  for(let i=0;i<cards.length;i++){ if(inRect(mx,my,cards[i])) return i; } return -1; }
-
 // hover highlights the card under the cursor (no scroll — carousel scroll follows
 // selection only, so cards don't slide out from under the pointer)
 cv.addEventListener('pointermove', e=>{
@@ -77,7 +72,6 @@ cv.addEventListener('pointermove', e=>{
       s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
-  if(game.upgradeChoices.length && upgradeAt(mx,my)>=0){ cv.style.cursor='pointer'; return; } // level-up card hover (#26)
   if(game.paused){                                   // hover-highlight pause buttons (#36)
     const b=pauseButtons();                          // don't move the manual aim while paused (#11)
     game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.settings)?'settings':inRect(mx,my,b.quit)?'quit':null;
@@ -106,7 +100,6 @@ cv.addEventListener('pointerdown', e=>{
     if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
     return;
   }
-  if(game.upgradeChoices.length){ const i=upgradeAt(mx,my); if(i>=0){ pickUpgrade(i); return; } } // pick a level-up card, play or paused (#26)
   if(game.paused){                                   // clickable pause menu (#36)
     const b=pauseButtons();
     if(inRect(mx,my,b.resume)) game.paused=false;

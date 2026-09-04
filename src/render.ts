@@ -12,6 +12,7 @@ import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN } from './settings.js';
 import type { Settings } from './settings.js';
+import { pickUpgrade } from './flow.js';
 
 // ---- render ----
 // the player ship hull (also reused for dash afterimages, #51). Builds the path only —
@@ -20,6 +21,7 @@ function shipPath(x: number,y: number,r: number){ ctx.beginPath();
   ctx.moveTo(x,y-r); ctx.lineTo(x-r*0.8,y+r*0.7); ctx.lineTo(x,y+r*0.3); ctx.lineTo(x+r*0.8,y+r*0.7); ctx.closePath(); }
 export function draw(){
   syncBottomHud();   // keep the DOM HUD strip below the canvas in sync (#41)
+  syncLevelUpPanel();   // keep the DOM level-up rail in sync (#26)
   ctx.clearRect(0,0,W,H);
   // starfield backdrop
   ctx.fillStyle='#06060b'; ctx.fillRect(0,0,W,H);
@@ -190,7 +192,6 @@ export function draw(){
     const statsBottom=drawPauseStats(rx, ry, panelW);
     drawRunBoons(rx, statsBottom+14, panelW); }
 
-  if(game.upgradeChoices.length) drawUpgradePanel();   // non-blocking level-up offer (#26) — over play or pause
   if(game.settingsOpen) drawSettings();   // overlay (title returns earlier, so this covers pause/etc)
 }
 
@@ -389,43 +390,33 @@ function syncBottomHud(){
   }
 }
 
-// Non-blocking level-up (#26): a compact right-side panel instead of a full-screen
-// modal, so the sim keeps running and the player picks when it's safe. Geometry is
-// shared with main.ts's pointer hit-testing via upgradePanelRects().
-function upgradePanelGeom(){
-  const pw=Math.min(300, Math.max(220, W*0.32)), x=W-pw-12, top=64, headerH=46, ch=90, gap=10;
-  const cards: {x:number;y:number;w:number;h:number}[]=[];
-  for(let i=0;i<game.upgradeChoices.length;i++) cards.push({ x, y:top+headerH+i*(ch+gap), w:pw, h:ch });
-  return { pw, x, top, headerH, ch, gap, cards };
-}
-export function upgradePanelRects(){ return upgradePanelGeom().cards; }
-function drawUpgradePanel(){
-  const g=upgradePanelGeom(); if(!g.cards.length) return;
-  const { pw, x, top, headerH, ch, gap } = g;
-  const totalH = headerH + g.cards.length*(ch+gap);
-  ctx.fillStyle='rgba(6,6,11,0.55)'; roundRect(x-8, top-16, pw+16, totalH+6, 10); ctx.fill();   // readable backdrop
-  ctx.textAlign='left'; ctx.font='bold 16px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
-  ctx.fillText('LEVEL UP', x, top+2);
-  ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#7a7a98'; ctx.fillText('1 / 2 / 3 or click', x, top+20);
-  if(game.pendingLevelUps>0){ ctx.textAlign='right'; ctx.fillStyle='#ffd24d';
-    ctx.fillText('+'+game.pendingLevelUps+' queued', x+pw, top+2); ctx.textAlign='left'; }
-  game.upgradeChoices.forEach((u,i)=>{
-    const r=g.cards[i];
-    const exHue = u.tag ? (CLASSES.find(c=>c.name.toUpperCase()===u.tag)?.hue ?? 45) : null;
-    const accent = exHue!=null ? `hsl(${exHue},85%,64%)` : '#8a5cff';
-    ctx.fillStyle = exHue!=null ? `hsl(${exHue},42%,13%)` : 'rgba(20,20,42,0.94)';
-    if(exHue!=null){ ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=accent; }
-    roundRect(r.x,r.y,r.w,r.h,9); ctx.fill();
-    if(exHue!=null) ctx.restore();
-    ctx.strokeStyle=accent; ctx.lineWidth=exHue!=null?2.5:1.5; roundRect(r.x,r.y,r.w,r.h,9); ctx.stroke();
-    ctx.textAlign='left'; ctx.fillStyle=accent; ctx.font='bold 14px ui-monospace,monospace';
-    ctx.fillText((i+1)+'. '+u.name, r.x+12, r.y+22);
-    const desc = u.descFn&&game.player?u.descFn(game.player):u.desc;
-    wrapText(desc, r.x+12, r.y+42, r.w-24, 15, '#b4b4d0', 12);
-    if(u.tag){ ctx.font='bold 9px ui-monospace,monospace'; ctx.fillStyle=accent; ctx.textAlign='right';
-      ctx.fillText(u.tag+' EXCLUSIVE', r.x+r.w-12, r.y+22); ctx.textAlign='left'; }
+// Non-blocking level-up (#26): the offer is a DOM panel in the side rail (index.html
+// #levelup), OUTSIDE the canvas, so it never covers the playfield. syncLevelUpPanel()
+// runs each frame and only rebuilds the DOM when the offer actually changes. Picking is
+// via the buttons' click (wired here) or the 1/2/3 keys (main.ts).
+const LEVELUP = el('levelup');
+let luSig = '';
+function esc(s: string){ return s.replace(/[&<>]/g, c => c==='&'?'&amp;':c==='<'?'&lt;':'&gt;'); }
+function syncLevelUpPanel(){
+  const choices = game.upgradeChoices;
+  if(!choices.length){ if(luSig){ LEVELUP.style.display='none'; LEVELUP.innerHTML=''; luSig=''; } return; }
+  const sig = choices.map(u=>u.id).join(',') + '|' + game.pendingLevelUps;
+  if(sig===luSig) return;   // unchanged — leave the DOM (and its click handlers) in place
+  luSig = sig;
+  LEVELUP.style.display='block';
+  const queued = game.pendingLevelUps>0 ? `<span class="lu-q">+${game.pendingLevelUps} queued</span>` : '';
+  let html = `<div class="lu-hdr">LEVEL UP${queued}</div><div class="lu-sub">1 / 2 / 3 or click</div>`;
+  choices.forEach((u,i)=>{
+    const desc = u.descFn&&game.player ? u.descFn(game.player) : u.desc;
+    const tag = u.tag ? `<span class="lu-tag">${esc(u.tag)}</span>` : '';
+    html += `<button type="button" tabindex="-1" class="lu-card${u.tag?' lu-ex':''}" data-i="${i}">`+
+            `<div class="lu-name">${i+1}. ${esc(u.name)}${tag}</div>`+
+            `<div class="lu-desc">${esc(desc)}</div></button>`;
   });
-  ctx.textAlign='left';
+  LEVELUP.innerHTML = html;
+  LEVELUP.querySelectorAll('.lu-card').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ pickUpgrade(Number(btn.getAttribute('data-i'))); (btn as HTMLElement).blur(); });
+  });
 }
 
 // ---- class select ----

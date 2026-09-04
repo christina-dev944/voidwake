@@ -30,8 +30,8 @@ export function installDomStub() {
   });
 
   const mkEl = (extra = {}) => ({
-    style: {}, textContent: '', addEventListener: add,
-    getContext: () => ctx,
+    style: {}, textContent: '', innerHTML: '', addEventListener: add,
+    getContext: () => ctx, querySelectorAll: () => [],
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 720, height: 720, right: 720, bottom: 720 }),
     width: 720, height: 720, ...extra,
   });
