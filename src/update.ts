@@ -133,10 +133,10 @@ export function update(){
   if(sl){
     if(sl.charge>0){ sl.charge--;
       if(sl.charge===0){                              // release: lock the column at the player's x and strike
-        const half=sl.width/2; sl.hitX=p.x;
-        for(const e of game.enemies){ if(e.y<=p.y && Math.abs(e.x-p.x)<=half+e.r){ e.hp-=sl.dmg; burst(e.x,e.y,190,12,3.2); } }
+        const half=sl.width/2, tipY=p.y-p.r; sl.hitX=p.x;   // column starts at the ship's nose (matches the render, #60)
+        for(const e of game.enemies){ if(e.y<=tipY && Math.abs(e.x-p.x)<=half+e.r){ e.hp-=sl.dmg; burst(e.x,e.y,190,12,3.2); } }
         for(let j=game.eBullets.length-1;j>=0;j--){ const b=game.eBullets[j];   // vaporize enemy fire caught in the lance
-          if(b.y<=p.y && Math.abs(b.x-p.x)<=half){ burst(b.x,b.y,190,2,1.4); game.eBullets.splice(j,1); } }
+          if(b.y<=tipY && Math.abs(b.x-p.x)<=half){ burst(b.x,b.y,190,2,1.4); game.eBullets.splice(j,1); } }
         sl.active=12; addShake(15); hitStop(7); sfx.skylance();
       }
     } else if(sl.active>0){ sl.active--; } else game.skylance=null;

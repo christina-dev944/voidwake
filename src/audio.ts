@@ -135,7 +135,11 @@ export const sfx = {
   // Lancer Skylance (#60): a rising charge whine during the wind-up…
   skylanceCharge(){ tone(200,0.42,{type:'sawtooth',gain:0.06,slideTo:1000,attack:0.06});
     tone(400,0.42,{type:'sine',gain:0.04,slideTo:1600,attack:0.06}); },
-  // …then a heavy vertical DISCHARGE — bright crack, downward boom, deep sub thump.
-  skylance(){ noise(0.09,{gain:0.16,freq:7000,q:0.5}); noise(0.5,{gain:0.24,freq:3000,freqTo:140,q:0.6});
-    tone(900,0.22,{type:'sawtooth',gain:0.14,slideTo:120}); tone(70,0.5,{type:'sine',gain:0.2,slideTo:32}); },
+  // …then a heavy DISCHARGE that reads as a POWERFUL LASER (#60 feedback): a strong
+  // sawtooth beam core sweeping down, a square harmonic under it, an airy bandpass
+  // sizzle, and a short sub for weight — tonal/beam-forward, not an explosion boom.
+  skylance(){ tone(1500,0.4,{type:'sawtooth',gain:0.17,slideTo:280});
+    tone(750,0.4,{type:'square',gain:0.09,slideTo:190});
+    noise(0.32,{gain:0.13,freq:6500,freqTo:1500,q:0.9,type:'bandpass'});
+    tone(90,0.28,{type:'sine',gain:0.11,slideTo:48}); },
 };
