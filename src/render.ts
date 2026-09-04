@@ -374,6 +374,9 @@ const HUD2 = {
   statbar:el('statbar'),
   statfill:el('statfill'),
   statseg:el('statseg'),
+  statwrap2:el('statwrap2'),
+  statlbl2:el('statlbl2'),
+  statfill2:el('statfill2'),
 };
 function syncBottomHud(){
   const p=game.player;
@@ -381,12 +384,25 @@ function syncBottomHud(){
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
   // statbar carries an explicit visibility:visible during play, which overrides the
   // root's inherited hidden when the run ends — so clear it here too (#59).
-  if(!show){ HUD2.statbar.style.visibility='hidden'; return; }
+  if(!show){ HUD2.statbar.style.visibility='hidden'; HUD2.statwrap2.style.display='none'; return; }
   const frac=clamp(p.hp/p.maxhp,0,1);
   HUD2.hpfill.style.width=(frac*100)+'%';
   HUD2.hpfill.style.background=`hsl(${frac*120},72%,48%)`;
   HUD2.hptext.textContent=Math.max(0,Math.ceil(p.hp))+' / '+p.maxhp;
   HUD2.statseg.style.display='none';              // only the multi-charge bar shows segment dividers
+  // Lancer ENERGY lives in the SECONDARY bar so it coexists with the active-cooldown bar
+  // (#60 bugfix): adding the Skylance active used to make the `p.active` branch replace
+  // the energy bar entirely. Now the laser shows both — energy here, Skylance below.
+  if(p.weapon==='laser'){
+    // energy = inverse of internal heat: full when idle, DRAINS as you fire, refills
+    // when you stop; empty (heat maxed) = the depleted lockout. Fixed 'ENERGY' label.
+    const energy=clamp(1 - p.heat/p.heatMax,0,1);
+    HUD2.statwrap2.style.display='flex';
+    HUD2.statlbl2.textContent='ENERGY';
+    HUD2.statlbl2.style.color=p.depleted?'#ff4d6d':'#8a8aa6';
+    HUD2.statfill2.style.width=(energy*100)+'%';
+    HUD2.statfill2.style.background=p.depleted?'#ff4d6d':`hsl(${energy*120},85%,55%)`;  // green (full) → red (empty)
+  } else HUD2.statwrap2.style.display='none';
   if(p.active){                                   // active-ability charges/cooldown (#39, #51)
     const maxCh=p.active.maxCharges||1, cd=p.active.cooldown||1;
     HUD2.statbar.style.visibility='visible';
@@ -413,18 +429,7 @@ function syncBottomHud(){
       HUD2.statfill.style.width=(prog*100)+'%';
       HUD2.statfill.style.background=ready?'#7cf7ff':'#4a6fa0';
     }
-  } else if(p.weapon==='laser'){                   // Lancer energy bar (#50)
-    // energy = the inverse of internal heat: full when idle, DRAINS as you fire,
-    // refills when you stop; empty (heat maxed) = the depleted lockout. Label is a
-    // fixed string so the bar never shifts when the state flips (#50 point 1).
-    const energy=clamp(1 - p.heat/p.heatMax,0,1);
-    HUD2.statlbl.textContent='ENERGY';
-    HUD2.statlbl.style.color=p.depleted?'#ff4d6d':'#8a8aa6';
-    HUD2.statbar.style.visibility='visible';
-    HUD2.statfill.style.width=(energy*100)+'%';
-    // green (full) → red (empty); solid red during the empty lockout.
-    HUD2.statfill.style.background=p.depleted?'#ff4d6d':`hsl(${energy*120},85%,55%)`;
-  } else {                                         // no status bar for plain-bullet classes
+  } else {                                         // no active → hide the primary bar (energy, if any, is in the secondary)
     HUD2.statlbl.textContent=''; HUD2.statbar.style.visibility='hidden';
   }
 }
