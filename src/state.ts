@@ -28,7 +28,7 @@ export const game: GameState = {
 };
 
 // which upgrade categories each weapon draws from (besides 'all')
-export const WEAPON_UPGRADES: Record<string, string[]> = { bullet:['bullet'], homing:['bullet'], laser:['laser'] };
+export const WEAPON_UPGRADES: Record<string, string[]> = { bullet:['bullet'], homing:['bullet'], laser:['laser'], auto:['bullet'] };
 
 // persistent best run across sessions (#8) — best wave and best score, each kept
 // independently so a long run and a high-scoring run both leave their mark.

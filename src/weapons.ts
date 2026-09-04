@@ -5,7 +5,7 @@ import { TAU, dist2 } from './util.js';
 import { game } from './state.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
-import { pickTarget, manualAim } from './targeting.js';
+import { pickTarget, manualAim, nearestN } from './targeting.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
 import type { Player, Enemy, BossEnemy } from './types.js';
@@ -15,8 +15,28 @@ import type { Player, Enemy, BossEnemy } from './types.js';
 // line is always covered, even with an even split. Units are multiples of the fan.
 function shotOffset(i: number){ const k=(i+1)>>1; return i%2===1 ? k : -k; }
 
+// fire one leading shot from the player toward a point (with crit roll). Shared by the
+// Auto-Gunner's per-target volley and could back other point-aimed fire later.
+function fireBulletAt(p: Player, tx: number, ty: number){
+  const a = Math.atan2(ty-p.y, tx-p.x), crit = Math.random() < p.crit;
+  game.pBullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*p.bulletSpeed, vy:Math.sin(a)*p.bulletSpeed,
+    r:crit?6:4, dmg:p.dmg*(crit?2:1), crit, pierce:p.pierce,
+    ttl: p.range ? Math.ceil(p.range/p.bulletSpeed) : 0, hitCd:0, homing:false, homeDelay:0 });
+}
+
 export function playerShoot(p: Player) {
   const manual = manualAim();
+  // Auto-Gunner (#21): lock the N nearest enemies and put one leading shot on each,
+  // so Split Shot widens coverage instead of fanning. Manual aim overrides to the cursor.
+  if(p.weapon==='auto' && !manual){
+    const targets = nearestN(p.x, p.y, p.shots);
+    for(const t of targets){
+      const tt = Math.hypot(t.x-p.x, t.y-p.y)/p.bulletSpeed;
+      fireBulletAt(p, t.x+(t.mvx||0)*tt, t.y+(t.mvy||0)*tt);   // lead each target
+    }
+    if(targets.length) sfx.shoot();
+    return;
+  }
   let baseAng = -Math.PI/2;
   if (manual) {                              // MANUAL (#11): aim straight at the cursor, no leading
     baseAng = Math.atan2(game.mouseY-p.y, game.mouseX-p.x);

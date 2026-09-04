@@ -5,7 +5,7 @@
 
 // ---- string-literal unions (compile-time checked, zero runtime cost) ----
 export type GameStateName = 'title' | 'classSelect' | 'playing' | 'upgrade' | 'dying' | 'dead';
-export type Weapon = 'bullet' | 'homing' | 'laser';
+export type Weapon = 'bullet' | 'homing' | 'laser' | 'auto';
 export type PauseButton = 'resume' | 'settings' | 'quit';
 export type HazardKind = 'line' | 'circle';
 export type ActiveEffect = 'nova' | 'cone';
@@ -16,7 +16,7 @@ export type AimModeId = 'nearest' | 'highhp' | 'manual';
 export interface StatBlock {
   dmg: number; fireRate: number; bulletSpeed: number; maxhp: number;
   speed: number; focusSpeed: number; range: number;
-  hp?: number; pierce?: number;
+  hp?: number; pierce?: number; shots?: number;
 }
 
 // An active ability definition (Nova, Scythe). `effect` maps to behavior in

@@ -11,6 +11,15 @@ export function nearestEnemy(x: number,y: number,exclude?: Set<number>|null): En
   return best;
 }
 
+// the n nearest distinct enemies, closest first — the Auto-Gunner locks one per shot (#21).
+export function nearestN(x: number,y: number,n: number): Enemy[] {
+  return game.enemies
+    .map(e => ({ e, d: dist2(x,y,e.x,e.y) }))
+    .sort((a,b) => a.d - b.d)
+    .slice(0, n)
+    .map(o => o.e);
+}
+
 // auto-aim target modes (#35) — the ship's weapon aims at whichever enemy this
 // picks. Extensible: add an entry + a case in pickTarget. Cycled with [T].
 export const AIM_MODES: { id: AimModeId; label: string }[] = [ {id:'nearest', label:'NEAREST'}, {id:'highhp', label:'HIGH HP'}, {id:'manual', label:'MANUAL'} ];
