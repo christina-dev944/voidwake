@@ -22,11 +22,15 @@ export const CLASSES: ClassDef[] = [
   {
     id: 'vanguard',
     name: 'Vanguard',
-    desc: 'Balanced and basic auto fire.',
+    desc: 'Balanced auto fire with a panic button: freeze time to reset any situation.',
+    activeDesc: 'Halts time — enemies, their bullets and beams all freeze for a few seconds while you keep moving and firing. No damage; pure breathing room to dodge out or line up a burst.',
     hue: 265,
     weapon: 'bullet',
     stats: {},
-    active: null,
+    // Time-stop (#25): the balanced starter's identity is flexibility — a get-out-of-
+    // anything utility active instead of a damage tool. effect resolved in abilities.ts.
+    // duration 150 = 2.5s frozen; cooldown 720 = 12s. First-pass numbers, tune iteratively.
+    active: { name: 'Time Stop', cooldown: 720, effect: 'timestop', duration: 150 },
   },
   {
     id: 'reaper',

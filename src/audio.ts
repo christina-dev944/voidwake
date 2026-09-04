@@ -124,4 +124,12 @@ export const sfx = {
   teleBeep(){ tone(1040,0.05,{type:'sine',gain:0.05}); },
   // …then a sharp zap when it fires the instant beam.
   laserFire(){ tone(880,0.14,{type:'sawtooth',gain:0.12,slideTo:180}); noise(0.14,{gain:0.14,freq:5000,freqTo:800,q:0.7}); },
+  // Time-stop (#25): a warped "the world halts" cue — a fast downward pitch smear
+  // (everything winding down) under an airy shimmer, then a low held drone.
+  timeStop(){ tone(620,0.5,{type:'sine',gain:0.14,slideTo:70,attack:0.006});
+    tone(310,0.45,{type:'triangle',gain:0.08,slideTo:60});
+    noise(0.5,{gain:0.07,freq:5200,freqTo:400,q:0.5}); },
+  // …and a rising "time resumes" snap when the freeze ends.
+  timeResume(){ tone(90,0.3,{type:'sine',gain:0.12,slideTo:520,attack:0.004});
+    noise(0.16,{gain:0.09,freq:600,freqTo:5000,q:0.5}); },
 };

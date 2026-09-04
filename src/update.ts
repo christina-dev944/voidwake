@@ -20,6 +20,10 @@ export function update(){
   game.time++;
   const p = game.player;
   if(!p) return;
+  // Time-stop (#25): while active, the enemy world is frozen (movement, firing,
+  // enemy bullets and hazards all pause below) — the player still moves and shoots.
+  const frozen = game.timeStop>0;
+  if(frozen && --game.timeStop<=0){ game.timeStopMax=0; sfx.timeResume(); }
   if(p.iframes>0) p.iframes--;
   // sound cue on the invuln window opening/closing (#51)
   const isInv=p.iframes>0;
@@ -86,6 +90,7 @@ export function update(){
   // enemies
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
     const ox=e.x, oy=e.y;
+    if(!frozen){                               // Time-stop (#25): enemies neither move nor fire while frozen
     if(e.aimCd>0){ e.aimCd--; }                // hold still while telegraphing so the beam stays attached (#46)
     else if(e.y<e.targetY){ e.y+=e.vy; }       // dive-in phase (all types descend to their slot)
     else if(e.move==='dart'){                  // darter: chase the player's x, creep downward, hover low
@@ -113,14 +118,18 @@ export function update(){
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
       else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
+    } else { e.mvx=0; e.mvy=0; }   // frozen: no displacement, so auto-aim leading doesn't chase a still target
+    // death still resolves while frozen — the player can freely damage/kill enemies during the stop
     if(e.hp<=0){ burst(e.x,e.y,e.hue,e.boss?40:16,e.boss?6:4); game.enemies.splice(i,1);
       if(e.boss){ addShake(14); hitStop(8); sfx.bossKill(); game.eBullets.length=0; } else sfx.enemyKill();   // boss death clears the screen of bullets (#3); shake/kill SFX (#5/#7)
       game.score += e.boss?500:50; if(p.leech)p.hp=Math.min(p.maxhp,p.hp+p.leech);
       gainXp(p, e.boss?6:2); }
   }
 
-  // enemy bullets
+  // enemy bullets — frozen bullets hang inert in the air (no travel, no collision)
+  // during Time-stop (#25), so the stop is a safe reposition window.
   for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
+    if(frozen) continue;
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
@@ -134,6 +143,7 @@ export function update(){
     const owner = h.owner!=null ? game.enemies.find(e=>e.id===h.owner) : null;
     if(h.owner!=null && !owner){ game.hazards.splice(i,1); continue; }   // owner died → cancel shot
     if(owner){ h.x=owner.x; h.y=owner.y; }                               // keep the beam origin glued to the enemy body
+    if(frozen) continue;                                                 // Time-stop (#25): telegraphs/beams pause too
     if(h.tele>0){ h.tele--;
       // static for the first ~2/3, then pulse increasingly fast over the last third;
       // a quiet beep fires at each pulse peak (so the beeping accelerates too).

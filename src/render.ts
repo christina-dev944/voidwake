@@ -86,8 +86,9 @@ export function draw(){
     if(!e.boss){ const w=e.r*2; ctx.fillStyle='#000'; ctx.fillRect(e.x-w/2,e.y-e.r-8,w,3);
       ctx.fillStyle=c; ctx.fillRect(e.x-w/2,e.y-e.r-8,w*clamp(e.hp/e.maxhp,0,1),3); } }
 
-  // enemy bullets
-  for(const b of game.eBullets){ ctx.fillStyle=`hsl(${b.hue},95%,68%)`;
+  // enemy bullets — icy-blue and desaturated while Time-stopped, to read as frozen (#25)
+  const frozen = game.timeStop>0;
+  for(const b of game.eBullets){ ctx.fillStyle = frozen ? 'hsl(200,60%,78%)' : `hsl(${b.hue},95%,68%)`;
     ctx.shadowBlur=6; ctx.shadowColor=ctx.fillStyle;
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
   ctx.shadowBlur=0;
@@ -157,6 +158,22 @@ export function draw(){
   }
 
   ctx.restore();   // end screen-shake transform (#5)
+
+  // Time-stop freeze overlay (#25): a cyan vignette that fades in on cast and out as
+  // the stop ends, so the frozen window reads clearly without washing out the field.
+  if(game.timeStop>0){
+    const t=game.timeStop, mx=game.timeStopMax||1;
+    const env=clamp(Math.min((mx-t)/10, t/24, 1), 0, 1);   // ramp in ~10f, hold, ramp out ~24f
+    const g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.25, W/2,H/2,Math.max(W,H)*0.62);
+    g.addColorStop(0,`rgba(120,200,255,${0.05*env})`);
+    g.addColorStop(1,`rgba(90,170,255,${0.30*env})`);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle=`rgba(160,220,255,${0.5*env})`; ctx.lineWidth=2;
+    ctx.strokeRect(1,1,W-2,H-2);
+    ctx.textAlign='center'; ctx.font='bold 13px ui-monospace,monospace';
+    ctx.fillStyle=`rgba(200,235,255,${0.85*env})`; ctx.fillText('TIME STOP', W/2, 22);
+    ctx.textAlign='left';
+  }
 
   // auto-aim mode indicator (#35) — drawn outside the shake so it stays legible
   if(game.state==='playing' && game.player){

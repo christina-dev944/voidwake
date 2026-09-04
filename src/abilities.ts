@@ -19,6 +19,15 @@ export function useActive(p: Player|null){ if(!p||!p.active||p.charges<=0) retur
 function applyActive(a: ActiveDef, p: Player){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
   else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
+  else if(a.effect==='timestop') timeStop(p, a.duration||150);
+}
+// Time-stop (#25): halt the enemy world for `dur` ticks — enemies, their bullets and
+// telegraphed hazards all freeze (handled in update.ts) while the player keeps moving
+// and firing. A pure utility/panic active: no damage, it buys breathing room and a
+// free window to line up hits. The frozen field is tinted in render.ts.
+function timeStop(_p: Player, dur: number){
+  game.timeStop=dur; game.timeStopMax=dur;
+  addShake(6); sfx.timeStop();   // the full-screen freeze tint (render.ts) is the visual
 }
 // Reaper Scythe (#42): a sector blast aimed at the current target — clears enemy
 // bullets and damages enemies inside the wedge (reach + central angle), where Nova

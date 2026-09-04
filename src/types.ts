@@ -8,7 +8,7 @@ export type GameStateName = 'title' | 'classSelect' | 'playing' | 'dying' | 'dea
 export type Weapon = 'bullet' | 'homing' | 'laser' | 'auto';
 export type PauseButton = 'resume' | 'settings' | 'quit';
 export type HazardKind = 'line' | 'circle';
-export type ActiveEffect = 'nova' | 'cone';
+export type ActiveEffect = 'nova' | 'cone' | 'timestop';
 export type AimModeId = 'nearest' | 'highhp' | 'manual';
 
 // ---- stats / classes ----
@@ -24,6 +24,7 @@ export interface StatBlock {
 export interface ActiveDef {
   name: string; cooldown: number; effect: ActiveEffect;
   radius?: number; dmg?: number; range?: number; angle?: number; maxCharges?: number;
+  duration?: number;   // timestop: frames the world stays frozen
 }
 
 // A selectable class/vessel (CLASSES entries).
@@ -123,6 +124,7 @@ export interface GameState {
   novaFx: Fx[]; coneFx: Fx[]; afterimages: Afterimage[]; hazards: Hazard[]; eid: number;
   cls: ClassDef; classIdx: number; classScroll: number; hoverIdx: number;
   shake: number; hitStop: number;
+  timeStop: number; timeStopMax: number;   // frames of frozen world left / the cast's full duration (#25)
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
   mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
   settingsOpen: boolean;            // settings overlay shown over title/pause (#28)
