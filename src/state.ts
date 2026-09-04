@@ -13,6 +13,7 @@ export const game: GameState = {
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   timeStop: 0, timeStopMax: 0, // Time-stop active (#25): frames of frozen world left + the cast's full duration (for the fade)
+  skylance: null,              // Lancer Skylance vertical burst in flight (#60)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)
   aimTarget: null,      // currently-locked auto-aim target — gives HIGH-HP mode stickiness (#49)
   aimLockTime: 0,       // game.time when the current HIGH-HP target was locked (dwell timer, #49)

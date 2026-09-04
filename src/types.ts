@@ -8,7 +8,7 @@ export type GameStateName = 'title' | 'classSelect' | 'playing' | 'dying' | 'dea
 export type Weapon = 'bullet' | 'homing' | 'laser' | 'auto';
 export type PauseButton = 'resume' | 'settings' | 'quit';
 export type HazardKind = 'line' | 'circle';
-export type ActiveEffect = 'nova' | 'cone' | 'timestop';
+export type ActiveEffect = 'nova' | 'cone' | 'timestop' | 'skylance';
 export type AimModeId = 'nearest' | 'highhp' | 'manual';
 
 // ---- stats / classes ----
@@ -25,6 +25,7 @@ export interface ActiveDef {
   name: string; cooldown: number; effect: ActiveEffect;
   radius?: number; dmg?: number; range?: number; angle?: number; maxCharges?: number;
   duration?: number;   // timestop: frames the world stays frozen
+  width?: number;      // skylance: lane width (px) of the vertical burst column
 }
 
 // A selectable class/vessel (CLASSES entries).
@@ -114,6 +115,14 @@ export interface Fx {
 // Fading dash ghost hull.
 export interface Afterimage { x: number; y: number; r: number; hue: number; life: number; }
 
+// Lancer Skylance (#60): a windup-then-fire vertical burst. Non-null while the lance
+// is charging (`charge`>0) or flashing after the hit (`active`>0). Can't be aimed —
+// the column is always straight up from the player.
+export interface Skylance {
+  charge: number; maxCharge: number; active: number;
+  dmg: number; width: number; hitX: number;   // hitX = the column x locked at the fire frame
+}
+
 // ---- the single shared game-state object ----
 export interface GameState {
   state: GameStateName;
@@ -125,6 +134,7 @@ export interface GameState {
   cls: ClassDef; classIdx: number; classScroll: number; hoverIdx: number;
   shake: number; hitStop: number;
   timeStop: number; timeStopMax: number;   // frames of frozen world left / the cast's full duration (#25)
+  skylance: Skylance | null;               // Lancer vertical burst in flight (#60)
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
   mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
   settingsOpen: boolean;            // settings overlay shown over title/pause (#28)

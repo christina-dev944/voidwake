@@ -20,6 +20,15 @@ function applyActive(a: ActiveDef, p: Player){
   if(a.effect==='nova') novaBlast(p, a.radius||160, a.dmg||120);
   else if(a.effect==='cone') coneBlast(p, a.range||220, a.angle||1.4, a.dmg||60);
   else if(a.effect==='timestop') timeStop(p, a.duration||150);
+  else if(a.effect==='skylance') skylanceCast(p, a.dmg||600, a.width||44);
+}
+// Lancer Skylance (#60): begin a short wind-up; the actual burst resolves in update.ts
+// when `charge` reaches 0 (hits everything in the vertical column above the player).
+// Can't be aimed — the fixed-up direction is the skill check. Wind-up = SKY_CHARGE ticks.
+const SKY_CHARGE=26;
+function skylanceCast(p: Player, dmg: number, width: number){
+  game.skylance={ charge:SKY_CHARGE, maxCharge:SKY_CHARGE, active:0, dmg, width, hitX:p.x };
+  addShake(4); sfx.skylanceCharge();   // the fire hit/flash + SFX land in update.ts on release
 }
 // Time-stop (#25): halt the enemy world for `dur` ticks — enemies, their bullets and
 // telegraphed hazards all freeze (handled in update.ts) while the player keeps moving

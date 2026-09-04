@@ -8,13 +8,13 @@ import type { Player, ClassDef } from './types.js';
 
 export function reset(cls: ClassDef=game.cls){ game.cls=cls; game.paused=false; game.dying=0; cv.style.cursor='default';
   game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[];game.upgrades=[];
-  game.upgradeChoices=[];game.pendingLevelUps=0;game.timeStop=0;game.timeStopMax=0;
+  game.upgradeChoices=[];game.pendingLevelUps=0;game.timeStop=0;game.timeStopMax=0;game.skylance=null;
   game.score=0;game.wave=0;game.player=newPlayer(cls);game.state='playing';startWave(1); }
 
 // abandon the current run and return to the title screen (pause-menu quit, #27).
 export function quitRun(){ game.paused=false; game.state='title'; game.player=null;
   game.enemies=[];game.pBullets=[];game.eBullets=[];game.particles=[];game.novaFx=[];game.coneFx=[];game.afterimages=[];game.hazards=[];
-  game.upgradeChoices=[];game.pendingLevelUps=0; }
+  game.upgradeChoices=[];game.pendingLevelUps=0;game.timeStop=0;game.timeStopMax=0;game.skylance=null; }
 
 export function gainXp(p: Player, amt: number){
   p.xp+=amt;

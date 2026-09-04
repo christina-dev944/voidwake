@@ -136,6 +136,28 @@ export function draw(){
     ctx.globalAlpha=l*0.8; shipPath(a.x,a.y,a.r*(0.7+0.3*l)); ctx.fill(); }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
 
+  // Lancer Skylance (#60): a brightening, pulsing charge line straight up during the
+  // wind-up, then a thick white/cyan discharge beam that fades over the hit frames.
+  const sl=game.skylance, plr=game.player;
+  if(sl && plr){
+    ctx.save(); ctx.lineCap='round';
+    if(sl.charge>0){
+      const f=1-sl.charge/sl.maxCharge;                       // 0→1 as it charges
+      ctx.globalAlpha=clamp(0.25+0.5*f+0.15*Math.sin(game.time*0.9),0,1);
+      ctx.strokeStyle='hsl(190,90%,70%)'; ctx.lineWidth=2+f*9;
+      ctx.beginPath(); ctx.moveTo(plr.x,plr.y); ctx.lineTo(plr.x,0); ctx.stroke();
+      ctx.fillStyle='hsl(190,95%,82%)'; ctx.shadowBlur=12; ctx.shadowColor='hsl(190,95%,75%)';
+      ctx.beginPath(); ctx.arc(plr.x,plr.y,3+f*6,0,TAU); ctx.fill();   // muzzle charge bead
+    } else if(sl.active>0){
+      const f=sl.active/12;                                     // fade out
+      ctx.globalAlpha=0.5*f; ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.5;
+      ctx.beginPath(); ctx.moveTo(sl.hitX,plr.y); ctx.lineTo(sl.hitX,0); ctx.stroke();
+      ctx.globalAlpha=f; ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.55;
+      ctx.beginPath(); ctx.moveTo(sl.hitX,plr.y); ctx.lineTo(sl.hitX,0); ctx.stroke();
+    }
+    ctx.restore(); ctx.globalAlpha=1; ctx.shadowBlur=0;
+  }
+
   // player (hidden during the death hold so the explosion stands alone) (#40)
   const p=game.player;
   if(p && game.state!=='dying'){

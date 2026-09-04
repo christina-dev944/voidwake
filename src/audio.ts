@@ -132,4 +132,10 @@ export const sfx = {
   // …and a rising "time resumes" snap when the freeze ends.
   timeResume(){ tone(90,0.3,{type:'sine',gain:0.12,slideTo:520,attack:0.004});
     noise(0.16,{gain:0.09,freq:600,freqTo:5000,q:0.5}); },
+  // Lancer Skylance (#60): a rising charge whine during the wind-up…
+  skylanceCharge(){ tone(200,0.42,{type:'sawtooth',gain:0.06,slideTo:1000,attack:0.06});
+    tone(400,0.42,{type:'sine',gain:0.04,slideTo:1600,attack:0.06}); },
+  // …then a heavy vertical DISCHARGE — bright crack, downward boom, deep sub thump.
+  skylance(){ noise(0.09,{gain:0.16,freq:7000,q:0.5}); noise(0.5,{gain:0.24,freq:3000,freqTo:140,q:0.6});
+    tone(900,0.22,{type:'sawtooth',gain:0.14,slideTo:120}); tone(70,0.5,{type:'sine',gain:0.2,slideTo:32}); },
 };

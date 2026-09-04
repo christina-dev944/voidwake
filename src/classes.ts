@@ -52,11 +52,15 @@ export const CLASSES: ClassDef[] = [
     id: 'lancer',
     name: 'Lancer',
     desc: 'Continuous piercing beam. Mind the heat.',
+    activeDesc: 'Skylance — charge briefly, then fire a huge burst STRAIGHT UP, hitting everything in the column above you. It can\'t be aimed, so line yourself up beneath a boss or heavy target and commit. Its answer to single big threats the beam chips too slowly.',
     hue: 190,
     weapon: 'laser',
     beamDps: 60,    // damage/sec dealt to EVERY enemy the beam line crosses
     stats: { maxhp: 90, hp: 90, speed: 4.2, dmg: 15 }, // dmg shown on card = indicative
-    active: null,
+    // Skylance (#60): a vertical burst for bosses/high-HP targets the sustained beam
+    // can't burn down fast enough. dmg 600 (~10s of beam in one hit), 14s cooldown,
+    // 44px lane. effect resolved in abilities.ts (wind-up + strike in update.ts).
+    active: { name: 'Skylance', cooldown: 840, effect: 'skylance', dmg: 600, width: 44 },
   },
   {
     id: 'mage',
