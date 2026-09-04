@@ -23,9 +23,12 @@ function applyActive(a: ActiveDef, p: Player){
 }
 // Time-stop (#25): halt the enemy world for `dur` ticks — enemies, their bullets and
 // telegraphed hazards all freeze (handled in update.ts) while the player keeps moving
-// and firing. A pure utility/panic active: no damage, it buys breathing room and a
-// free window to line up hits. The frozen field is tinted in render.ts.
-function timeStop(_p: Player, dur: number){
+// and firing. A pure utility effect: no damage, it buys breathing room and a free window
+// to line up hits. The frozen field is tinted in render.ts.
+// SHELVED as a class active (felt out of place on the Vanguard) — kept fully wired for
+// reuse as a CONSUMABLE later (shop/drops, #63/#15). Trigger it by calling applyActive
+// with an effect:'timestop' def, or call timeStop() directly from the consumable code.
+export function timeStop(_p: Player, dur: number){
   game.timeStop=dur; game.timeStopMax=dur;
   addShake(6); sfx.timeStop();   // the full-screen freeze tint (render.ts) is the visual
 }
