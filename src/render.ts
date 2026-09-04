@@ -151,13 +151,13 @@ export function draw(){
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
     // XP strip stays on the top edge (thin, doesn't block the field); HP + active/heat
     // now live in the DOM strip below the canvas (see syncBottomHud, #41)
-    if(game.state==='playing'||game.state==='upgrade') drawXpBar(p);
+    if(game.state==='playing') drawXpBar(p);
   }
 
   ctx.restore();   // end screen-shake transform (#5)
 
   // auto-aim mode indicator (#35) — drawn outside the shake so it stays legible
-  if((game.state==='playing'||game.state==='upgrade') && game.player){
+  if(game.state==='playing' && game.player){
     ctx.textAlign='right'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#7a7a98';
     ctx.fillText('[T] AIM: '+AIM_MODES[game.aimIdx].label, W-14, 20);
     if(isMuted()){ ctx.fillStyle='#565879'; ctx.fillText('[M] MUTED', W-14, 36); }   // audio muted (#7)
@@ -167,7 +167,6 @@ export function draw(){
     // no drawn reticle, so the two don't double up.
   }
 
-  if(game.state==='upgrade') drawUpgrade();
   if(game.state==='dead'){ ctx.fillStyle='rgba(6,6,11,.78)'; ctx.fillRect(0,0,W,H);
     center('YOU DIED', 52, '#ff4d6d', H/2-140);
     center('reached wave '+game.wave+'  ·  score '+game.score, 18, '#e8e8f0', H/2-86);
@@ -191,6 +190,7 @@ export function draw(){
     const statsBottom=drawPauseStats(rx, ry, panelW);
     drawRunBoons(rx, statsBottom+14, panelW); }
 
+  if(game.upgradeChoices.length) drawUpgradePanel();   // non-blocking level-up offer (#26) — over play or pause
   if(game.settingsOpen) drawSettings();   // overlay (title returns earlier, so this covers pause/etc)
 }
 
@@ -337,7 +337,7 @@ const HUD2 = {
 };
 function syncBottomHud(){
   const p=game.player;
-  const show = p && (game.state==='playing'||game.state==='upgrade'||game.state==='dying');
+  const show = p && (game.state==='playing'||game.state==='dying');
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
   // statbar carries an explicit visibility:visible during play, which overrides the
   // root's inherited hidden when the run ends — so clear it here too (#59).
@@ -389,32 +389,41 @@ function syncBottomHud(){
   }
 }
 
-function drawUpgrade(){
-  ctx.fillStyle='rgba(6,6,11,.82)'; ctx.fillRect(0,0,W,H);
-  center('LEVEL UP', 40, '#8a5cff', 150);
-  center('choose a boon  (1 / 2 / 3 or click)', 14, '#7a7a98', 190);
+// Non-blocking level-up (#26): a compact right-side panel instead of a full-screen
+// modal, so the sim keeps running and the player picks when it's safe. Geometry is
+// shared with main.ts's pointer hit-testing via upgradePanelRects().
+function upgradePanelGeom(){
+  const pw=Math.min(300, Math.max(220, W*0.32)), x=W-pw-12, top=64, headerH=46, ch=90, gap=10;
+  const cards: {x:number;y:number;w:number;h:number}[]=[];
+  for(let i=0;i<game.upgradeChoices.length;i++) cards.push({ x, y:top+headerH+i*(ch+gap), w:pw, h:ch });
+  return { pw, x, top, headerH, ch, gap, cards };
+}
+export function upgradePanelRects(){ return upgradePanelGeom().cards; }
+function drawUpgradePanel(){
+  const g=upgradePanelGeom(); if(!g.cards.length) return;
+  const { pw, x, top, headerH, ch, gap } = g;
+  const totalH = headerH + g.cards.length*(ch+gap);
+  ctx.fillStyle='rgba(6,6,11,0.55)'; roundRect(x-8, top-16, pw+16, totalH+6, 10); ctx.fill();   // readable backdrop
+  ctx.textAlign='left'; ctx.font='bold 16px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
+  ctx.fillText('LEVEL UP', x, top+2);
+  ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#7a7a98'; ctx.fillText('1 / 2 / 3 or click', x, top+20);
+  if(game.pendingLevelUps>0){ ctx.textAlign='right'; ctx.fillStyle='#ffd24d';
+    ctx.fillText('+'+game.pendingLevelUps+' queued', x+pw, top+2); ctx.textAlign='left'; }
   game.upgradeChoices.forEach((u,i)=>{
-    const y=220+i*150, x=W/2-260, w=520, h=120;
-    // class-exclusive boons get a class-tinted, glowing card + a badge
+    const r=g.cards[i];
     const exHue = u.tag ? (CLASSES.find(c=>c.name.toUpperCase()===u.tag)?.hue ?? 45) : null;
     const accent = exHue!=null ? `hsl(${exHue},85%,64%)` : '#8a5cff';
-    ctx.fillStyle = exHue!=null ? `hsl(${exHue},42%,13%)` : '#14142a';
-    if(exHue!=null){ ctx.save(); ctx.shadowBlur=18; ctx.shadowColor=accent; }
-    roundRect(x,y,w,h,10); ctx.fill();
+    ctx.fillStyle = exHue!=null ? `hsl(${exHue},42%,13%)` : 'rgba(20,20,42,0.94)';
+    if(exHue!=null){ ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=accent; }
+    roundRect(r.x,r.y,r.w,r.h,9); ctx.fill();
     if(exHue!=null) ctx.restore();
-    ctx.strokeStyle=accent; ctx.lineWidth=exHue!=null?3:2; roundRect(x,y,w,h,10); ctx.stroke();
-    ctx.textAlign='left';
-    ctx.fillStyle=accent; ctx.font='bold 22px ui-monospace,monospace';
-    ctx.fillText((i+1)+'. '+u.name, x+24, y+48);   // tighter number↔name gap (single space)
-    ctx.fillStyle='#c8c8e0'; ctx.font='16px ui-monospace,monospace';
-    // dynamic desc (e.g. Aegis shows live invuln duration); flush-left with the name
-    ctx.fillText(u.descFn&&game.player?u.descFn(game.player):u.desc, x+24, y+82);
-    if(u.tag){
-      const label=u.tag+' EXCLUSIVE'; ctx.font='bold 11px ui-monospace,monospace';
-      const bw=ctx.measureText(label).width+20, bx=x+w-bw-16, by=y+14, bh=20;
-      ctx.fillStyle=accent; roundRect(bx,by,bw,bh,10); ctx.fill();
-      ctx.fillStyle='#0a0a12'; ctx.textAlign='center'; ctx.fillText(label, bx+bw/2, by+14); ctx.textAlign='left';
-    }
+    ctx.strokeStyle=accent; ctx.lineWidth=exHue!=null?2.5:1.5; roundRect(r.x,r.y,r.w,r.h,9); ctx.stroke();
+    ctx.textAlign='left'; ctx.fillStyle=accent; ctx.font='bold 14px ui-monospace,monospace';
+    ctx.fillText((i+1)+'. '+u.name, r.x+12, r.y+22);
+    const desc = u.descFn&&game.player?u.descFn(game.player):u.desc;
+    wrapText(desc, r.x+12, r.y+42, r.w-24, 15, '#b4b4d0', 12);
+    if(u.tag){ ctx.font='bold 9px ui-monospace,monospace'; ctx.fillStyle=accent; ctx.textAlign='right';
+      ctx.fillText(u.tag+' EXCLUSIVE', r.x+r.w-12, r.y+22); ctx.textAlign='left'; }
   });
   ctx.textAlign='left';
 }

@@ -9,7 +9,7 @@ export const game: GameState = {
   state: 'title', // title | classSelect | playing | upgrade | dying | dead
   wave: 0, score: 0, paused:false, dying: 0, // dying = frames to hold the world before the game-over screen (#40)
   player: null, enemies: [], pBullets: [], eBullets: [], particles: [],
-  upgrades: [], upgradeChoices: [], time: 0, novaFx: [], coneFx: [], afterimages: [], hazards: [], eid: 0,
+  upgrades: [], upgradeChoices: [], pendingLevelUps: 0, time: 0, novaFx: [], coneFx: [], afterimages: [], hazards: [], eid: 0,
   cls: DEFAULT_CLASS, classIdx: 0, classScroll: 0, hoverIdx: -1,
   shake: 0, hitStop: 0, // game-feel: screen-shake magnitude (px) + frames to freeze the sim (#5)
   aimIdx: 0,            // auto-aim target mode (index into AIM_MODES) — persists across runs (#35)

@@ -20,8 +20,7 @@ function tick(){
   // settles quickly and the game-over screen isn't left jittering (#5/#40)
   if(game.shake>0.3) game.shake*=0.72; else game.shake=0;
   if(game.hitStop>0){ game.hitStop--; return; }   // freeze the whole sim for a few frames (#5)
-  if(game.state==='playing') update();
-  else if(game.state==='upgrade') animateParticles(); // frozen sim, particles still settle
+  if(game.state==='playing') update();   // level-up selection no longer freezes the sim (#26)
   else if(game.state==='dying'){ animateParticles(); if(--game.dying<=0) game.state='dead'; } // hold, then game over (#40)
 }
 function loop(now: number){

@@ -54,6 +54,18 @@ test('built game boots, starts a run, and the simulation advances', async () => 
   assert.ok(game.player, 'a player should be spawned');
   assert.ok(game.enemies.length > 0, 'wave 1 should spawn enemies');
 
+  // Non-blocking level-up (#26): force a kill to trigger a level, then confirm the sim
+  // keeps ticking (no frozen upgrade state), an offer appears, and a pick clears it.
+  game.player.xpNext = 1; game.player.xp = 0;   // make the next kill level us up
+  game.enemies[0].hp = -1;                       // reaped next tick -> grants XP -> level
+  const tLevel = game.time;
+  dom.advanceFrames(3);
+  assert.equal(game.state, 'playing', 'a level-up must not freeze into a separate state');
+  assert.ok(game.time > tLevel, 'the sim keeps running during the level-up offer');
+  assert.ok(game.upgradeChoices.length > 0, 'a level-up offer should appear');
+  dom.fire('keydown', { key: '1' });             // pick the first boon
+  assert.equal(game.upgradeChoices.length, 0, 'picking the only offer clears the panel');
+
   // hold "move right" and let the fixed-timestep sim run ~2 seconds of frames
   const startX = game.player.x;
   dom.fire('keydown', { key: 'd' });

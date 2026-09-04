@@ -15,6 +15,7 @@ export function hurtPlayer(dmg: number, opts:{noHitStop?:boolean}={}){
   p.hp-=dmg; p.iframes=p.iframeMax||40; burst(p.x,p.y,DANGER_HUE,20,4);
   addShake(8); if(!opts.noHitStop) hitStop(3);
   if(p.hp<=0){ game.state='dying'; game.dying=55; addShake(20); hitStop(10);
+    game.upgradeChoices=[]; game.pendingLevelUps=0;   // drop any open level-up offer on death (#26)
     burst(p.x,p.y,DANGER_HUE,60,7); sfx.death(); recordBest(); }
   else sfx.hurt();
 }

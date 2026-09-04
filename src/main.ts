@@ -8,7 +8,7 @@ import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
 import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
-import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue } from './render.js';
+import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue, upgradePanelRects } from './render.js';
 import { keys } from './input.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
 import { settings, saveSettings, applySettings } from './settings.js';
@@ -42,7 +42,9 @@ addEventListener('keydown', e=>{
   if(game.settingsOpen){ if(k==='escape'||k==='s') closeSettings(); return; }   // settings overlay (#28)
   if((game.state==='title' || game.paused) && k==='s'){ openSettings(); return; } // open from title/pause
   if(game.paused && k==='q'){ quitRun(); return; } // quit-to-title from pause menu
-  if(game.state==='upgrade'){ const n=parseInt(e.key); if(n>=1&&n<=3) pickUpgrade(n-1); }
+  // non-blocking level-up (#26): pick with number keys any time an offer is showing,
+  // during play OR while paused.
+  if(game.upgradeChoices.length){ const n=parseInt(e.key); if(n>=1&&n<=game.upgradeChoices.length){ pickUpgrade(n-1); return; } }
   if((game.state==='title'||game.state==='dead') && (k===' '||k==='enter')){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     if(k==='arrowleft'||k==='a') game.classIdx=clamp(game.classIdx-1,0,CLASSES.length-1);
@@ -59,10 +61,10 @@ function canvasXY(e: MouseEvent){ const rect=cv.getBoundingClientRect();
   return [ (e.clientX-rect.left)*(W/rect.width), (e.clientY-rect.top)*(H/rect.height) ]; }
 function classAt(mx: number,my: number){ for(let i=0;i<CLASSES.length;i++){ const c=classCardRect(i);
   if(mx>=c.x&&mx<=c.x+c.w&&my>=c.y&&my<=c.y+c.h) return i; } return -1; }
-// exact level-up card bounds (must match drawUpgrade's layout) so clicks land
-// only on a card, not the gaps between them (#34)
-function upgradeAt(mx: number,my: number){ for(let i=0;i<game.upgradeChoices.length;i++){
-  const y=220+i*150, x=W/2-260; if(mx>=x&&mx<=x+520&&my>=y&&my<=y+120) return i; } return -1; }
+// which non-blocking level-up card (if any) is under the cursor (#26); geometry lives
+// in render.upgradePanelRects so draw + hit-testing stay in sync.
+function upgradeAt(mx: number,my: number){ const cards=upgradePanelRects();
+  for(let i=0;i<cards.length;i++){ if(inRect(mx,my,cards[i])) return i; } return -1; }
 
 // hover highlights the card under the cursor (no scroll — carousel scroll follows
 // selection only, so cards don't slide out from under the pointer)
@@ -75,12 +77,12 @@ cv.addEventListener('pointermove', e=>{
       s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
+  if(game.upgradeChoices.length && upgradeAt(mx,my)>=0){ cv.style.cursor='pointer'; return; } // level-up card hover (#26)
   if(game.paused){                                   // hover-highlight pause buttons (#36)
     const b=pauseButtons();                          // don't move the manual aim while paused (#11)
     game.pauseHover = inRect(mx,my,b.resume)?'resume':inRect(mx,my,b.settings)?'settings':inRect(mx,my,b.quit)?'quit':null;
     cv.style.cursor = game.pauseHover?'pointer':'default'; return;
   }
-  if(game.state==='upgrade'){ cv.style.cursor = upgradeAt(mx,my)>=0 ? 'pointer':'default'; return; }
   if(game.state!=='classSelect'){
     if(game.state==='playing'){ game.mouseX=mx; game.mouseY=my;   // track the game-unit cursor for MANUAL aim (#11)
       cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }  // OS crosshair pointer in manual aim (#11)
@@ -104,6 +106,7 @@ cv.addEventListener('pointerdown', e=>{
     if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
     return;
   }
+  if(game.upgradeChoices.length){ const i=upgradeAt(mx,my); if(i>=0){ pickUpgrade(i); return; } } // pick a level-up card, play or paused (#26)
   if(game.paused){                                   // clickable pause menu (#36)
     const b=pauseButtons();
     if(inRect(mx,my,b.resume)) game.paused=false;
@@ -119,9 +122,6 @@ cv.addEventListener('pointerdown', e=>{
     if(game.classIdx<CLASSES.length-1 && inRect(mx,my,chevronRect(1))){ game.classIdx++; return; }
     const i=classAt(mx,my); if(i>=0) reset(CLASSES[i]); // click a card → lock in + launch
     return;
-  }
-  if(game.state==='upgrade'){
-    const idx=upgradeAt(mx,my); if(idx>=0) pickUpgrade(idx);
   }
 });
 

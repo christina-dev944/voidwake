@@ -4,7 +4,7 @@
 // No runtime code lives here — types only.
 
 // ---- string-literal unions (compile-time checked, zero runtime cost) ----
-export type GameStateName = 'title' | 'classSelect' | 'playing' | 'upgrade' | 'dying' | 'dead';
+export type GameStateName = 'title' | 'classSelect' | 'playing' | 'dying' | 'dead';
 export type Weapon = 'bullet' | 'homing' | 'laser' | 'auto';
 export type PauseButton = 'resume' | 'settings' | 'quit';
 export type HazardKind = 'line' | 'circle';
@@ -119,7 +119,7 @@ export interface GameState {
   wave: number; score: number; paused: boolean; dying: number;
   player: Player | null;
   enemies: Enemy[]; pBullets: PBullet[]; eBullets: EBullet[]; particles: Particle[];
-  upgrades: string[]; upgradeChoices: Upgrade[]; time: number;
+  upgrades: string[]; upgradeChoices: Upgrade[]; pendingLevelUps: number; time: number;
   novaFx: Fx[]; coneFx: Fx[]; afterimages: Afterimage[]; hazards: Hazard[]; eid: number;
   cls: ClassDef; classIdx: number; classScroll: number; hoverIdx: number;
   shake: number; hitStop: number;
