@@ -22,9 +22,19 @@ export function resize(){
   cv.style.width = side + 'px'; cv.style.height = side + 'px';
   cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // tuck the side panel right up against the centered canvas's right edge
+  // tuck the side panel right up against the centered canvas's right edge, as wide as
+  // the right margin allows (up to 300px), and match its height to the canvas so the
+  // bottom-pinned controls line up with the bottom of the PLAY area, not the page (#26).
   const sideEl = document.getElementById('side');
-  if(sideEl){ sideEl.style.left = Math.round(window.innerWidth/2 + side/2 + 14) + 'px'; sideEl.style.right = 'auto'; }
+  if(sideEl){
+    const canvasRight = window.innerWidth/2 + side/2;
+    const sideW = Math.round(Math.max(232, Math.min(300, window.innerWidth - canvasRight - 24)));
+    sideEl.style.left = Math.round(canvasRight + 14) + 'px'; sideEl.style.right = 'auto';
+    sideEl.style.width = sideW + 'px';
+    const r = cv.getBoundingClientRect();
+    sideEl.style.top = Math.round(r.top) + 'px';
+    sideEl.style.height = Math.round(r.height) + 'px';
+  }
   if (game && game.player){ game.player.x = clamp(game.player.x, game.player.r, W-game.player.r);
     game.player.y = clamp(game.player.y, game.player.r, H-game.player.r); }
 }
