@@ -19,9 +19,12 @@ export const UPGRADES: Upgrade[] = [
   // --- laser (Lancer) — tag marks a class-exclusive boon for the UI badge ---
   { id:'beam',   for:'laser', tag:'LANCER', name:'Beam Amplifier', desc:'+30% beam damage',        apply:p=>p.beamDps*=1.3 },
   { id:'wide',   for:'laser', tag:'LANCER', name:'Wide Lens',      desc:'+6 beam width',           apply:p=>p.beamWidth+=6 },
-  { id:'coolant',for:'laser', tag:'LANCER', name:'Efficiency',     desc:'-30% energy drain',       apply:p=>p.heatRate*=0.7 },
-  { id:'vent',   for:'laser', tag:'LANCER', name:'Heat Sink',      desc:'+40% cooldown recovery',  apply:p=>p.coolRate*=1.4 },
-  { id:'capac',  for:'laser', tag:'LANCER', name:'Capacitor',      desc:'+25% energy capacity',    apply:p=>p.heatMax*=1.25 },
+  // Merged uptime boon (#60): folds the old Efficiency/Heat Sink/Capacitor into one —
+  // less drain, faster recovery, bigger tank → ~+20% sustained fire — and also shaves
+  // the Skylance cooldown, since it's the Lancer's all-round "run the beam longer" pick.
+  { id:'reactor',for:'laser', tag:'LANCER', name:'Overdrive Reactor', desc:'+~20% laser uptime & -20% Skylance cooldown',
+    apply:p=>{ p.heatRate*=0.78; p.coolRate*=1.3; p.heatMax*=1.2;
+      if(p.active) p.active.cooldown=Math.round(p.active.cooldown*0.8); } },
 
   // --- Mage (Nova) — gated on having the Nova active, so only the Mage rolls these ---
   { id:'novarng', for:'all', tag:'MAGE', req:p=>p.active&&p.active.effect==='nova', name:'Nova Radius',   desc:'+35% nova radius',    apply:p=>{ if(p.active) p.active.radius=(p.active.radius||0)*1.35; } },
