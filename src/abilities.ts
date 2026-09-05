@@ -30,10 +30,12 @@ function applyActive(a: ActiveDef, p: Player){
 // TOTAL damage is unchanged from the instant version: SKY_SECONDS of the player's beam
 // DPS (900 at base, scales with Beam Amplifier), spread evenly across the on-duration.
 // The lane is a bit thicker than the beam and SCALES with beam width (Wide Lens, #60).
-const SKY_CHARGE=26, SKY_SECONDS=15, SKY_ACTIVE=36, SKY_THICK=8;
+const SKY_CHARGE=26, SKY_SECONDS=15, SKY_ACTIVE=36;
 function skylanceCast(p: Player){
   const total=p.beamDps*SKY_SECONDS;
-  const width=Math.max(44, p.beamWidth*SKY_THICK);   // ≈48 at base beamWidth 6; grows with Wide Lens
+  // lane scales with beam width but GENTLY (#60 feedback: Wide Lens widened it too much).
+  // Base ≈49 at beamWidth 6; each +6 Wide Lens adds only ~9px (was ~48px).
+  const width=Math.round(40 + p.beamWidth*1.5);
   game.skylance={ charge:SKY_CHARGE, maxCharge:SKY_CHARGE, active:0, activeMax:SKY_ACTIVE,
     perTick: total/SKY_ACTIVE, width };
   addShake(4); sfx.skylanceCharge();   // the beam turns on (with its held SFX) in update.ts on release
