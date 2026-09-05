@@ -144,26 +144,25 @@ export function draw(){
     // opacity tracks the player-bullet setting (game.skyAlpha), a touch brighter than the
     // laser (#60 feedback) so enemy fire stays readable but the ability still pops.
     const sa=game.skyAlpha;
-    // flat cap (not round): a round cap on the wide beam draws a big semicircle bulge at
-    // the origin that overlaps the ship — butt cap keeps the beam flush to the nose (#60).
-    ctx.save(); ctx.lineCap='butt';
+    // Round cap draws a half-circle at the beam start; lift the origin above the nose so
+    // that half-circle clears the ship with a gap equal to its own radius (= half the
+    // widest line width) — no overlap with the player model (#60 feedback).
+    ctx.save(); ctx.lineCap='round';
     if(sl.charge>0){
       const f=1-sl.charge/sl.maxCharge;                       // 0→1 as it charges
+      const lw=2+f*9, oy=tipY-lw;                             // lift by the line width → gap = radius (lw/2)
       ctx.globalAlpha=clamp(sa*(0.6+0.8*f)+0.1*Math.sin(game.time*0.9),0,1);
-      ctx.strokeStyle='hsl(190,90%,70%)'; ctx.lineWidth=2+f*9;
-      ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
-      ctx.globalAlpha=clamp(sa*1.4+0.15,0,1);                 // muzzle bead stays readable as the wind-up tell
-      ctx.fillStyle='hsl(190,95%,82%)'; ctx.shadowBlur=12; ctx.shadowColor='hsl(190,95%,75%)';
-      const beadR=2+f*5;                                      // sits ABOVE the nose so it doesn't cover the ship
-      ctx.beginPath(); ctx.arc(plr.x,tipY-beadR,beadR,0,TAU); ctx.fill();
+      ctx.strokeStyle='hsl(190,90%,70%)'; ctx.lineWidth=lw; ctx.shadowBlur=10; ctx.shadowColor='hsl(190,95%,72%)';
+      ctx.beginPath(); ctx.moveTo(plr.x,oy); ctx.lineTo(plr.x,0); ctx.stroke();
     } else if(sl.active>0){
       // sustained beam at the ship's live x — full lane width, held at the Skylance
       // opacity with a subtle pulse, only fading over the last few ticks as it winks out.
       const f=clamp(sl.active/6,0,1), pulse=0.85+0.15*Math.sin(game.time*0.9);
-      ctx.globalAlpha=clamp(sa*0.6*f*pulse,0,1); ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.4;
-      ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
-      ctx.globalAlpha=clamp(sa*f*pulse,0,1); ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.6;
-      ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
+      const glowW=sl.width*1.4, coreW=sl.width*0.6, oy=tipY-glowW;   // lift by the widest cap so it clears the ship
+      ctx.globalAlpha=clamp(sa*0.6*f*pulse,0,1); ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=glowW;
+      ctx.beginPath(); ctx.moveTo(plr.x,oy); ctx.lineTo(plr.x,0); ctx.stroke();
+      ctx.globalAlpha=clamp(sa*f*pulse,0,1); ctx.strokeStyle='#eaffff'; ctx.lineWidth=coreW;
+      ctx.beginPath(); ctx.moveTo(plr.x,oy); ctx.lineTo(plr.x,0); ctx.stroke();
     }
     ctx.restore(); ctx.globalAlpha=1; ctx.shadowBlur=0;
   }
