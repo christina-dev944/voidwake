@@ -117,14 +117,19 @@ export function draw(){
     // reads as a glow, so we layer plain strokes (like the marksman beam, #46).
     // Batched into two passes (all glows, then all cores) so style/alpha is set
     // once instead of per beam. Opacity capped below a bullet's (#48).
+    // Start each beam out from the ship's nose, not its center: push the origin along
+    // the beam's OWN angle by (tip distance + cap radius) so the round cap seats flush at
+    // the hull edge (same procedure as Skylance). Only the draw origin moves — the angles
+    // come from pl.beam.angs (auto-aim + Split Shot), so aiming is untouched. (#60)
+    const d=pl.r+glowW/2;
     ctx.save(); ctx.lineCap='round';
     ctx.strokeStyle=`hsl(${pl.cls.hue},90%,62%)`; ctx.lineWidth=glowW; ctx.globalAlpha=game.beamAlpha*0.6;
-    for(const ang of pl.beam.angs){
-      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+Math.cos(ang)*len, pl.y+Math.sin(ang)*len); ctx.stroke();
+    for(const ang of pl.beam.angs){ const c=Math.cos(ang), s=Math.sin(ang);
+      ctx.beginPath(); ctx.moveTo(pl.x+c*d, pl.y+s*d); ctx.lineTo(pl.x+c*len, pl.y+s*len); ctx.stroke();
     }
     ctx.strokeStyle='#eaffff'; ctx.lineWidth=coreW; ctx.globalAlpha=game.beamAlpha;
-    for(const ang of pl.beam.angs){
-      ctx.beginPath(); ctx.moveTo(pl.x,pl.y); ctx.lineTo(pl.x+Math.cos(ang)*len, pl.y+Math.sin(ang)*len); ctx.stroke();
+    for(const ang of pl.beam.angs){ const c=Math.cos(ang), s=Math.sin(ang);
+      ctx.beginPath(); ctx.moveTo(pl.x+c*d, pl.y+s*d); ctx.lineTo(pl.x+c*len, pl.y+s*len); ctx.stroke();
     }
     ctx.restore();
   }
