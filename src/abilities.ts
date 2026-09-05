@@ -28,10 +28,10 @@ function applyActive(a: ActiveDef, p: Player){
 // than one instant hit. Can't be aimed — the up direction is fixed; it tracks the
 // player's live x, so hold under a target to land the full damage.
 // TOTAL damage = SKY_SECONDS of the player's beam DPS (scales with Beam Amplifier),
-// spread evenly across the on-duration — i.e. Skylance is worth 8s of normal beam
-// (480 at base beamDps 60). The lane is a bit thicker than the beam and SCALES with
+// spread evenly across the on-duration — i.e. Skylance is worth 10s of normal beam
+// (600 at base beamDps 60). The lane is a bit thicker than the beam and SCALES with
 // beam width (Wide Lens, #60).
-const SKY_CHARGE=26, SKY_SECONDS=8, SKY_ACTIVE=36;
+const SKY_CHARGE=26, SKY_SECONDS=10, SKY_ACTIVE=36;
 function skylanceCast(p: Player){
   const total=p.beamDps*SKY_SECONDS;
   // lane scales with beam width but GENTLY (#60 feedback: Wide Lens widened it too much).
