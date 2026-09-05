@@ -288,7 +288,7 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
 // Slider rows are data-driven so adding an option later is one array entry. `key`
 // maps straight to a numeric Settings field; the toggle + close are separate rects.
 const SETTINGS_SLIDERS: { key: keyof Settings; label: string }[] = [
-  { key:'bulletOpacity', label:'Bullet opacity' },
+  { key:'bulletOpacity', label:'Player bullet opacity' },
 ];
 // geometry shared by drawSettings() and the pointer hit-testing in main.ts
 export function settingsRects(){
