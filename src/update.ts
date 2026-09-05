@@ -120,7 +120,7 @@ export function update(){
         else {
           const wv=Math.min(game.wave,24);
           const radius = 78 + wv*2.4;                        // zone grows with the run (~78→136px)
-          const tele = game.wave>=14 ? 118 : 96;             // longer, more menacing wind-up late (#61: tune per wave)
+          const tele = game.wave>=14 ? 156 : 132;            // long, readable wind-up so there's time to walk out (#61: tune per wave)
           telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18 });
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence
         }
