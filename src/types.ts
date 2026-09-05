@@ -142,5 +142,5 @@ export interface GameState {
   mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
   settingsOpen: boolean;            // settings overlay shown over title/pause (#28)
   pauseHover: PauseButton | null;
-  pBulletAlpha: number; beamAlpha: number;
+  pBulletAlpha: number; beamAlpha: number; skyAlpha: number;
 }

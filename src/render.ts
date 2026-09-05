@@ -141,21 +141,25 @@ export function draw(){
   const sl=game.skylance, plr=game.player;
   if(sl && plr){
     const tipY=plr.y-plr.r;   // emanate from the ship's nose (its firing point), not its center (#60 feedback)
+    // opacity tracks the player-bullet setting (game.skyAlpha), a touch brighter than the
+    // laser (#60 feedback) so enemy fire stays readable but the ability still pops.
+    const sa=game.skyAlpha;
     ctx.save(); ctx.lineCap='round';
     if(sl.charge>0){
       const f=1-sl.charge/sl.maxCharge;                       // 0→1 as it charges
-      ctx.globalAlpha=clamp(0.25+0.5*f+0.15*Math.sin(game.time*0.9),0,1);
+      ctx.globalAlpha=clamp(sa*(0.6+0.8*f)+0.1*Math.sin(game.time*0.9),0,1);
       ctx.strokeStyle='hsl(190,90%,70%)'; ctx.lineWidth=2+f*9;
       ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
+      ctx.globalAlpha=clamp(sa*1.4+0.15,0,1);                 // muzzle bead stays readable as the wind-up tell
       ctx.fillStyle='hsl(190,95%,82%)'; ctx.shadowBlur=12; ctx.shadowColor='hsl(190,95%,75%)';
       ctx.beginPath(); ctx.arc(plr.x,tipY,3+f*6,0,TAU); ctx.fill();   // muzzle charge bead at the nose
     } else if(sl.active>0){
-      // sustained beam at the ship's live x — full lane width, held bright with a
-      // subtle pulse, only fading over the last few ticks as it winks out.
+      // sustained beam at the ship's live x — full lane width, held at the Skylance
+      // opacity with a subtle pulse, only fading over the last few ticks as it winks out.
       const f=clamp(sl.active/6,0,1), pulse=0.85+0.15*Math.sin(game.time*0.9);
-      ctx.globalAlpha=0.45*f*pulse; ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.4;
+      ctx.globalAlpha=clamp(sa*0.6*f*pulse,0,1); ctx.strokeStyle='hsl(190,90%,62%)'; ctx.lineWidth=sl.width*1.4;
       ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
-      ctx.globalAlpha=f*pulse; ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.6;
+      ctx.globalAlpha=clamp(sa*f*pulse,0,1); ctx.strokeStyle='#eaffff'; ctx.lineWidth=sl.width*0.6;
       ctx.beginPath(); ctx.moveTo(plr.x,tipY); ctx.lineTo(plr.x,0); ctx.stroke();
     }
     ctx.restore(); ctx.globalAlpha=1; ctx.shadowBlur=0;

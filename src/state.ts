@@ -27,6 +27,9 @@ export const game: GameState = {
   // BELOW a discrete player bullet's — the ever-present beam sits quieter and
   // enemy fire stays readable (#48). Core = this; glow = a fraction of it.
   beamAlpha: 0.16,
+  // Skylance opacity (#60): tracks the bullet-opacity setting at full ratio (applySettings
+  // overwrites this at load), so the signature beam reads a touch brighter than the laser.
+  skyAlpha: 0.25,
 };
 
 // which upgrade categories each weapon draws from (besides 'all')
