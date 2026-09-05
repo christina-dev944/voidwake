@@ -81,11 +81,16 @@ export function draw(){
   // radius over the wind-up with a pulsing rim, then a bright blast flash on detonation.
   for(const h of game.hazards){ if(h.kind!=='circle') continue; const R=h.radius||0;
     if(h.tele>0){
-      const grow=(h.maxTele-h.tele)/h.maxTele, r=R*(0.35+0.65*grow), a=0.14+(h.pulse||0)*0.30;
-      ctx.globalAlpha=a; ctx.fillStyle='hsl(18,90%,52%)';
+      const grow=(h.maxTele-h.tele)/h.maxTele, r=R*(0.35+0.65*grow), a=0.07+(h.pulse||0)*0.16;
+      ctx.globalAlpha=a; ctx.fillStyle='hsl(18,90%,52%)';                 // fainter fill (less opacity, #61 feedback)
       ctx.beginPath();ctx.arc(h.x,h.y,r,0,TAU);ctx.fill();
-      ctx.globalAlpha=Math.min(1,a+0.4); ctx.strokeStyle='hsl(22,95%,66%)'; ctx.lineWidth=2.5;
+      ctx.globalAlpha=Math.min(1,a+0.34); ctx.strokeStyle='hsl(22,95%,66%)'; ctx.lineWidth=1.5;  // thinner outline
       ctx.beginPath();ctx.arc(h.x,h.y,r,0,TAU);ctx.stroke();
+      // light "incoming" ring: starts wide and shrinks inward as the timer runs, meeting
+      // the expanding outline at full radius exactly when the zone detonates (#61 feedback).
+      const ra=R*(1+1.35*(1-grow));
+      ctx.globalAlpha=0.18+0.55*grow; ctx.strokeStyle='hsl(42,100%,85%)'; ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(h.x,h.y,ra,0,TAU);ctx.stroke();
     } else if(h.active>0){
       ctx.globalAlpha=0.4*clamp(h.active/8,0,1); ctx.fillStyle='hsl(28,95%,60%)';
       ctx.beginPath();ctx.arc(h.x,h.y,R,0,TAU);ctx.fill();
