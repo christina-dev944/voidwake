@@ -124,6 +124,9 @@ export const sfx = {
   teleBeep(){ tone(1040,0.05,{type:'sine',gain:0.05}); },
   // …then a sharp zap when it fires the instant beam.
   laserFire(){ tone(880,0.14,{type:'sawtooth',gain:0.12,slideTo:180}); noise(0.14,{gain:0.14,freq:5000,freqTo:800,q:0.7}); },
+  // Mortar zone AoE (#61): a low ground-detonation thud — a broadband boom sweeping
+  // down over a sine sub-thump. Duller/earthier than nova() so it reads as an impact.
+  zoneBoom(){ noise(0.4,{gain:0.16,freq:1400,freqTo:90,q:0.7}); tone(90,0.34,{type:'sine',gain:0.15,slideTo:34}); },
   // Time-stop (#25): a warped "the world halts" cue — a fast downward pitch smear
   // (everything winding down) under an airy shimmer, then a low held drone.
   timeStop(){ tone(620,0.5,{type:'sine',gain:0.14,slideTo:70,attack:0.006});

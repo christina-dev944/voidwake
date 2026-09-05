@@ -36,3 +36,10 @@ export function hazardHitsPlayer(h: Hazard,p: Player){
 export function telegraphLine(x: number,y: number,ang: number,{width=5,tele=90,active:act=9,dmg=14,hue=0,owner=null as number|null,track=false}={}){
   game.hazards.push({ kind:'line', x, y, ang, width, tele, maxTele:tele, active:act, dmg, hue, owner, track, pulse:0, pulsePhase:0 });
 }
+// Mortar zone AoE (#61): a circular danger zone fixed at (x,y). It warns for `tele`
+// frames (a growing/pulsing ring, same accelerating cadence as the line) then snaps
+// for `active` frames. Unlike the laser it's a ground zone — owner is null so the
+// shell still lands if the caster dies, and it never re-glues to a moving enemy.
+export function telegraphCircle(x: number,y: number,radius: number,{tele=100,active:act=14,dmg=18,hue=32}={}){
+  game.hazards.push({ kind:'circle', x, y, ang:0, width:0, tele, maxTele:tele, active:act, dmg, hue, owner:null, track:false, pulse:0, pulsePhase:0, radius });
+}

@@ -74,6 +74,7 @@ interface EnemyBase {
   pattern: string; ang: number; wave: number; hue: number;
   aimCd: number;                // marksman telegraph freeze (0 = free to act)
   telegraph?: boolean;
+  zone?: boolean;               // mortar: lobs a circular zone AoE instead of bullets (#61)
   mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading), set each tick
 }
 export interface NormalEnemy extends EnemyBase { boss: false; }

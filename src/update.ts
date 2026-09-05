@@ -9,7 +9,7 @@ import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
 import { playerShoot, updateLaser, enemyShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser } from './weapons.js';
-import { hurtPlayer, hazardHitsPlayer, telegraphLine } from './combat.js';
+import { hurtPlayer, hazardHitsPlayer, telegraphLine, telegraphCircle } from './combat.js';
 import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
 import { SCYTHE_BOOST_MULT } from './abilities.js';
@@ -115,6 +115,15 @@ export function update(){
           e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
         }
+      } else if(e.zone){                                    // mortar: lob a telegraphed circular zone at the player (#61)
+        if(e.y < e.targetY){ e.fireCd = 10; }               // wait until settled before lobbing
+        else {
+          const wv=Math.min(game.wave,24);
+          const radius = 78 + wv*2.4;                        // zone grows with the run (~78→136px)
+          const tele = game.wave>=14 ? 118 : 96;             // longer, more menacing wind-up late (#61: tune per wave)
+          telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18 });
+          sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence
+        }
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
       else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
@@ -170,10 +179,13 @@ export function update(){
         h.pulsePhase=prev+(2*Math.PI*f)/60; h.pulse=(1-Math.cos(h.pulsePhase))/2;
         if(Math.floor(h.pulsePhase/Math.PI)>Math.floor(prev/Math.PI) && Math.floor(h.pulsePhase/Math.PI)%2===1) sfx.teleBeep();
       } else h.pulse=0;
-      if(h.tele===0){ sfx.laserFire(); } // fires as the warning ends — no shake/jolt on fire
+      if(h.tele===0){                                   // warning ends → the shot lands
+        if(h.kind==='circle'){ sfx.zoneBoom(); addShake(9); burst(h.x,h.y,h.hue,26,5); }  // ground detonation: boom + jolt + debris
+        else sfx.laserFire();                           // line: instant beam zap, no shake/jolt
+      }
     }
     else if(h.active>0){ h.active--;
-      if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg, {noHitStop:true}); // no hit stop on beam hit
+      if(p.iframes<=0 && hazardHitsPlayer(h,p)) hurtPlayer(h.dmg, {noHitStop:true}); // no hit stop on beam/blast hit
     } else game.hazards.splice(i,1);
   }
 

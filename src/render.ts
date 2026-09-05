@@ -77,6 +77,22 @@ export function draw(){
       ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(ex,ey);ctx.stroke();
     }
   }
+  // circular zone hazards (#61, mortar) — a filled warning disc that grows to full
+  // radius over the wind-up with a pulsing rim, then a bright blast flash on detonation.
+  for(const h of game.hazards){ if(h.kind!=='circle') continue; const R=h.radius||0;
+    if(h.tele>0){
+      const grow=(h.maxTele-h.tele)/h.maxTele, r=R*(0.35+0.65*grow), a=0.14+(h.pulse||0)*0.30;
+      ctx.globalAlpha=a; ctx.fillStyle='hsl(18,90%,52%)';
+      ctx.beginPath();ctx.arc(h.x,h.y,r,0,TAU);ctx.fill();
+      ctx.globalAlpha=Math.min(1,a+0.4); ctx.strokeStyle='hsl(22,95%,66%)'; ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(h.x,h.y,r,0,TAU);ctx.stroke();
+    } else if(h.active>0){
+      ctx.globalAlpha=0.4*clamp(h.active/8,0,1); ctx.fillStyle='hsl(28,95%,60%)';
+      ctx.beginPath();ctx.arc(h.x,h.y,R,0,TAU);ctx.fill();
+      ctx.globalAlpha=Math.min(1,h.active/6); ctx.strokeStyle='#fff'; ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(h.x,h.y,R,0,TAU);ctx.stroke();
+    }
+  }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
 
   for(const e of game.enemies){ const c=`hsl(${e.hue},70%,${e.boss?60:55}%)`;

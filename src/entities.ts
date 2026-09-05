@@ -60,7 +60,7 @@ export function startWave(n: number) {
 // fire cadence (fireMul, <1 = faster), colour and movement style. `minWave` gates
 // when a type starts appearing; `weight` biases the random pick, so grunts stay the
 // backbone while tougher/faster types trickle in as a run deepens.
-interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; }
+interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; }
 const ENEMY_TYPES: Record<string, EnemyType> = {
   grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
   weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
@@ -69,6 +69,10 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // marksman telegraphs a laser line at the player, then fires an instant hitscan
   // beam (#46). `telegraph` routes it to the hazard system instead of enemyShoot.
   marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(300,318), minWave:4, weight:2, telegraph:true },
+  // mortar lobs a telegraphed circular zone at the player's position, forcing a
+  // reposition rather than a bullet-dodge (#61). Slow + a bit beefy so the zone
+  // pressure is the threat; `zone` routes it to telegraphCircle instead of a shot.
+  mortar: { r:18, hpMul:1.4, spd:0.6,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:8, weight:2, zone:true },
 };
 function pickEnemyType(wave: number): string {
   const pool: string[]=[];
@@ -90,10 +94,11 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     id: game.eid++,
     x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
     telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
+    zone: !!d.zone,             // mortar zone AoE (#61)
     aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
-    fireCd: d.telegraph ? rand(80,130) : rand(30,90), // marksman waits longer before its first shot
+    fireCd: (d.telegraph||d.zone) ? rand(80,130) : rand(30,90), // marksman/mortar wind up before their first attack
     pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
     ang: 0, wave, hue: d.hue(),
   };
