@@ -132,9 +132,9 @@ export const sfx = {
   // …and a rising "time resumes" snap when the freeze ends.
   timeResume(){ tone(90,0.3,{type:'sine',gain:0.12,slideTo:520,attack:0.004});
     noise(0.16,{gain:0.09,freq:600,freqTo:5000,q:0.5}); },
-  // Lancer Skylance (#60): a rising charge whine during the wind-up…
-  skylanceCharge(){ tone(200,0.42,{type:'sawtooth',gain:0.06,slideTo:1000,attack:0.06});
-    tone(400,0.42,{type:'sine',gain:0.04,slideTo:1600,attack:0.06}); },
+  // Lancer Skylance (#60): a rising charge whine during the wind-up… (kept quiet)
+  skylanceCharge(){ tone(200,0.42,{type:'sawtooth',gain:0.035,slideTo:1000,attack:0.06});
+    tone(400,0.42,{type:'sine',gain:0.022,slideTo:1600,attack:0.06}); },
   // …then a SUSTAINED powerful-laser beam held for the ability's whole duration (#60
   // feedback): a sawtooth core + square harmonic + airy bandpass sizzle, all with an
   // attack→sustain→release envelope over `dur` seconds, so it's on the entire time.
@@ -148,11 +148,11 @@ export const sfx = {
       g.gain.setValueAtTime(gain,t+dur-rel); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); // sustain→release
       o.connect(g); g.connect(master!); o.start(t); o.stop(t+dur+0.02);
     };
-    osc(760,'sawtooth',0.15); osc(384,'square',0.06); osc(90,'sine',0.05);   // core + harmonic + weight
+    osc(760,'sawtooth',0.08); osc(384,'square',0.032); osc(90,'sine',0.028);   // core + harmonic + weight (quieter)
     const src=c.createBufferSource(); src.buffer=sharedNoise(c); src.loop=true;   // held sizzle
     const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=4200; bp.Q.value=0.9;
-    const ng=c.createGain(); ng.gain.setValueAtTime(0.0001,t); ng.gain.exponentialRampToValueAtTime(0.07,t+0.03);
-    ng.gain.setValueAtTime(0.07,t+dur-rel); ng.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    const ng=c.createGain(); ng.gain.setValueAtTime(0.0001,t); ng.gain.exponentialRampToValueAtTime(0.038,t+0.03);
+    ng.gain.setValueAtTime(0.038,t+dur-rel); ng.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     src.connect(bp); bp.connect(ng); ng.connect(master!); src.start(t); src.stop(t+dur+0.02);
   },
 };
