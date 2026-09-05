@@ -52,7 +52,7 @@ export const CLASSES: ClassDef[] = [
     id: 'lancer',
     name: 'Lancer',
     desc: 'Continuous piercing beam. Mind the heat.',
-    activeDesc: 'Skylance — charge briefly, then unleash a huge beam STRAIGHT UP for a short burst, shredding everything in the column above you. It can\'t be aimed, so line yourself up beneath a boss or heavy target and hold. Its damage AND width scale with your beam upgrades, so it grows with the Lancer.',
+    activeDesc: 'Charges briefly, then unleashes a huge beam straight up for a short burst of damage that also removes enemy bullets. It can\'t be aimed, so line yourself beneath a heavy target. Beam upgrades also apply to this ability.',
     hue: 190,
     weapon: 'laser',
     beamDps: 60,    // damage/sec dealt to EVERY enemy the beam line crosses
