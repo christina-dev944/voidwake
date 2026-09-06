@@ -177,7 +177,7 @@ export function update(){
       const frac=(h.maxTele-h.tele)/h.maxTele;
       if(h.track){                                               // higher waves: chase the player, then lock so there's a dodge window
         if(h.kind==='circle'){ if(frac<0.6){                            // zone drifts toward the player (capped speed, a touch under Mage focus 2.0), locks at 60%
-          const ZS=1.6, dx=p.x-h.x, dy=p.y-h.y, d=Math.hypot(dx,dy);
+          const ZS=1.1, dx=p.x-h.x, dy=p.y-h.y, d=Math.hypot(dx,dy);
           if(d>0){ const s=Math.min(ZS,d); h.x+=dx/d*s; h.y+=dy/d*s; } } }
         else if(frac<2/3) h.ang=Math.atan2(p.y-h.y, p.x-h.x);          // line re-aims at the player, locks at 2/3
       }
