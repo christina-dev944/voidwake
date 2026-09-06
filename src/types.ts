@@ -104,13 +104,13 @@ export interface Hazard {
 }
 
 export interface Particle {
-  x: number; y: number; vx: number; vy: number; life: number; hue: number; dim?: number;
+  x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; hue: number; dim?: number;
 }
 
 // Expanding ring/wedge visual (Nova ring + Scythe cone share the animator).
 export interface Fx {
   x: number; y: number; r: number; max: number; life: number;
-  aim?: number; half?: number;
+  aim?: number; half?: number; hue?: number;
 }
 
 // Fading dash ghost hull.

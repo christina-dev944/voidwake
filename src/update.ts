@@ -186,7 +186,10 @@ export function update(){
         if(Math.floor(h.pulsePhase/Math.PI)>Math.floor(prev/Math.PI) && Math.floor(h.pulsePhase/Math.PI)%2===1) sfx.teleBeep();
       } else h.pulse=0;
       if(h.tele===0){                                   // warning ends → the shot lands
-        if(h.kind==='circle'){ sfx.zoneBoom(); addShake(9); burst(h.x,h.y,h.hue,26,5); }  // ground detonation: boom + jolt + debris
+        if(h.kind==='circle'){ sfx.zoneBoom(); addShake(11);                    // ground detonation: boom + jolt…
+          burst(h.x,h.y,h.hue,40,6.5);                                          // …a fat debris burst…
+          burst(h.x,h.y,48,14,2.5);                                             // …a few bright yellow embers on top…
+          game.novaFx.push({ x:h.x, y:h.y, r:(h.radius||0)*0.4, max:h.radius||0, life:1, hue:26 }); }  // …and an orange shockwave ring to the blast radius
         else sfx.laserFire();                           // line: instant beam zap, no shake/jolt
       }
     }

@@ -44,10 +44,16 @@ export function draw(){
   ctx.save();
   if(game.shake>0){ const s=game.shake; ctx.translate(rand(-s,s), rand(-s,s)); }
 
-  // particles
-  for(const pt of game.particles){ ctx.globalAlpha=clamp(pt.life/24,0,1)*(pt.dim??1);
-    ctx.fillStyle=`hsl(${pt.hue},90%,65%)`; ctx.fillRect(pt.x-1.5,pt.y-1.5,3,3); }
-  ctx.globalAlpha=1;
+  // particles — additive glowing sparks: a soft wide halo + a bright hot core, both
+  // fading AND shrinking over the grain's life so a burst blooms then dissipates like
+  // embers instead of hard squares. `lighter` makes overlapping grains glow brighter.
+  ctx.globalCompositeOperation='lighter';
+  for(const pt of game.particles){ const t=clamp(pt.life/pt.max,0,1), dim=pt.dim??1, sz=pt.size*(0.4+0.6*t);
+    ctx.globalAlpha=0.22*t*dim; ctx.fillStyle=`hsl(${pt.hue},95%,60%)`;                 // halo
+    ctx.beginPath();ctx.arc(pt.x,pt.y,sz*2.1,0,TAU);ctx.fill();
+    ctx.globalAlpha=clamp(t*1.2,0,1)*dim; ctx.fillStyle=`hsl(${pt.hue},100%,${72+18*(1-t)}%)`; // hot core (whitens as it fades)
+    ctx.beginPath();ctx.arc(pt.x,pt.y,sz,0,TAU);ctx.fill(); }
+  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
 
   // player bullets — dimmed (see game.pBulletAlpha) so enemy fire reads clearly
   ctx.globalAlpha=game.pBulletAlpha;
@@ -114,9 +120,11 @@ export function draw(){
     ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
   ctx.shadowBlur=0;
 
-  // nova rings
-  for(const f of game.novaFx){ ctx.globalAlpha=clamp(f.life,0,1)*0.7;
-    ctx.strokeStyle='hsl(285,90%,72%)'; ctx.lineWidth=4; ctx.shadowBlur=14; ctx.shadowColor='hsl(285,90%,70%)';
+  // nova rings — shared by the Mage Nova (purple) and the mortar detonation shockwave
+  // (orange, via f.hue). Thins as it expands so it reads as an outgoing pressure wave.
+  for(const f of game.novaFx){ const hue=f.hue??285, t=clamp(f.life,0,1);
+    ctx.globalAlpha=t*0.7;
+    ctx.strokeStyle=`hsl(${hue},90%,72%)`; ctx.lineWidth=1+4*t; ctx.shadowBlur=14; ctx.shadowColor=`hsl(${hue},90%,70%)`;
     ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,TAU); ctx.stroke(); }
   ctx.globalAlpha=1; ctx.shadowBlur=0;
 
