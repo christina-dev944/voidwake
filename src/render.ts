@@ -89,7 +89,7 @@ export function draw(){
       // light "incoming" ring: starts wide and shrinks inward as the timer runs, meeting
       // the expanding outline at full radius exactly when the zone detonates (#61 feedback).
       const ra=R*(1+1.35*(1-grow));
-      ctx.globalAlpha=0.18+0.55*grow; ctx.strokeStyle='hsl(42,100%,85%)'; ctx.lineWidth=1.5;
+      ctx.globalAlpha=0.1+0.38*grow; ctx.strokeStyle='hsl(42,100%,85%)'; ctx.lineWidth=1;
       ctx.beginPath();ctx.arc(h.x,h.y,ra,0,TAU);ctx.stroke();
     } else if(h.active>0){
       ctx.globalAlpha=0.4*clamp(h.active/8,0,1); ctx.fillStyle='hsl(28,95%,60%)';
