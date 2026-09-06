@@ -120,8 +120,9 @@ export function update(){
         else {
           const wv=Math.min(game.wave,24);
           const radius = 78 + wv*2.4;                        // zone grows with the run (~78→136px)
-          const tele = game.wave>=14 ? 156 : 132;            // long, readable wind-up so there's time to walk out (#61: tune per wave)
-          telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=14 }); // later waves: the zone chases the player, then locks
+          const LATE = 14;
+          const tele = game.wave>=LATE ? 156 : 132;          // long, readable wind-up so there's time to walk out (#61: tune per wave)
+          telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=LATE }); // later waves: the zone chases the player, then locks
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence
         }
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
@@ -175,7 +176,9 @@ export function update(){
       // a quiet beep fires at each pulse peak (so the beeping accelerates too).
       const frac=(h.maxTele-h.tele)/h.maxTele;
       if(h.track){                                               // higher waves: chase the player, then lock so there's a dodge window
-        if(h.kind==='circle'){ if(frac<0.6){ h.x=p.x; h.y=p.y; } }     // zone slides onto the player, locks at 60%
+        if(h.kind==='circle'){ if(frac<0.6){                            // zone drifts toward the player (capped speed, a touch under Mage focus 2.0), locks at 60%
+          const ZS=1.6, dx=p.x-h.x, dy=p.y-h.y, d=Math.hypot(dx,dy);
+          if(d>0){ const s=Math.min(ZS,d); h.x+=dx/d*s; h.y+=dy/d*s; } } }
         else if(frac<2/3) h.ang=Math.atan2(p.y-h.y, p.x-h.x);          // line re-aims at the player, locks at 2/3
       }
       if(frac>=2/3){ const u=(frac-2/3)/(1/3), f=3+u*10, prev=h.pulsePhase;   // 3Hz → 13Hz
