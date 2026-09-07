@@ -120,7 +120,7 @@ export function update(){
         else {
           const wv=Math.min(game.wave,24);
           const radius = 78 + wv*2.4;                        // zone grows with the run (~78→136px)
-          const LATE = 1;                                    // TEST#61 TEMP: set back to 14 before closing the issue (testing tracking from wave 1)
+          const LATE = 14;                                   // later waves: the zone tracks the player before locking
           const tele = game.wave>=LATE ? 156 : 132;          // long, readable wind-up so there's time to walk out (#61: tune per wave)
           telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=LATE }); // later waves: the zone chases the player, then locks
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence

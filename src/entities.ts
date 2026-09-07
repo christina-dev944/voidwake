@@ -72,7 +72,7 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // mortar lobs a telegraphed circular zone at the player's position, forcing a
   // reposition rather than a bullet-dodge (#61). Slow + a bit beefy so the zone
   // pressure is the threat; `zone` routes it to telegraphCircle instead of a shot.
-  mortar: { r:18, hpMul:1.4, spd:0.6,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:1, weight:2, zone:true }, // TEST#61 TEMP: minWave back to 8 before closing
+  mortar: { r:18, hpMul:1.4, spd:0.6,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:8, weight:2, zone:true },
 };
 function pickEnemyType(wave: number): string {
   const pool: string[]=[];
