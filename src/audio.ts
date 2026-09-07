@@ -126,11 +126,14 @@ export const sfx = {
   laserFire(){ tone(880,0.14,{type:'sawtooth',gain:0.12,slideTo:180}); noise(0.14,{gain:0.14,freq:5000,freqTo:800,q:0.7}); },
   // Mortar zone AoE (#61): a low ground-detonation thud — a broadband boom sweeping
   // down over a sine sub-thump. Duller/earthier than nova() so it reads as an impact.
+  // A DRY, earthy dirt-impact crunch — deliberately NOT the down-swept boom + deep
+  // sine sub that nova()/Scythe share (that overlap made them sound the same, #61).
+  // Mid-focused, short and percussive: gritty crunch + gravel body + a brief low-mid
+  // thunk, no deep sub and no long down-sweep.
   zoneBoom(){
-    noise(0.05,{gain:0.14,freq:2600,q:0.6});             // sharp impact crack (transient attack)
-    noise(0.45,{gain:0.17,freq:1300,freqTo:80,q:0.7});   // broadband body sweeping down
-    tone(96,0.4,{type:'sine',gain:0.16,slideTo:32});     // deep sub-thump
-    noise(0.55,{gain:0.055,freq:200,q:1.2});             // low dusty rumble tail
+    noise(0.06,{gain:0.13,freq:3200,q:0.7});                          // gritty dirt-impact crunch
+    noise(0.2, {gain:0.13,freq:700,q:1.4,type:'bandpass'});          // earthy gravel body (mid-band, no sweep)
+    tone(150,0.14,{type:'triangle',gain:0.10,slideTo:72});           // short low-mid thunk (not a deep sub)
   },
   // Time-stop (#25): a warped "the world halts" cue — a fast downward pitch smear
   // (everything winding down) under an airy shimmer, then a low held drone.
