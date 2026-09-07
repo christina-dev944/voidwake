@@ -122,7 +122,7 @@ export function update(){
           const radius = 78 + wv*2.4;                        // zone grows with the run (~78→136px)
           const LATE = 14;                                   // later waves: the zone tracks the player before locking
           const tele = game.wave>=LATE ? 156 : 132;          // long, readable wind-up so there's time to walk out (#61: tune per wave)
-          telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=LATE }); // later waves: the zone chases the player, then locks
+          telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=LATE, owner:e.id }); // later waves: the zone chases the player, then locks; owner ties it to the caster so it vanishes on death (#61)
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence
         }
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
@@ -168,8 +168,8 @@ export function update(){
   // window for `active` frames. Line hazards = the marksman/boss laser.
   for(let i=game.hazards.length-1;i>=0;i--){ const h=game.hazards[i];
     const owner = h.owner!=null ? game.enemies.find(e=>e.id===h.owner) : null;
-    if(h.owner!=null && !owner){ game.hazards.splice(i,1); continue; }   // owner died → cancel shot
-    if(owner){ h.x=owner.x; h.y=owner.y; }                               // keep the beam origin glued to the enemy body
+    if(h.owner!=null && !owner){ game.hazards.splice(i,1); continue; }   // owner died → cancel shot (laser beam or mortar zone #61)
+    if(owner && h.kind==='line'){ h.x=owner.x; h.y=owner.y; }            // keep the beam origin glued to the enemy body (the mortar zone stays at its landing spot)
     if(frozen) continue;                                                 // Time-stop (#25): telegraphs/beams pause too
     if(h.tele>0){ h.tele--;
       // static for the first ~2/3, then pulse increasingly fast over the last third;
