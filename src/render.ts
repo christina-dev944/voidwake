@@ -48,9 +48,9 @@ export function draw(){
   // shrinking over the grain's life so a burst dissipates like embers. Normal blending
   // (no additive) so overlapping grains don't blow out to white at the source (#61).
   for(const pt of game.particles){ const t=clamp(pt.life/pt.max,0,1), dim=pt.dim??1, sz=pt.size*(0.5+0.5*t);
-    ctx.globalAlpha=0.14*t*dim; ctx.fillStyle=`hsl(${pt.hue},80%,52%)`;   // faint halo
+    ctx.globalAlpha=0.10*t*dim; ctx.fillStyle=`hsl(${pt.hue},80%,50%)`;   // faint halo
     ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,TAU);ctx.fill();
-    ctx.globalAlpha=0.7*t*dim; ctx.fillStyle=`hsl(${pt.hue},85%,58%)`;    // muted core (no whitening)
+    ctx.globalAlpha=0.52*t*dim; ctx.fillStyle=`hsl(${pt.hue},85%,55%)`;   // muted core (no whitening)
     ctx.beginPath();ctx.arc(pt.x,pt.y,sz,0,TAU);ctx.fill(); }
   ctx.globalAlpha=1;
 
