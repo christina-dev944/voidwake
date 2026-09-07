@@ -44,16 +44,15 @@ export function draw(){
   ctx.save();
   if(game.shake>0){ const s=game.shake; ctx.translate(rand(-s,s), rand(-s,s)); }
 
-  // particles — additive glowing sparks: a soft wide halo + a bright hot core, both
-  // fading AND shrinking over the grain's life so a burst blooms then dissipates like
-  // embers instead of hard squares. `lighter` makes overlapping grains glow brighter.
-  ctx.globalCompositeOperation='lighter';
-  for(const pt of game.particles){ const t=clamp(pt.life/pt.max,0,1), dim=pt.dim??1, sz=pt.size*(0.4+0.6*t);
-    ctx.globalAlpha=0.22*t*dim; ctx.fillStyle=`hsl(${pt.hue},95%,60%)`;                 // halo
-    ctx.beginPath();ctx.arc(pt.x,pt.y,sz*2.1,0,TAU);ctx.fill();
-    ctx.globalAlpha=clamp(t*1.2,0,1)*dim; ctx.fillStyle=`hsl(${pt.hue},100%,${72+18*(1-t)}%)`; // hot core (whitens as it fades)
+  // particles — soft glowing debris: a faint halo + a muted core, both fading AND
+  // shrinking over the grain's life so a burst dissipates like embers. Normal blending
+  // (no additive) so overlapping grains don't blow out to white at the source (#61).
+  for(const pt of game.particles){ const t=clamp(pt.life/pt.max,0,1), dim=pt.dim??1, sz=pt.size*(0.5+0.5*t);
+    ctx.globalAlpha=0.14*t*dim; ctx.fillStyle=`hsl(${pt.hue},80%,52%)`;   // faint halo
+    ctx.beginPath();ctx.arc(pt.x,pt.y,sz*1.8,0,TAU);ctx.fill();
+    ctx.globalAlpha=0.7*t*dim; ctx.fillStyle=`hsl(${pt.hue},85%,58%)`;    // muted core (no whitening)
     ctx.beginPath();ctx.arc(pt.x,pt.y,sz,0,TAU);ctx.fill(); }
-  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+  ctx.globalAlpha=1;
 
   // player bullets — dimmed (see game.pBulletAlpha) so enemy fire reads clearly
   ctx.globalAlpha=game.pBulletAlpha;
