@@ -8,6 +8,7 @@ import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.j
 import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
 import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS } from './keybinds.js';
+import type { KeyAction } from './keybinds.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN } from './settings.js';
@@ -392,10 +393,19 @@ function drawSettings(){
     });
   }
   drawButton(r.close, 'Close  [Esc]', false);
-  // capture-mode prompt overlay (#71)
+  // capture-mode prompt as a centered text-box overlay (#71)
   if(game.rebind){
-    ctx.textAlign='center'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c9b4ff';
-    ctx.fillText('Press a key or mouse button…  (Esc to cancel)', W/2, r.close.y-14);
+    const bw=320, bh=126, bx=W/2-bw/2, by=H/2-bh/2;
+    ctx.fillStyle='rgba(6,6,11,.7)'; ctx.fillRect(0,0,W,H);
+    panelBox(bx,by,bw,bh);
+    const action=game.rebind.action as KeyAction;
+    ctx.textAlign='center';
+    ctx.font='14px ui-monospace,monospace'; ctx.fillStyle='#c9b4ff';
+    ctx.fillText(`Rebind: ${ACTION_LABELS[action]}  (slot ${game.rebind.slot+1})`, W/2, by+38);
+    ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
+    ctx.fillText('Press any key or mouse button', W/2, by+68);
+    ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a8aa6';
+    ctx.fillText('Del = clear      Esc = cancel', W/2, by+98);
   }
   ctx.textAlign='left';
 }

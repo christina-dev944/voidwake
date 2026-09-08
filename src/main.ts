@@ -14,11 +14,14 @@ import { matches, setBind } from './keybinds.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
 import { settings, saveSettings, applySettings } from './settings.js';
 
-// end any in-progress keybind capture (#71) by writing `token` into the pending slot
-// ('' = leave it as-is). Returns true if a capture was consumed.
+// end any in-progress keybind capture (#71) by writing `token` into the pending slot.
+// Esc cancels (no change); Delete/Backspace clears the slot; anything else binds it.
+// Returns true if a capture was consumed.
 function consumeRebind(token: string): boolean {
   if(!game.rebind) return false;
-  if(token!=='' && token!=='escape') setBind(game.rebind.action as any, game.rebind.slot, token);
+  if(token==='escape'){ game.rebind = null; return true; }
+  const clear = token==='delete' || token==='backspace';
+  if(token!=='') setBind(game.rebind.action as any, game.rebind.slot, clear ? '' : token);
   game.rebind = null;
   return true;
 }
