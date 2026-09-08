@@ -405,7 +405,7 @@ function drawSettings(){
     ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
     ctx.fillText('Press any key or mouse button', W/2, by+68);
     ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a8aa6';
-    ctx.fillText('Del = clear      Esc = cancel', W/2, by+98);
+    ctx.fillText('Del / Backspace = clear      Esc = cancel', W/2, by+98);
   }
   ctx.textAlign='left';
 }
