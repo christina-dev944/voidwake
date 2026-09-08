@@ -4,7 +4,7 @@
 import { TAU, clamp, rand } from './util.js';
 import { ctx, W, H } from './canvas.js';
 import { game, best, UP_NAME, UP_TAG } from './state.js';
-import { CLASSES, classStatBars, classActiveLabel } from './classes.js';
+import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.js';
 import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
 import { keys } from './input.js';
@@ -358,6 +358,13 @@ function drawSettings(){
   ctx.textAlign='left';
 }
 
+// Accent colour for a class-exclusive boon = that class's hue (matches the ship/beam).
+// Empty for shared boons, so the UI falls back to the default purple.
+function tagAccent(tag?: string): string {
+  if(!tag) return '';
+  return `hsl(${classById(tag.toLowerCase()).hue},90%,62%)`;
+}
+
 // Fill an upgrade's game-icon (512-space Path2D) into a size×size box at (x,y).
 function drawUpgradeIcon(id: string, x: number, y: number, size: number, color: string){
   const path=iconPath(id); if(!path) return;
@@ -380,13 +387,13 @@ function drawRunBoons(px: number,py: number,panelW: number){
   if(!entries.length){ ctx.fillStyle='#565879'; ctx.font='13px ui-monospace,monospace';
     ctx.fillText('none yet', px+18, py+54); return; }
   ctx.font='13px ui-monospace,monospace';
-  const colW=(panelW-36)/cols, ISZ=15;   // icon glyph box, sits left of each name
+  const colW=(panelW-36)/cols, ISZ=15, GAP=18;   // GAP (icon→text) == the 18px panel inset
   entries.forEach((en,i)=>{ const col=Math.floor(i/perCol), row=i%perCol;
     const x=px+18+col*colW, ty=py+54+row*lh;
-    const ex=UP_TAG[en.id];                                   // class-exclusive → gold like the cards
-    drawUpgradeIcon(en.id, x, ty-ISZ+2, ISZ, ex?'#e0b24a':'#8a5cff');
+    const acc=tagAccent(UP_TAG[en.id]) || '#8a5cff';          // class-exclusive → class colour, like the cards
+    drawUpgradeIcon(en.id, x, ty-ISZ+2, ISZ, acc);
     ctx.fillStyle='#c8c8e0';
-    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), x+ISZ+7, ty); });
+    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), x+ISZ+GAP, ty); });
 }
 
 // Thin XP progress strip along the very top edge — fills left→right toward the
@@ -507,9 +514,10 @@ function syncLevelUpPanel(){
   choices.forEach((u,i)=>{
     const desc = u.descFn&&game.player ? u.descFn(game.player) : u.desc;
     const tag = u.tag ? `<span class="lu-tag">${esc(u.tag)}</span>` : '';
-    const icon = iconSvg(u.id);
-    html += `<button type="button" tabindex="-1" class="lu-card${u.tag?' lu-ex':''}" data-i="${i}">`+
-            `<span class="lu-icon-wrap">${icon}</span>`+
+    const acc = tagAccent(u.tag);   // class-coloured on exclusive boons; default purple otherwise
+    const style = acc ? ` style="--acc:${acc}"` : '';
+    html += `<button type="button" tabindex="-1" class="lu-card${u.tag?' lu-ex':''}" data-i="${i}"${style}>`+
+            iconSvg(u.id)+
             `<span class="lu-body">`+
             `<span class="lu-name">${i+1}. ${esc(u.name)}${tag}</span>`+
             `<span class="lu-desc">${esc(desc)}</span></span></button>`;
