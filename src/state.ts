@@ -49,3 +49,4 @@ export function recordBest(){ let changed=false;
 
 // id → display name, for showing the run's acquired boons in the pause menu (#31)
 export const UP_NAME = Object.fromEntries(UPGRADES.map(u=>[u.id,u.name]));
+export const UP_TAG: Record<string,string|undefined> = Object.fromEntries(UPGRADES.map(u=>[u.id,u.tag]));

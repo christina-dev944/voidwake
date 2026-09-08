@@ -53,15 +53,21 @@
   #levelup .lu-hdr { color:#8a5cff; font-weight:bold; letter-spacing:1px; font-size:17px; }
   #levelup .lu-q { color:#ffd24d; font-size:13px; margin-left:6px; letter-spacing:0; }
   #levelup .lu-sub { color:#7a7a98; font-size:12px; margin:3px 0 10px; }
-  #levelup .lu-card { display:block; width:100%; text-align:left; background:#14142a;
-    border:1.5px solid #3a3a5c; border-radius:7px; padding:10px 12px; margin-bottom:9px;
-    color:var(--fg); cursor:pointer; font-family:inherit; }
+  #levelup .lu-card { display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+    background:#14142a; border:1.5px solid #3a3a5c; border-radius:7px; padding:10px 12px;
+    margin-bottom:9px; color:var(--fg); cursor:pointer; font-family:inherit; }
   #levelup .lu-card:last-child { margin-bottom:0; }
   #levelup .lu-card:hover { border-color:#8a5cff; background:#1a1a34; }
   #levelup .lu-ex { border-color:#c9a24a; }
-  #levelup .lu-name { font-weight:bold; font-size:16px; color:#8a5cff; margin-bottom:4px; }
+  /* icon chip — tinted to the card's accent (purple, gold for class-exclusive) */
+  #levelup .lu-icon-wrap { flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:7px; background:#0e0e20; border:1px solid #2a2a48; }
+  #levelup .lu-icon { width:26px; height:26px; color:#8a5cff; display:block; }
+  #levelup .lu-ex .lu-icon { color:#e0b24a; }
+  #levelup .lu-body { flex:1 1 auto; min-width:0; }
+  #levelup .lu-name { display:block; font-weight:bold; font-size:16px; color:#8a5cff; margin-bottom:4px; }
   #levelup .lu-ex .lu-name { color:#e0b24a; }
-  #levelup .lu-desc { font-size:14px; color:#b4b4d0; line-height:1.35; }
+  #levelup .lu-desc { display:block; font-size:14px; color:#b4b4d0; line-height:1.35; }
   #levelup .lu-tag { font-size:11px; color:#c9a24a; margin-left:6px; font-weight:600; }
 </style>
 </head>

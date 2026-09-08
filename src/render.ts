@@ -3,7 +3,7 @@
 // hit-testing shares. Reads game state and renders; it never drives the simulation.
 import { TAU, clamp, rand } from './util.js';
 import { ctx, W, H } from './canvas.js';
-import { game, best, UP_NAME } from './state.js';
+import { game, best, UP_NAME, UP_TAG } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel } from './classes.js';
 import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
@@ -11,6 +11,7 @@ import { keys } from './input.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN } from './settings.js';
+import { iconSvg, iconPath, ICON_VIEWBOX } from './icons.js';
 import type { Settings } from './settings.js';
 import { pickUpgrade } from './flow.js';
 
@@ -357,13 +358,20 @@ function drawSettings(){
   ctx.textAlign='left';
 }
 
+// Fill an upgrade's game-icon (512-space Path2D) into a size×size box at (x,y).
+function drawUpgradeIcon(id: string, x: number, y: number, size: number, color: string){
+  const path=iconPath(id); if(!path) return;
+  const s=size/ICON_VIEWBOX;
+  ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.fillStyle=color; ctx.fill(path); ctx.restore();
+}
+
 // pause-menu build readout (#31/#36): boons picked up this run, stacked "Name ×N",
 // in a bordered panel below the STATS panel in the RIGHT column of the pause screen.
 function drawRunBoons(px: number,py: number,panelW: number){
   const p=game.player; if(!p) return;
   const counts=new Map<string,number>();
   for(const id of game.upgrades) counts.set(id,(counts.get(id)||0)+1);
-  const entries=[...counts.entries()].map(([id,c])=>({ name:UP_NAME[id]||id, c }));
+  const entries=[...counts.entries()].map(([id,c])=>({ id, name:UP_NAME[id]||id, c }));
   const cols = entries.length>18 ? 3 : entries.length>9 ? 2 : 1, perCol=Math.max(1,Math.ceil(entries.length/cols));
   const lh=22, panelH = 54 + (entries.length?perCol:1)*lh;
   panelBox(px,py,panelW,panelH);
@@ -371,10 +379,14 @@ function drawRunBoons(px: number,py: number,panelW: number){
   ctx.fillText('UPGRADES THIS RUN', px+18, py+28);
   if(!entries.length){ ctx.fillStyle='#565879'; ctx.font='13px ui-monospace,monospace';
     ctx.fillText('none yet', px+18, py+54); return; }
-  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
-  const colW=(panelW-36)/cols;
+  ctx.font='13px ui-monospace,monospace';
+  const colW=(panelW-36)/cols, ISZ=15;   // icon glyph box, sits left of each name
   entries.forEach((en,i)=>{ const col=Math.floor(i/perCol), row=i%perCol;
-    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), px+18+col*colW, py+54+row*lh); });
+    const x=px+18+col*colW, ty=py+54+row*lh;
+    const ex=UP_TAG[en.id];                                   // class-exclusive → gold like the cards
+    drawUpgradeIcon(en.id, x, ty-ISZ+2, ISZ, ex?'#e0b24a':'#8a5cff');
+    ctx.fillStyle='#c8c8e0';
+    ctx.fillText(en.name+(en.c>1?'  ×'+en.c:''), x+ISZ+7, ty); });
 }
 
 // Thin XP progress strip along the very top edge — fills left→right toward the
@@ -495,9 +507,12 @@ function syncLevelUpPanel(){
   choices.forEach((u,i)=>{
     const desc = u.descFn&&game.player ? u.descFn(game.player) : u.desc;
     const tag = u.tag ? `<span class="lu-tag">${esc(u.tag)}</span>` : '';
+    const icon = iconSvg(u.id);
     html += `<button type="button" tabindex="-1" class="lu-card${u.tag?' lu-ex':''}" data-i="${i}">`+
-            `<div class="lu-name">${i+1}. ${esc(u.name)}${tag}</div>`+
-            `<div class="lu-desc">${esc(desc)}</div></button>`;
+            `<span class="lu-icon-wrap">${icon}</span>`+
+            `<span class="lu-body">`+
+            `<span class="lu-name">${i+1}. ${esc(u.name)}${tag}</span>`+
+            `<span class="lu-desc">${esc(desc)}</span></span></button>`;
   });
   LEVELUP.innerHTML = html;
   LEVELUP.querySelectorAll('.lu-card').forEach(btn=>{
