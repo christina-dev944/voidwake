@@ -7,7 +7,7 @@ import { game, best, UP_NAME, UP_TAG } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.js';
 import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
-import { keys } from './input.js';
+import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS } from './keybinds.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN } from './settings.js';
@@ -215,7 +215,7 @@ export function draw(){
     if(inv){ ctx.strokeStyle=pc; ctx.globalAlpha=0.35+0.2*Math.sin(game.time*0.5);
       ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.r+5,0,TAU); ctx.stroke(); ctx.globalAlpha=1; }
     // hitbox dot when focusing
-    if(keys['shift']){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
+    if(held('focus')){ ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(p.x,p.y,p.hitR,0,TAU);ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x,p.y,p.r+6,0,TAU);ctx.stroke(); }
     // XP strip stays on the top edge (thin, doesn't block the field); HP + active/heat
     // now live in the DOM strip below the canvas (see syncBottomHud, #41)
@@ -330,18 +330,28 @@ const SETTINGS_SLIDERS: { key: NumericSettingKey; label: string }[] = [
 ];
 // geometry shared by drawSettings() and the pointer hit-testing in main.ts. Layout
 // runs top-down from below the sliders: sound toggle, a CONTROLS subheading, the
-// auto-shoot toggle (#70/#71) with a one-line hint, then the close button.
+// auto-shoot toggle (#70), one row per rebindable action (two slot buttons each, #71),
+// then the close button.
 export function settingsRects(){
-  const w=Math.min(480, W*0.82), pad=30, x=W/2-w/2, nS=SETTINGS_SLIDERS.length;
-  const sBottom=100+nS*64;                 // y-offset just below the last slider
-  const soundOff=sBottom, ctrlHdrOff=sBottom+42, autoOff=sBottom+72, hintOff=sBottom+98;
-  const h=hintOff+82, y=H/2-h/2;
+  const w=Math.min(460, W*0.9), pad=26, x=W/2-w/2, nS=SETTINGS_SLIDERS.length, nB=KEY_ACTIONS.length;
+  const slidersTop=100;
+  const soundOff=slidersTop + nS*64;
+  const ctrlHdrOff=soundOff + 40;
+  const autoOff=ctrlHdrOff + 24;
+  const bindsTop=autoOff + 42;
+  const rowH=30;
+  const bottom=bindsTop + nB*rowH;
+  const h=bottom + 60, y=H/2-h/2;
   const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label,
-    track:{ x:x+pad, y:y+100+i*64, w:w-pad*2, h:6 } }));
-  const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:30 };
-  const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:30 };
-  const close = { x:x+w/2-75, y:y+h-56, w:150, h:40 };
-  return { panel:{x,y,w,h}, sliders, sound, ctrlHdrY:y+ctrlHdrOff, autoShoot, hintY:y+hintOff, close };
+    track:{ x:x+pad, y:y+slidersTop+i*64, w:w-pad*2, h:6 } }));
+  const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:26 };
+  const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:26 };
+  const bw=76, bh=22, gap=8;
+  const binds = KEY_ACTIONS.map((a,i)=>{ const ry=y+bindsTop+i*rowH;
+    return { action:a, labelX:x+pad, labelY:ry+16,
+      slots:[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ] }; });
+  const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
+  return { panel:{x,y,w,h}, sliders, sound, ctrlHdrY:y+ctrlHdrOff, autoShoot, binds, close };
 }
 // map a fraction (0..1 along the track) to/from the OPACITY_MIN..1 value range
 export const sliderFrac = (v: number) => (v-OPACITY_MIN)/(1-OPACITY_MIN);
@@ -362,14 +372,31 @@ function drawSettings(){
   const on=!isMuted();
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
   ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w, r.sound.y+18);
-  // CONTROLS section (#71): the auto-shoot toggle + its hint on how to fire when off (#70)
+  // CONTROLS section (#71): auto-shoot toggle (#70) + a rebind row per action
   ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff'; ctx.fillText('CONTROLS', r.sound.x, r.ctrlHdrY+10);
   const auto=settings.autoShoot;
-  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+18);
-  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w, r.autoShoot.y+18);
-  ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#6a6a86';
-  ctx.fillText(auto?'Fires automatically while enemies are present.':'Hold Left-click to fire.', r.autoShoot.x, r.hintY+10);
+  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
+  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w, r.autoShoot.y+16);
+  for(const bd of r.binds){
+    ctx.textAlign='left'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
+    ctx.fillText(ACTION_LABELS[bd.action], bd.labelX, bd.labelY);
+    bd.slots.forEach((sl,si)=>{
+      const capturing = !!game.rebind && game.rebind.action===bd.action && game.rebind.slot===si;
+      ctx.fillStyle = capturing ? '#2a2a52' : '#1a1a30';
+      roundRect(sl.x,sl.y,sl.w,sl.h,5); ctx.fill();
+      ctx.strokeStyle = capturing ? '#8a5cff' : '#33334f'; ctx.lineWidth=1;
+      roundRect(sl.x,sl.y,sl.w,sl.h,5); ctx.stroke();
+      ctx.textAlign='center'; ctx.font='11px ui-monospace,monospace';
+      ctx.fillStyle = capturing ? '#c9b4ff' : '#9a9ab8';
+      ctx.fillText(capturing ? '…' : keyLabel(keybinds[bd.action][si]), sl.x+sl.w/2, sl.y+15);
+    });
+  }
   drawButton(r.close, 'Close  [Esc]', false);
+  // capture-mode prompt overlay (#71)
+  if(game.rebind){
+    ctx.textAlign='center'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c9b4ff';
+    ctx.fillText('Press a key or mouse button…  (Esc to cancel)', W/2, r.close.y-14);
+  }
   ctx.textAlign='left';
 }
 

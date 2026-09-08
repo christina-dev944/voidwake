@@ -10,8 +10,18 @@ import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
 import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue } from './render.js';
 import { keys } from './input.js';
+import { matches, setBind } from './keybinds.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
 import { settings, saveSettings, applySettings } from './settings.js';
+
+// end any in-progress keybind capture (#71) by writing `token` into the pending slot
+// ('' = leave it as-is). Returns true if a capture was consumed.
+function consumeRebind(token: string): boolean {
+  if(!game.rebind) return false;
+  if(token!=='' && token!=='escape') setBind(game.rebind.action as any, game.rebind.slot, token);
+  game.rebind = null;
+  return true;
+}
 
 // settings overlay (#28): open/close + which slider (if any) the pointer is dragging
 function openSettings(){ game.settingsOpen=true; cv.style.cursor='default'; }
@@ -27,11 +37,11 @@ function setSliderFromX(i: number, mx: number){
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   resumeAudio();   // first gesture unlocks WebAudio (#7)
+  if (game.rebind) return;   // capturing a rebind (#71) — the handler below claims the key
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
   if (game.settingsOpen) return;   // settings swallows gameplay keys (Esc/S close it, handled below)
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
-    game.shootHeld = false;   // drop a held fire input across a pause so it doesn't stick (#70)
     // default cursor for the pause menu; back to the crosshair for manual aim on resume (#11)
     cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; }
   if (k0==='m') toggleMute();   // mute toggle (#7)
@@ -40,6 +50,7 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 addEventListener('keydown', e=>{
   const k=e.key.toLowerCase();
+  if(consumeRebind(k)){ e.preventDefault(); return; }   // keybind capture claims this press (#71)
   if(game.settingsOpen){ if(k==='escape'||k==='s') closeSettings(); return; }   // settings overlay (#28)
   if((game.state==='title' || game.paused) && k==='s'){ openSettings(); return; } // open from title/pause
   if(game.paused && k==='q'){ quitRun(); return; } // quit-to-title from pause menu
@@ -54,7 +65,7 @@ addEventListener('keydown', e=>{
     else { const n=parseInt(e.key); if(n>=1&&n<=CLASSES.length){ game.classIdx=n-1; reset(CLASSES[n-1]); } }
     return;
   }
-  if(game.state==='playing' && !game.paused && k===' ') useActive(game.player);   // not while paused
+  if(game.state==='playing' && !game.paused && matches('ability', k)) useActive(game.player);   // rebindable ability (#71); not while paused
   if(game.state==='playing' && !game.paused && k==='t'){ game.aimIdx=(game.aimIdx+1)%AIM_MODES.length; // cycle aim mode (#35); MANUAL = aim at cursor (#11)
     cv.style.cursor = manualAim() ? 'crosshair' : 'default'; }   // OS crosshair marks the aim point in manual (#11)
 });
@@ -70,7 +81,8 @@ cv.addEventListener('pointermove', e=>{
     if(sliderGrab>=0) setSliderFromX(sliderGrab, mx);
     const s=settingsRects();
     const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || inRect(mx,my,s.autoShoot) || sliderGrab>=0 ||
-      s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
+      s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28})) ||
+      s.binds.some(bd=>bd.slots.some(sl=>inRect(mx,my,sl)));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
   if(game.paused){                                   // hover-highlight pause buttons (#36)
@@ -91,14 +103,17 @@ cv.addEventListener('pointermove', e=>{
 });
 cv.addEventListener('pointerdown', e=>{
   resumeAudio();   // first gesture unlocks WebAudio (#7)
+  keys['mouse'+e.button] = true;   // mouse buttons live in the same held-map as keys, so binds can use them (#71)
   const [mx,my]=canvasXY(e);
-  if(game.settingsOpen){                             // settings overlay: sliders / sound / close (#28)
+  if(consumeRebind('mouse'+e.button)) return;        // capturing a rebind → this button becomes the bind (#71)
+  if(game.settingsOpen){                             // settings overlay: sliders / sound / binds / close (#28)
     const s=settingsRects();
     if(inRect(mx,my,s.close)){ closeSettings(); return; }
     const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); return; }   // grab to drag, and jump to the click point
     if(inRect(mx,my,s.sound)){ toggleMute(); return; }
-    if(inRect(mx,my,s.autoShoot)){ settings.autoShoot=!settings.autoShoot; saveSettings(); return; }   // (#70/#71)
+    if(inRect(mx,my,s.autoShoot)){ settings.autoShoot=!settings.autoShoot; saveSettings(); return; }   // (#70)
+    for(const bd of s.binds){ for(let sl=0;sl<2;sl++){ if(inRect(mx,my,bd.slots[sl])){ game.rebind={action:bd.action, slot:sl}; return; } } }  // start capture (#71)
     if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
     return;
   }
@@ -110,7 +125,10 @@ cv.addEventListener('pointerdown', e=>{
     game.pauseHover=null; cv.style.cursor='default';
     return;
   }
-  if(game.state==='playing'){ game.shootHeld=true; return; }   // hold Left-click to fire when auto-shoot is off (#70)
+  if(game.state==='playing'){   // shoot is read live from the held-map (#70); a mouse-bound ability fires here (#71)
+    if(!game.paused && matches('ability','mouse'+e.button)) useActive(game.player);
+    return;
+  }
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     // chevrons page the selection; keeps far-off classes reachable by mouse
@@ -122,7 +140,7 @@ cv.addEventListener('pointerdown', e=>{
 });
 
 // release a settings slider drag anywhere the pointer comes up (incl. off-canvas) (#28)
-addEventListener('pointerup', ()=>{ sliderGrab=-1; game.shootHeld=false; });
+addEventListener('pointerup', e=>{ sliderGrab=-1; keys['mouse'+e.button]=false; });
 
 // starting the loop (its own module) kicks off the fixed-timestep heartbeat
 import './loop.js';

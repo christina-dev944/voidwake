@@ -5,7 +5,7 @@ import { TAU, clamp, dist2 } from './util.js';
 import { W, H } from './canvas.js';
 import { game } from './state.js';
 import { settings } from './settings.js';
-import { keys } from './input.js';
+import { held } from './keybinds.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
@@ -43,13 +43,13 @@ export function update(){
     }
   }
 
-  // movement
-  const focus = keys['shift'];
+  // movement — all inputs go through the rebindable keybinds (#71)
+  const focus = held('focus');
   let sp = focus? p.focusSpeed : p.speed;
   if(p.boostT>0) sp*=SCYTHE_BOOST_MULT;           // Scythe dash (#51)
   let dx=0,dy=0;
-  if(keys['a']||keys['arrowleft'])dx--; if(keys['d']||keys['arrowright'])dx++;
-  if(keys['w']||keys['arrowup'])dy--; if(keys['s']||keys['arrowdown'])dy++;
+  if(held('left'))dx--; if(held('right'))dx++;
+  if(held('up'))dy--; if(held('down'))dy++;
   if(dx&&dy){dx*=0.707;dy*=0.707;}
   p.x=clamp(p.x+dx*sp,p.r,W-p.r); p.y=clamp(p.y+dy*sp,p.r,H-p.r);
   if(p.boostT>0){ p.boostT--;                     // leave a fading afterimage trail while dashing (#51)
@@ -59,7 +59,7 @@ export function update(){
   // fire — laser is a continuous beam, everything else fires discrete bullets.
   // Auto-shoot off (#70): only fire while the shoot input is held; the cooldown is
   // clamped at 0 (not run negative) so the first held shot lands immediately.
-  const wantFire = settings.autoShoot || game.shootHeld;
+  const wantFire = settings.autoShoot || held('shoot');
   if(p.weapon==='laser'){ updateLaser(p); }
   else { if(p.fireCd>0) p.fireCd--;
     if(p.fireCd<=0 && game.enemies.length && wantFire){ playerShoot(p); p.fireCd=p.fireRate; } }

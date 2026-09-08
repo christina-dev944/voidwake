@@ -7,6 +7,7 @@ import { settings } from './settings.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
+import { held } from './keybinds.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
 import type { Player, Enemy, BossEnemy } from './types.js';
@@ -85,7 +86,7 @@ export function playerShoot(p: Player) {
 export function updateLaser(p: Player){
   const manual = manualAim();                // MANUAL (#11): beam follows the cursor
   const target = manual ? null : pickTarget(p.x,p.y,true); // dwell=true for HIGH-HP stickiness (#49)
-  const wantFire = settings.autoShoot || game.shootHeld;   // auto-shoot off → hold to beam (#70)
+  const wantFire = settings.autoShoot || held('shoot');   // auto-shoot off → hold to beam (#70)
   const firing = !p.depleted && wantFire && (manual ? game.enemies.length>0 : !!target);
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
