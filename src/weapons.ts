@@ -3,6 +3,7 @@
 // lasers. Reads/writes game.pBullets / game.eBullets; the sim calls these each tick.
 import { TAU, dist2 } from './util.js';
 import { game } from './state.js';
+import { settings } from './settings.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
@@ -84,7 +85,8 @@ export function playerShoot(p: Player) {
 export function updateLaser(p: Player){
   const manual = manualAim();                // MANUAL (#11): beam follows the cursor
   const target = manual ? null : pickTarget(p.x,p.y,true); // dwell=true for HIGH-HP stickiness (#49)
-  const firing = !p.depleted && (manual ? game.enemies.length>0 : !!target);
+  const wantFire = settings.autoShoot || game.shootHeld;   // auto-shoot off → hold to beam (#70)
+  const firing = !p.depleted && wantFire && (manual ? game.enemies.length>0 : !!target);
   if(firing){
     p.heat = Math.min(p.heatMax, p.heat + p.heatRate);
     if(p.heat>=p.heatMax) p.depleted = true;

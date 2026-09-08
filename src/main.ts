@@ -31,6 +31,7 @@ addEventListener('keydown', e => {
   const k0=e.key.toLowerCase();
   if (game.settingsOpen) return;   // settings swallows gameplay keys (Esc/S close it, handled below)
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
+    game.shootHeld = false;   // drop a held fire input across a pause so it doesn't stick (#70)
     // default cursor for the pause menu; back to the crosshair for manual aim on resume (#11)
     cv.style.cursor = (!game.paused && game.state==='playing' && manualAim()) ? 'crosshair' : 'default'; }
   if (k0==='m') toggleMute();   // mute toggle (#7)
@@ -68,7 +69,7 @@ cv.addEventListener('pointermove', e=>{
   if(game.settingsOpen){                             // settings overlay takes pointer priority (#28)
     if(sliderGrab>=0) setSliderFromX(sliderGrab, mx);
     const s=settingsRects();
-    const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || sliderGrab>=0 ||
+    const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || inRect(mx,my,s.autoShoot) || sliderGrab>=0 ||
       s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
@@ -97,6 +98,7 @@ cv.addEventListener('pointerdown', e=>{
     const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); return; }   // grab to drag, and jump to the click point
     if(inRect(mx,my,s.sound)){ toggleMute(); return; }
+    if(inRect(mx,my,s.autoShoot)){ settings.autoShoot=!settings.autoShoot; saveSettings(); return; }   // (#70/#71)
     if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
     return;
   }
@@ -108,6 +110,7 @@ cv.addEventListener('pointerdown', e=>{
     game.pauseHover=null; cv.style.cursor='default';
     return;
   }
+  if(game.state==='playing'){ game.shootHeld=true; return; }   // hold Left-click to fire when auto-shoot is off (#70)
   if(game.state==='title'||game.state==='dead'){ game.classIdx=CLASSES.indexOf(game.cls); if(game.classIdx<0)game.classIdx=0; game.classScroll=game.classIdx; game.state='classSelect'; return; }
   if(game.state==='classSelect'){
     // chevrons page the selection; keeps far-off classes reachable by mouse
@@ -119,7 +122,7 @@ cv.addEventListener('pointerdown', e=>{
 });
 
 // release a settings slider drag anywhere the pointer comes up (incl. off-canvas) (#28)
-addEventListener('pointerup', ()=>{ sliderGrab=-1; });
+addEventListener('pointerup', ()=>{ sliderGrab=-1; game.shootHeld=false; });
 
 // starting the loop (its own module) kicks off the fixed-timestep heartbeat
 import './loop.js';

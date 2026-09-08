@@ -141,6 +141,7 @@ export interface GameState {
   skylance: Skylance | null;               // Lancer vertical burst in flight (#60)
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
   mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
+  shootHeld: boolean;               // fire input held — only matters when auto-shoot is off (#70)
   settingsOpen: boolean;            // settings overlay shown over title/pause (#28)
   pauseHover: PauseButton | null;
   pBulletAlpha: number; beamAlpha: number; skyAlpha: number;

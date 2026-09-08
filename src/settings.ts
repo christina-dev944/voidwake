@@ -5,10 +5,11 @@
 import { clamp } from './util.js';
 import { game } from './state.js';
 
-export interface Settings { bulletOpacity: number; }
+export interface Settings { bulletOpacity: number; autoShoot: boolean; }
 
 // Defaults mirror the historical game.* starting values so a fresh player is unchanged.
-const DEFAULTS: Settings = { bulletOpacity: 0.25 };
+// autoShoot on by default = the original always-on firing (#70).
+const DEFAULTS: Settings = { bulletOpacity: 0.25, autoShoot: true };
 export const OPACITY_MIN = 0.05;   // never let projectiles go fully invisible
 // The Lancer beam is always-on, so it reads quieter than discrete bullets: its opacity
 // tracks the bullet setting at a fixed 0.64 ratio (25% -> 16%, 100% -> 64%). One slider.
@@ -19,12 +20,15 @@ const SKY_RATIO = 1.0;
 const KEY = 'voidwake.settings';
 
 function load(): Settings {
+  const out: Settings = { ...DEFAULTS };
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (s && typeof s.bulletOpacity === 'number')
-      return { bulletOpacity: clamp(s.bulletOpacity, OPACITY_MIN, 1) };
+    if (s) {
+      if (typeof s.bulletOpacity === 'number') out.bulletOpacity = clamp(s.bulletOpacity, OPACITY_MIN, 1);
+      if (typeof s.autoShoot === 'boolean') out.autoShoot = s.autoShoot;
+    }
   } catch {}
-  return { ...DEFAULTS };
+  return out;
 }
 
 export const settings: Settings = load();

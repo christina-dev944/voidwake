@@ -4,6 +4,7 @@
 import { TAU, clamp, dist2 } from './util.js';
 import { W, H } from './canvas.js';
 import { game } from './state.js';
+import { settings } from './settings.js';
 import { keys } from './input.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
@@ -55,9 +56,13 @@ export function update(){
     game.afterimages.push({ x:p.x, y:p.y, r:p.r, hue:(p.cls&&p.cls.hue)||18, life:1 }); }
   const hitR = focus? p.hitR : p.hitR+3;
 
-  // fire — laser is a continuous beam, everything else fires discrete bullets
+  // fire — laser is a continuous beam, everything else fires discrete bullets.
+  // Auto-shoot off (#70): only fire while the shoot input is held; the cooldown is
+  // clamped at 0 (not run negative) so the first held shot lands immediately.
+  const wantFire = settings.autoShoot || game.shootHeld;
   if(p.weapon==='laser'){ updateLaser(p); }
-  else { p.fireCd--; if(p.fireCd<=0 && game.enemies.length){ playerShoot(p); p.fireCd=p.fireRate; } }
+  else { if(p.fireCd>0) p.fireCd--;
+    if(p.fireCd<=0 && game.enemies.length && wantFire){ playerShoot(p); p.fireCd=p.fireRate; } }
 
   // player bullets
   for(let i=game.pBullets.length-1;i>=0;i--){ const b=game.pBullets[i];

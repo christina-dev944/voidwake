@@ -322,18 +322,26 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
 
 // ---- settings menu (#28) ----
 // Slider rows are data-driven so adding an option later is one array entry. `key`
-// maps straight to a numeric Settings field; the toggle + close are separate rects.
-const SETTINGS_SLIDERS: { key: keyof Settings; label: string }[] = [
+// maps straight to a numeric Settings field; the toggles + close are separate rects.
+// Sliders only ever drive numeric settings, so the key type excludes boolean fields.
+type NumericSettingKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
+const SETTINGS_SLIDERS: { key: NumericSettingKey; label: string }[] = [
   { key:'bulletOpacity', label:'Player bullet opacity' },
 ];
-// geometry shared by drawSettings() and the pointer hit-testing in main.ts
+// geometry shared by drawSettings() and the pointer hit-testing in main.ts. Layout
+// runs top-down from below the sliders: sound toggle, a CONTROLS subheading, the
+// auto-shoot toggle (#70/#71) with a one-line hint, then the close button.
 export function settingsRects(){
-  const w=Math.min(480, W*0.82), h=260, x=W/2-w/2, y=H/2-h/2, pad=30;
+  const w=Math.min(480, W*0.82), pad=30, x=W/2-w/2, nS=SETTINGS_SLIDERS.length;
+  const sBottom=100+nS*64;                 // y-offset just below the last slider
+  const soundOff=sBottom, ctrlHdrOff=sBottom+42, autoOff=sBottom+72, hintOff=sBottom+98;
+  const h=hintOff+82, y=H/2-h/2;
   const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label,
     track:{ x:x+pad, y:y+100+i*64, w:w-pad*2, h:6 } }));
-  const sound = { x:x+pad, y:y+100+SETTINGS_SLIDERS.length*64, w:w-pad*2, h:30 };
+  const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:30 };
+  const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:30 };
   const close = { x:x+w/2-75, y:y+h-56, w:150, h:40 };
-  return { panel:{x,y,w,h}, sliders, sound, close };
+  return { panel:{x,y,w,h}, sliders, sound, ctrlHdrY:y+ctrlHdrOff, autoShoot, hintY:y+hintOff, close };
 }
 // map a fraction (0..1 along the track) to/from the OPACITY_MIN..1 value range
 export const sliderFrac = (v: number) => (v-OPACITY_MIN)/(1-OPACITY_MIN);
@@ -354,6 +362,13 @@ function drawSettings(){
   const on=!isMuted();
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
   ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w, r.sound.y+18);
+  // CONTROLS section (#71): the auto-shoot toggle + its hint on how to fire when off (#70)
+  ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff'; ctx.fillText('CONTROLS', r.sound.x, r.ctrlHdrY+10);
+  const auto=settings.autoShoot;
+  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+18);
+  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w, r.autoShoot.y+18);
+  ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#6a6a86';
+  ctx.fillText(auto?'Fires automatically while enemies are present.':'Hold Left-click to fire.', r.autoShoot.x, r.hintY+10);
   drawButton(r.close, 'Close  [Esc]', false);
   ctx.textAlign='left';
 }
