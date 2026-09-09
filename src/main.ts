@@ -87,7 +87,7 @@ cv.addEventListener('pointermove', e=>{
     const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || inRect(mx,my,s.autoShoot) || sliderGrab>=0 ||
       s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28})) ||
       s.binds.some(bd=>bd.slots.some(sl=>inRect(mx,my,sl))) ||
-      s.sliders.some(sl=>inRect(mx,my,sl.reset)) || inRect(mx,my,s.soundReset) || inRect(mx,my,s.autoReset) ||
+      s.sliders.some(sl=>inRect(mx,my,sl.reset)) || inRect(mx,my,s.sound.reset) || inRect(mx,my,s.autoShoot.reset) ||
       s.binds.some(bd=>inRect(mx,my,bd.reset));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
@@ -117,8 +117,8 @@ cv.addEventListener('pointerdown', e=>{
     // reset-to-default buttons (#72) take priority — they sit within/over their rows
     for(const sl of s.sliders){ if(settings[sl.key]!==SETTINGS_DEFAULTS[sl.key] && inRect(mx,my,sl.reset)){
       settings[sl.key]=SETTINGS_DEFAULTS[sl.key]; applySettings(); saveSettings(); return; } }
-    if(isMuted() && inRect(mx,my,s.soundReset)){ setMuted(false); return; }
-    if(settings.autoShoot!==SETTINGS_DEFAULTS.autoShoot && inRect(mx,my,s.autoReset)){ settings.autoShoot=SETTINGS_DEFAULTS.autoShoot; saveSettings(); return; }
+    if(isMuted() && inRect(mx,my,s.sound.reset)){ setMuted(false); return; }
+    if(settings.autoShoot!==SETTINGS_DEFAULTS.autoShoot && inRect(mx,my,s.autoShoot.reset)){ settings.autoShoot=SETTINGS_DEFAULTS.autoShoot; saveSettings(); return; }
     for(const bd of s.binds){ if(!bindIsDefault(bd.action) && inRect(mx,my,bd.reset)){ resetBind(bd.action); return; } }
     if(inRect(mx,my,s.close)){ closeSettings(); return; }
     const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));

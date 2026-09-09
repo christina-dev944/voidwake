@@ -322,45 +322,46 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
 }
 
 // ---- settings menu (#28) ----
-// Slider rows are data-driven so adding an option later is one array entry. `key`
-// maps straight to a numeric Settings field; the toggles + close are separate rects.
-// Sliders only ever drive numeric settings, so the key type excludes boolean fields.
+// The menu is grouped into labelled sections (DISPLAY / SOUND / CONTROLS) so related
+// options sit together with consistent spacing (#72 feedback). `key` maps straight to a
+// numeric Settings field; sliders only drive numeric settings, so the key type excludes
+// boolean fields.
 type NumericSettingKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
-// Each slider carries its own value range so options with different scales share the
-// one UI: bullet opacity clamps to OPACITY_MIN (never fully invisible), volume is 0..1.
-const SETTINGS_SLIDERS: { key: NumericSettingKey; label: string; min: number; max: number }[] = [
-  { key:'bulletOpacity', label:'Player bullet opacity', min:OPACITY_MIN, max:1 },
-  { key:'volume',        label:'Master volume',         min:0,          max:1 },
-];
-// geometry shared by drawSettings() and the pointer hit-testing in main.ts. Layout
-// runs top-down from below the sliders: sound toggle, a CONTROLS subheading, the
-// auto-shoot toggle (#70), one row per rebindable action (two slot buttons each, #71),
-// then the close button.
+// geometry shared by drawSettings() and the pointer hit-testing in main.ts. A single
+// top-down cursor lays out section headers, sliders, toggles, and the keybind rows with
+// fixed per-element heights, so every group keeps the same rhythm.
 export function settingsRects(){
-  const w=Math.min(460, W*0.9), pad=26, x=W/2-w/2, nS=SETTINGS_SLIDERS.length, nB=KEY_ACTIONS.length;
-  const slidersTop=100;
-  const soundOff=slidersTop + nS*64;
-  const ctrlHdrOff=soundOff + 40;
-  const autoOff=ctrlHdrOff + 24;
-  const bindsTop=autoOff + 42;
-  const rowH=30;
-  const bottom=bindsTop + nB*rowH;
-  const h=bottom + 60, y=H/2-h/2;
-  const RS=16;   // per-option reset-to-default button size (#72)
-  const sliders = SETTINGS_SLIDERS.map((s,i)=>{ const track={ x:x+pad, y:y+slidersTop+i*64, w:w-pad*2, h:6 };
-    return { key:s.key, label:s.label, min:s.min, max:s.max, track,
-      reset:{ x:track.x+track.w-RS, y:track.y-25, w:RS, h:RS } }; });   // on the label row, far right
-  const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:26 };
-  const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:26 };
-  const soundReset = { x:sound.x+sound.w-RS, y:sound.y+5, w:RS, h:RS };
-  const autoReset = { x:autoShoot.x+autoShoot.w-RS, y:autoShoot.y+5, w:RS, h:RS };
-  const bw=76, bh=22, gap=8;
-  const binds = KEY_ACTIONS.map((a,i)=>{ const ry=y+bindsTop+i*rowH;
+  const w=Math.min(460, W*0.9), pad=26, RS=16, trackW=w-pad*2, nB=KEY_ACTIONS.length;
+  const bw=76, bh=22, gap=8, rowH=30;
+  const HDR=30, SLIDER=54, TOGGLE=34, TOP=84, BOTTOM=60;   // per-element vertical footprints
+  // total height = sum of every element's footprint (2 headers over one item each +
+  // the SOUND header over a toggle+slider + CONTROLS over a toggle + nB bind rows).
+  const h = TOP + (HDR+SLIDER) + (HDR+TOGGLE+SLIDER) + (HDR+TOGGLE) + nB*rowH + BOTTOM;
+  const x=W/2-w/2, y=H/2-h/2;
+  let c=y+TOP;
+  const headers: { label:string; x:number; y:number }[] = [];
+  const hdr=(label:string)=>{ headers.push({ label, x:x+pad, y:c+16 }); c+=HDR; };
+  const mkSlider=(key: NumericSettingKey, label: string, min: number, max: number)=>{
+    const track={ x:x+pad, y:c+22, w:trackW, h:6 };
+    const s={ key, label, min, max, track, reset:{ x:track.x+trackW-RS, y:track.y-25, w:RS, h:RS } };
+    c+=SLIDER; return s;
+  };
+  const mkToggle=()=>{ const t={ x:x+pad, y:c, w:trackW, h:26, reset:{ x:x+pad+trackW-RS, y:c+5, w:RS, h:RS } };
+    c+=TOGGLE; return t; };
+
+  hdr('DISPLAY');
+  const sliders=[ mkSlider('bulletOpacity','Player bullet opacity',OPACITY_MIN,1) ];
+  hdr('SOUND');
+  const sound=mkToggle();                              // Sound on/off, then the level below it
+  sliders.push( mkSlider('volume','Master volume',0,1) );
+  hdr('CONTROLS');
+  const autoShoot=mkToggle();
+  const binds = KEY_ACTIONS.map((a,i)=>{ const ry=c+i*rowH;
     const slots=[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ];
     return { action:a, labelX:x+pad, labelY:ry+16, slots,
       reset:{ x:slots[0].x-8-RS, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // left of the first slot button
   const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
-  return { panel:{x,y,w,h}, sliders, sound, soundReset, ctrlHdrY:y+ctrlHdrOff, autoShoot, autoReset, binds, close, RS };
+  return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close, RS };
 }
 // map a fraction (0..1 along the track) to/from a slider's [min,max] value range
 export const sliderFrac = (v: number, min: number, max: number) => (v-min)/(max-min);
@@ -379,6 +380,9 @@ function drawSettings(){
   panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
   center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
   const RS=r.RS;
+  // section headers (DISPLAY / SOUND / CONTROLS) — group related options (#72 feedback)
+  ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
+  for(const hd of r.headers) ctx.fillText(hd.label, hd.x, hd.y);
   for(const s of r.sliders){
     const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val,s.min,s.max),0,1);
     const diff = val!==SETTINGS_DEFAULTS[s.key];   // reset button drawn only when changed (#72)
@@ -394,13 +398,12 @@ function drawSettings(){
   const on=!isMuted(), soundDiff=isMuted();   // default is unmuted, so a reset shows only when muted (#72)
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
   ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w-(RS+8), r.sound.y+18);
-  if(soundDiff) drawResetBtn(r.soundReset);
+  if(soundDiff) drawResetBtn(r.sound.reset);
   // CONTROLS section (#71): auto-shoot toggle (#70) + a rebind row per action
-  ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff'; ctx.fillText('CONTROLS', r.sound.x, r.ctrlHdrY+10);
   const auto=settings.autoShoot, autoDiff=auto!==SETTINGS_DEFAULTS.autoShoot;
-  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
+  ctx.textAlign='left'; ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
   ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w-(RS+8), r.autoShoot.y+16);
-  if(autoDiff) drawResetBtn(r.autoReset);
+  if(autoDiff) drawResetBtn(r.autoShoot.reset);
   for(const bd of r.binds){
     ctx.textAlign='left'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
     ctx.fillText(ACTION_LABELS[bd.action], bd.labelX, bd.labelY);
