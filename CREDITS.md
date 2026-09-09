@@ -25,5 +25,17 @@ The SVGs are bundled as files in `src/icons/` (inlined at build time).
 | Bloodpact | cut-palm | Lorc |
 | Aegis | shield-echoes | Lorc |
 
-Artists (Lorc, Delapouite, Skoll, Zeromancer) retain copyright to their work; see
-game-icons.net for the full author list and license terms.
+Menu / GUI icons (pause + settings menus):
+
+| Use | Icon | Artist |
+| --- | --- | --- |
+| Resume | play-button | Guard13007 |
+| Settings | gears | Lorc |
+| Quit to title | exit-door | Delapouite |
+| Close | cross-mark | Lorc |
+| Display section | eyeball | Lorc |
+| Sound section | speaker | Delapouite |
+| Controls section | console-controller | Skoll |
+
+Artists (Lorc, Delapouite, Skoll, Zeromancer, Guard13007) retain copyright to their
+work; see game-icons.net for the full author list and license terms.

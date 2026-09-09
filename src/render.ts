@@ -266,9 +266,9 @@ export function draw(){
     ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 40px ui-monospace,monospace';
     ctx.fillText('PAUSED', lx, Math.max(72,H*0.16));                        // title top-left
     const b=pauseButtons();
-    drawButton(b.resume,'▶  Resume', game.pauseHover==='resume');           // left column
-    drawButton(b.settings,'⚙  Settings', game.pauseHover==='settings');
-    drawButton(b.quit,'✕  Quit to title', game.pauseHover==='quit');
+    drawButton(b.resume,'Resume', game.pauseHover==='resume', 'resume');     // left column
+    drawButton(b.settings,'Settings', game.pauseHover==='settings', 'settings');
+    drawButton(b.quit,'Quit to title', game.pauseHover==='quit', 'quit');
     // right column: STATS panel on top, UPGRADES THIS RUN panel below it
     const panelW=Math.min(360,Math.max(260,W*0.34));
     const rx=W-panelW-Math.max(40,W*0.08), ry=b.resume.y;
@@ -314,11 +314,13 @@ function drawPauseStats(x: number,y: number,w: number){
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
 export function pauseButtons(){ const w=230,h=46, x=Math.max(40,W*0.10), y0=Math.max(120,H*0.30);
   return { resume:{x,y:y0,w,h}, settings:{x,y:y0+60,w,h}, quit:{x,y:y0+120,w,h} }; }
-function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean){
+function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean,iconId?: string){
   ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
+  let tx=r.x+18;
+  if(iconId){ const sz=20; drawUpgradeIcon(iconId, r.x+16, r.y+r.h/2-sz/2, sz, hover?'#c9b4ff':'#8a5cff'); tx=r.x+16+sz+12; }
   ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
-  ctx.fillText(label, r.x+18, r.y+r.h/2+6);
+  ctx.fillText(label, tx, r.y+r.h/2+6);
 }
 
 // ---- settings menu (#28) ----
@@ -339,8 +341,8 @@ export function settingsRects(){
   const h = TOP + (HDR+SLIDER) + (HDR+TOGGLE+SLIDER) + (HDR+TOGGLE) + nB*rowH + BOTTOM;
   const x=W/2-w/2, y=H/2-h/2;
   let c=y+TOP;
-  const headers: { label:string; x:number; y:number }[] = [];
-  const hdr=(label:string)=>{ headers.push({ label, x:x+pad, y:c+16 }); c+=HDR; };
+  const headers: { label:string; icon:string; x:number; y:number }[] = [];
+  const hdr=(label:string, icon:string)=>{ headers.push({ label, icon, x:x+pad, y:c+16 }); c+=HDR; };
   const mkSlider=(key: NumericSettingKey, label: string, min: number, max: number)=>{
     const track={ x:x+pad, y:c+22, w:trackW, h:6 };
     const s={ key, label, min, max, track, reset:{ x:track.x+trackW-RS, y:track.y-25, w:RS, h:RS } };
@@ -349,12 +351,12 @@ export function settingsRects(){
   const mkToggle=()=>{ const t={ x:x+pad, y:c, w:trackW, h:26, reset:{ x:x+pad+trackW-RS, y:c+5, w:RS, h:RS } };
     c+=TOGGLE; return t; };
 
-  hdr('DISPLAY');
+  hdr('DISPLAY','display');
   const sliders=[ mkSlider('bulletOpacity','Player bullet opacity',OPACITY_MIN,1) ];
-  hdr('SOUND');
+  hdr('SOUND','sound');
   const sound=mkToggle();                              // Sound on/off, then the level below it
   sliders.push( mkSlider('volume','Master volume',0,1) );
-  hdr('CONTROLS');
+  hdr('CONTROLS','controls');
   const autoShoot=mkToggle();
   const binds = KEY_ACTIONS.map((a,i)=>{ const ry=c+i*rowH;
     const slots=[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ];
@@ -380,9 +382,9 @@ function drawSettings(){
   panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
   center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
   const RS=r.RS;
-  // section headers (DISPLAY / SOUND / CONTROLS) — group related options (#72 feedback)
+  // section headers (DISPLAY / SOUND / CONTROLS) with a game-icon glyph (#72/#76)
   ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
-  for(const hd of r.headers) ctx.fillText(hd.label, hd.x, hd.y);
+  for(const hd of r.headers){ drawUpgradeIcon(hd.icon, hd.x, hd.y-11, 13, '#8a5cff'); ctx.fillText(hd.label, hd.x+20, hd.y); }
   for(const s of r.sliders){
     const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val,s.min,s.max),0,1);
     const diff = val!==SETTINGS_DEFAULTS[s.key];   // reset button drawn only when changed (#72)
@@ -419,7 +421,7 @@ function drawSettings(){
       ctx.fillText(capturing ? '…' : keyLabel(keybinds[bd.action][si]), sl.x+sl.w/2, sl.y+15);
     });
   }
-  drawButton(r.close, 'Close  [Esc]', false);
+  drawButton(r.close, 'Close  [Esc]', false, 'close');
   // capture-mode prompt as a centered text-box overlay (#71)
   if(game.rebind){
     const bw=320, bh=126, bx=W/2-bw/2, by=H/2-bh/2;
