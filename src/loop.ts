@@ -6,6 +6,7 @@ import { sfx } from './audio.js';
 import { animateParticles } from './effects.js';
 import { update } from './update.js';
 import { draw } from './render.js';
+import { sampleFps, drawDebug } from './debug.js';
 
 // Fixed timestep: sim runs at a constant 60 ticks/sec regardless of the display's
 // refresh rate, so the game feels identical on 60/120/144/240Hz panels. (Before this,
@@ -35,7 +36,9 @@ function loop(now: number){
   const p=game.player;
   const beamOn = !game.paused && game.state==='playing' && p && p.weapon==='laser' && p.beam && p.beam.active;
   sfx.laser(!!beamOn, p?.depleted ?? false);
+  sampleFps(now);   // feed the debug overlay's real frame-rate reading (#74)
   draw();
+  if(game.debug) drawDebug();   // dev overlay on top of everything, in any state (#74)
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

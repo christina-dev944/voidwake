@@ -19,6 +19,7 @@ export const game: GameState = {
   aimLockTime: 0,       // game.time when the current HIGH-HP target was locked (dwell timer, #49)
   mouseX: 360, mouseY: 360, // cursor in game units for MANUAL aim mode (#11); updated on pointermove
   rebind: null,             // keybind slot capturing the next press (#71), or null
+  debug: false,             // F3-style developer overlay (#74)
   settingsOpen: false,      // settings overlay open over the title or pause menu (#28)
   pauseHover: null,     // which pause button the cursor is over ('resume'|'quit'|null) (#36)
   // player bullets are dimmed so enemy fire stays readable (#29). Default 25%;

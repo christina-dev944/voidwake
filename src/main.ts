@@ -43,6 +43,7 @@ addEventListener('keydown', e => {
   if (game.rebind) return;   // capturing a rebind (#71) — the handler below claims the key
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
   const k0=e.key.toLowerCase();
+  if (k0==='f3'){ game.debug=!game.debug; e.preventDefault(); return; }   // toggle dev overlay in any state (#74)
   if (game.settingsOpen) return;   // settings swallows gameplay keys (Esc/S close it, handled below)
   if ((k0==='p'||k0==='escape') && (game.state==='playing'||game.paused)){ game.paused = !game.paused;
     // default cursor for the pause menu; back to the crosshair for manual aim on resume (#11)

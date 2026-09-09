@@ -142,6 +142,7 @@ export interface GameState {
   aimIdx: number; aimTarget: Enemy | null; aimLockTime: number;
   mouseX: number; mouseY: number;   // cursor in game units, for MANUAL aim (#11)
   rebind: { action: string; slot: number } | null;   // which keybind slot is capturing the next press (#71)
+  debug: boolean;                   // F3-style developer overlay (#74)
   settingsOpen: boolean;            // settings overlay shown over title/pause (#28)
   pauseHover: PauseButton | null;
   pBulletAlpha: number; beamAlpha: number; skyAlpha: number;
