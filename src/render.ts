@@ -381,9 +381,11 @@ function drawSettings(){
   const RS=r.RS;
   for(const s of r.sliders){
     const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val,s.min,s.max),0,1);
-    const diff = val!==SETTINGS_DEFAULTS[s.key];   // shifted-value + reset button only when changed (#72)
+    const diff = val!==SETTINGS_DEFAULTS[s.key];   // reset button drawn only when changed (#72)
+    // the value/state text always sits in its reset-reserved slot so it never JUMPS when the
+    // button appears/disappears (the button just fills the fixed gutter) — #72 feedback.
     ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText(s.label, t.x, t.y-12);
-    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w-(diff?RS+8:0), t.y-12);
+    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w-(RS+8), t.y-12);
     ctx.fillStyle='#26264a'; roundRect(t.x,t.y,t.w,t.h,3); ctx.fill();                         // track
     ctx.fillStyle='hsl(258,90%,66%)'; roundRect(t.x,t.y,Math.max(t.h,fw),t.h,3); ctx.fill();   // fill
     ctx.beginPath(); ctx.arc(t.x+fw, t.y+t.h/2, 8, 0, TAU); ctx.fillStyle='#e8e8f0'; ctx.fill(); // knob
@@ -391,13 +393,13 @@ function drawSettings(){
   }
   const on=!isMuted(), soundDiff=isMuted();   // default is unmuted, so a reset shows only when muted (#72)
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
-  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w-(soundDiff?RS+8:0), r.sound.y+18);
+  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w-(RS+8), r.sound.y+18);
   if(soundDiff) drawResetBtn(r.soundReset);
   // CONTROLS section (#71): auto-shoot toggle (#70) + a rebind row per action
   ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff'; ctx.fillText('CONTROLS', r.sound.x, r.ctrlHdrY+10);
   const auto=settings.autoShoot, autoDiff=auto!==SETTINGS_DEFAULTS.autoShoot;
   ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
-  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w-(autoDiff?RS+8:0), r.autoShoot.y+16);
+  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w-(RS+8), r.autoShoot.y+16);
   if(autoDiff) drawResetBtn(r.autoReset);
   for(const bd of r.binds){
     ctx.textAlign='left'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
