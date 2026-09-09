@@ -367,7 +367,7 @@ export function settingsRects(){
     const slots=[ {x:contentR-bw*2-gap, y:ry, w:bw, h:bh}, {x:contentR-bw, y:ry, w:bw, h:bh} ];
     return { action:a, labelX:x+pad, labelY:ry+16, slots,
       reset:{ x:resetX, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // in the shared right gutter
-  const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
+  const close = { x:x+w/2-98, y:y+h-52, w:196, h:38 };   // wide enough for icon + "Close  [Esc]" (#76)
   return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close, RS };
 }
 // map a fraction (0..1 along the track) to/from a slider's [min,max] value range
