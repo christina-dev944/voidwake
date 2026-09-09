@@ -25,17 +25,21 @@ The SVGs are bundled as files in `src/icons/` (inlined at build time).
 | Bloodpact | cut-palm | Lorc |
 | Aegis | shield-echoes | Lorc |
 
-Menu / GUI icons (pause + settings menus):
+Artists (Lorc, Delapouite, Skoll, Zeromancer) retain copyright to their work; see
+game-icons.net for the full author list and license terms.
 
-| Use | Icon | Artist |
-| --- | --- | --- |
-| Resume | play-button | Guard13007 |
-| Settings | gears | Lorc |
-| Quit to title | exit-door | Delapouite |
-| Close | cross-mark | Lorc |
-| Display section | eyeball | Lorc |
-| Sound section | speaker | Delapouite |
-| Controls section | console-controller | Skoll |
+## Menu / GUI icons
 
-Artists (Lorc, Delapouite, Skoll, Zeromancer, Guard13007) retain copyright to their
-work; see game-icons.net for the full author list and license terms.
+Pause + settings menu icons are from [Phosphor Icons](https://phosphoricons.com),
+used under the [MIT license](https://github.com/phosphor-icons/core/blob/main/LICENSE).
+Bundled as files in `src/icons/` (`ph-*.svg`, inlined at build time).
+
+| Use | Phosphor icon |
+| --- | --- |
+| Resume | play |
+| Settings | gear |
+| Quit to title | sign-out |
+| Close | x |
+| Display section | eye |
+| Sound section | speaker-high |
+| Controls section | game-controller |

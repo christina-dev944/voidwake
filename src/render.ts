@@ -12,7 +12,7 @@ import type { KeyAction } from './keybinds.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN, SETTINGS_DEFAULTS } from './settings.js';
-import { iconSvg, iconPath, ICON_VIEWBOX } from './icons.js';
+import { iconSvg, iconPath, iconViewBox } from './icons.js';
 import type { Settings } from './settings.js';
 import { pickUpgrade } from './flow.js';
 
@@ -449,7 +449,7 @@ function tagAccent(tag?: string): string {
 // Fill an upgrade's game-icon (512-space Path2D) into a size×size box at (x,y).
 function drawUpgradeIcon(id: string, x: number, y: number, size: number, color: string){
   const path=iconPath(id); if(!path) return;
-  const s=size/ICON_VIEWBOX;
+  const s=size/iconViewBox(id);
   ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.fillStyle=color; ctx.fill(path); ctx.restore();
 }
 
