@@ -340,15 +340,19 @@ export function settingsRects(){
   // the SOUND header over a toggle+slider + CONTROLS over a toggle + nB bind rows).
   const h = TOP + (HDR+SLIDER) + (HDR+TOGGLE+SLIDER) + (HDR+TOGGLE) + nB*rowH + BOTTOM;
   const x=W/2-w/2, y=H/2-h/2;
+  // A fixed right-hand gutter (G) reserved for the reset-to-default button on EVERY row,
+  // so sliders, toggles, keybind boxes and values all share the same right edge (contentR)
+  // whether or not a reset is showing — nothing jumps and the columns line up (#72 feedback).
+  const G=RS+8, contentR=x+w-pad-G, resetX=x+w-pad-RS;
   let c=y+TOP;
   const headers: { label:string; icon:string; x:number; y:number }[] = [];
   const hdr=(label:string, icon:string)=>{ headers.push({ label, icon, x:x+pad, y:c+16 }); c+=HDR; };
   const mkSlider=(key: NumericSettingKey, label: string, min: number, max: number)=>{
-    const track={ x:x+pad, y:c+22, w:trackW, h:6 };
-    const s={ key, label, min, max, track, reset:{ x:track.x+trackW-RS, y:track.y-25, w:RS, h:RS } };
+    const track={ x:x+pad, y:c+22, w:contentR-(x+pad), h:6 };
+    const s={ key, label, min, max, track, reset:{ x:resetX, y:track.y-25, w:RS, h:RS } };
     c+=SLIDER; return s;
   };
-  const mkToggle=()=>{ const t={ x:x+pad, y:c, w:trackW, h:26, reset:{ x:x+pad+trackW-RS, y:c+5, w:RS, h:RS } };
+  const mkToggle=()=>{ const t={ x:x+pad, y:c, w:trackW, h:26, reset:{ x:resetX, y:c+5, w:RS, h:RS } };
     c+=TOGGLE; return t; };
 
   hdr('DISPLAY','display');
@@ -359,9 +363,10 @@ export function settingsRects(){
   hdr('CONTROLS','controls');
   const autoShoot=mkToggle();
   const binds = KEY_ACTIONS.map((a,i)=>{ const ry=c+i*rowH;
-    const slots=[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ];
+    // both slot boxes end at contentR too, so the keybind column lines up with the sliders
+    const slots=[ {x:contentR-bw*2-gap, y:ry, w:bw, h:bh}, {x:contentR-bw, y:ry, w:bw, h:bh} ];
     return { action:a, labelX:x+pad, labelY:ry+16, slots,
-      reset:{ x:slots[0].x-8-RS, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // left of the first slot button
+      reset:{ x:resetX, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // in the shared right gutter
   const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
   return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close, RS };
 }
@@ -391,7 +396,7 @@ function drawSettings(){
     // the value/state text always sits in its reset-reserved slot so it never JUMPS when the
     // button appears/disappears (the button just fills the fixed gutter) — #72 feedback.
     ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText(s.label, t.x, t.y-12);
-    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w-(RS+8), t.y-12);
+    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w, t.y-12);
     ctx.fillStyle='#26264a'; roundRect(t.x,t.y,t.w,t.h,3); ctx.fill();                         // track
     ctx.fillStyle='hsl(258,90%,66%)'; roundRect(t.x,t.y,Math.max(t.h,fw),t.h,3); ctx.fill();   // fill
     ctx.beginPath(); ctx.arc(t.x+fw, t.y+t.h/2, 8, 0, TAU); ctx.fillStyle='#e8e8f0'; ctx.fill(); // knob
