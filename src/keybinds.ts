@@ -49,6 +49,12 @@ export function setBind(a: KeyAction, slot: number, token: string){
   keybinds[a][slot] = token;
   saveKeybinds();
 }
+// #72 reset-to-default: is this action's binding unchanged from the shipped default?
+export function bindIsDefault(a: KeyAction): boolean {
+  return keybinds[a][0]===DEFAULTS[a][0] && keybinds[a][1]===DEFAULTS[a][1];
+}
+// #72 reset-to-default: restore an action's two slots to the shipped default, then persist.
+export function resetBind(a: KeyAction){ keybinds[a]=[DEFAULTS[a][0],DEFAULTS[a][1]]; saveKeybinds(); }
 // is either slot's key/button currently held?
 export function held(a: KeyAction): boolean {
   const [k1,k2] = keybinds[a];

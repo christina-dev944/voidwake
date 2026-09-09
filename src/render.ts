@@ -7,11 +7,11 @@ import { game, best, UP_NAME, UP_TAG } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.js';
 import { AIM_MODES } from './targeting.js';
 import { isMuted } from './audio.js';
-import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS } from './keybinds.js';
+import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS, bindIsDefault } from './keybinds.js';
 import type { KeyAction } from './keybinds.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
-import { settings, OPACITY_MIN } from './settings.js';
+import { settings, OPACITY_MIN, SETTINGS_DEFAULTS } from './settings.js';
 import { iconSvg, iconPath, ICON_VIEWBOX } from './icons.js';
 import type { Settings } from './settings.js';
 import { pickUpgrade } from './flow.js';
@@ -346,44 +346,63 @@ export function settingsRects(){
   const rowH=30;
   const bottom=bindsTop + nB*rowH;
   const h=bottom + 60, y=H/2-h/2;
-  const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label, min:s.min, max:s.max,
-    track:{ x:x+pad, y:y+slidersTop+i*64, w:w-pad*2, h:6 } }));
+  const RS=16;   // per-option reset-to-default button size (#72)
+  const sliders = SETTINGS_SLIDERS.map((s,i)=>{ const track={ x:x+pad, y:y+slidersTop+i*64, w:w-pad*2, h:6 };
+    return { key:s.key, label:s.label, min:s.min, max:s.max, track,
+      reset:{ x:track.x+track.w-RS, y:track.y-25, w:RS, h:RS } }; });   // on the label row, far right
   const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:26 };
   const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:26 };
+  const soundReset = { x:sound.x+sound.w-RS, y:sound.y+5, w:RS, h:RS };
+  const autoReset = { x:autoShoot.x+autoShoot.w-RS, y:autoShoot.y+5, w:RS, h:RS };
   const bw=76, bh=22, gap=8;
   const binds = KEY_ACTIONS.map((a,i)=>{ const ry=y+bindsTop+i*rowH;
-    return { action:a, labelX:x+pad, labelY:ry+16,
-      slots:[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ] }; });
+    const slots=[ {x:x+w-pad-bw*2-gap, y:ry, w:bw, h:bh}, {x:x+w-pad-bw, y:ry, w:bw, h:bh} ];
+    return { action:a, labelX:x+pad, labelY:ry+16, slots,
+      reset:{ x:slots[0].x-8-RS, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // left of the first slot button
   const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
-  return { panel:{x,y,w,h}, sliders, sound, ctrlHdrY:y+ctrlHdrOff, autoShoot, binds, close };
+  return { panel:{x,y,w,h}, sliders, sound, soundReset, ctrlHdrY:y+ctrlHdrOff, autoShoot, autoReset, binds, close, RS };
 }
 // map a fraction (0..1 along the track) to/from a slider's [min,max] value range
 export const sliderFrac = (v: number, min: number, max: number) => (v-min)/(max-min);
 export const sliderValue = (f: number, min: number, max: number) => min + clamp(f,0,1)*(max-min);
+// small "↺" button drawn beside an option that differs from its shipped default (#72)
+function drawResetBtn(rc: {x:number;y:number;w:number;h:number}){
+  ctx.fillStyle='#1a1a30'; roundRect(rc.x,rc.y,rc.w,rc.h,4); ctx.fill();
+  ctx.strokeStyle='#4a4a6c'; ctx.lineWidth=1; roundRect(rc.x,rc.y,rc.w,rc.h,4); ctx.stroke();
+  ctx.fillStyle='#c9b4ff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='12px ui-monospace,monospace';
+  ctx.fillText('↺', rc.x+rc.w/2, rc.y+rc.h/2+1);
+  ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+}
 function drawSettings(){
   const r=settingsRects();
   ctx.fillStyle='rgba(6,6,11,.82)'; ctx.fillRect(0,0,W,H);
   panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
   center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
+  const RS=r.RS;
   for(const s of r.sliders){
     const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val,s.min,s.max),0,1);
+    const diff = val!==SETTINGS_DEFAULTS[s.key];   // shifted-value + reset button only when changed (#72)
     ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText(s.label, t.x, t.y-12);
-    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w, t.y-12);
+    ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w-(diff?RS+8:0), t.y-12);
     ctx.fillStyle='#26264a'; roundRect(t.x,t.y,t.w,t.h,3); ctx.fill();                         // track
     ctx.fillStyle='hsl(258,90%,66%)'; roundRect(t.x,t.y,Math.max(t.h,fw),t.h,3); ctx.fill();   // fill
     ctx.beginPath(); ctx.arc(t.x+fw, t.y+t.h/2, 8, 0, TAU); ctx.fillStyle='#e8e8f0'; ctx.fill(); // knob
+    if(diff) drawResetBtn(s.reset);
   }
-  const on=!isMuted();
+  const on=!isMuted(), soundDiff=isMuted();   // default is unmuted, so a reset shows only when muted (#72)
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
-  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w, r.sound.y+18);
+  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w-(soundDiff?RS+8:0), r.sound.y+18);
+  if(soundDiff) drawResetBtn(r.soundReset);
   // CONTROLS section (#71): auto-shoot toggle (#70) + a rebind row per action
   ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff'; ctx.fillText('CONTROLS', r.sound.x, r.ctrlHdrY+10);
-  const auto=settings.autoShoot;
+  const auto=settings.autoShoot, autoDiff=auto!==SETTINGS_DEFAULTS.autoShoot;
   ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
-  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w, r.autoShoot.y+16);
+  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w-(autoDiff?RS+8:0), r.autoShoot.y+16);
+  if(autoDiff) drawResetBtn(r.autoReset);
   for(const bd of r.binds){
     ctx.textAlign='left'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
     ctx.fillText(ACTION_LABELS[bd.action], bd.labelX, bd.labelY);
+    if(!bindIsDefault(bd.action)) drawResetBtn(bd.reset);   // between the label and the slot buttons (#72)
     bd.slots.forEach((sl,si)=>{
       const capturing = !!game.rebind && game.rebind.action===bd.action && game.rebind.slot===si;
       ctx.fillStyle = capturing ? '#2a2a52' : '#1a1a30';

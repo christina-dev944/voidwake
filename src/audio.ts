@@ -22,6 +22,7 @@ function ensure(){
 export function resumeAudio(){ const c=ensure(); if(c && c.state==='suspended') c.resume(); }
 export function toggleMute(){ muted=!muted; try{ localStorage.setItem('voidwake.muted', muted?'1':'0'); }catch{} return muted; }
 export function isMuted(){ return muted; }
+export function setMuted(m: boolean){ muted=m; try{ localStorage.setItem('voidwake.muted', muted?'1':'0'); }catch{} }
 // master volume (#65) — clamp, store, and apply live to the running gain node.
 export function setVolume(v: number){ volume=Math.max(0,Math.min(1,v)); if(master) master.gain.value=volume; }
 export function getVolume(){ return volume; }

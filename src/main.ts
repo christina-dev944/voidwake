@@ -3,16 +3,16 @@
 // entities, weapons, abilities, combat, effects, targeting, update, render, flow).
 import { clamp } from './util.js';
 import { CLASSES } from './classes.js';
-import { resumeAudio, toggleMute } from './audio.js';
+import { resumeAudio, toggleMute, setMuted, isMuted } from './audio.js';
 import { game } from './state.js';
 import { cv, W, H } from './canvas.js';
 import { AIM_MODES, manualAim } from './targeting.js';
 import { useActive } from './abilities.js';
 import { classCardRect, chevronRect, inRect, pauseButtons, settingsRects, sliderValue } from './render.js';
 import { keys } from './input.js';
-import { matches, setBind } from './keybinds.js';
+import { matches, setBind, bindIsDefault, resetBind } from './keybinds.js';
 import { reset, quitRun, pickUpgrade } from './flow.js';
-import { settings, saveSettings, applySettings } from './settings.js';
+import { settings, saveSettings, applySettings, SETTINGS_DEFAULTS } from './settings.js';
 
 // end any in-progress keybind capture (#71) by writing `token` into the pending slot.
 // Esc cancels (no change); Delete/Backspace clears the slot; anything else binds it.
@@ -86,7 +86,9 @@ cv.addEventListener('pointermove', e=>{
     const s=settingsRects();
     const hot = inRect(mx,my,s.close) || inRect(mx,my,s.sound) || inRect(mx,my,s.autoShoot) || sliderGrab>=0 ||
       s.sliders.some(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28})) ||
-      s.binds.some(bd=>bd.slots.some(sl=>inRect(mx,my,sl)));
+      s.binds.some(bd=>bd.slots.some(sl=>inRect(mx,my,sl))) ||
+      s.sliders.some(sl=>inRect(mx,my,sl.reset)) || inRect(mx,my,s.soundReset) || inRect(mx,my,s.autoReset) ||
+      s.binds.some(bd=>inRect(mx,my,bd.reset));
     cv.style.cursor = hot?'pointer':'default'; return;
   }
   if(game.paused){                                   // hover-highlight pause buttons (#36)
@@ -112,6 +114,12 @@ cv.addEventListener('pointerdown', e=>{
   if(consumeRebind('mouse'+e.button)) return;        // capturing a rebind → this button becomes the bind (#71)
   if(game.settingsOpen){                             // settings overlay: sliders / sound / binds / close (#28)
     const s=settingsRects();
+    // reset-to-default buttons (#72) take priority — they sit within/over their rows
+    for(const sl of s.sliders){ if(settings[sl.key]!==SETTINGS_DEFAULTS[sl.key] && inRect(mx,my,sl.reset)){
+      settings[sl.key]=SETTINGS_DEFAULTS[sl.key]; applySettings(); saveSettings(); return; } }
+    if(isMuted() && inRect(mx,my,s.soundReset)){ setMuted(false); return; }
+    if(settings.autoShoot!==SETTINGS_DEFAULTS.autoShoot && inRect(mx,my,s.autoReset)){ settings.autoShoot=SETTINGS_DEFAULTS.autoShoot; saveSettings(); return; }
+    for(const bd of s.binds){ if(!bindIsDefault(bd.action) && inRect(mx,my,bd.reset)){ resetBind(bd.action); return; } }
     if(inRect(mx,my,s.close)){ closeSettings(); return; }
     const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
     if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); return; }   // grab to drag, and jump to the click point
