@@ -333,26 +333,27 @@ type NumericSettingKey = { [K in keyof Settings]: Settings[K] extends number ? K
 // top-down cursor lays out section headers, sliders, toggles, and the keybind rows with
 // fixed per-element heights, so every group keeps the same rhythm.
 export function settingsRects(){
-  const w=Math.min(460, W*0.9), pad=26, RS=16, trackW=w-pad*2, nB=KEY_ACTIONS.length;
+  const w=Math.min(460, W*0.9), pad=26, RS=16, nB=KEY_ACTIONS.length;
   const bw=76, bh=22, gap=8, rowH=30;
   const HDR=30, SLIDER=54, TOGGLE=34, TOP=84, BOTTOM=60;   // per-element vertical footprints
   // total height = sum of every element's footprint (2 headers over one item each +
   // the SOUND header over a toggle+slider + CONTROLS over a toggle + nB bind rows).
   const h = TOP + (HDR+SLIDER) + (HDR+TOGGLE+SLIDER) + (HDR+TOGGLE) + nB*rowH + BOTTOM;
   const x=W/2-w/2, y=H/2-h/2;
-  // A fixed right-hand gutter (G) reserved for the reset-to-default button on EVERY row,
-  // so sliders, toggles, keybind boxes and values all share the same right edge (contentR)
-  // whether or not a reset is showing — nothing jumps and the columns line up (#72 feedback).
-  const G=RS+8, contentR=x+w-pad-G, resetX=x+w-pad-RS;
+  // A fixed gutter (G) is reserved on BOTH sides: the right one holds the reset-to-default
+  // button on every row; the left one is left empty purely so the content block stays
+  // horizontally CENTERED in the panel (equal margins) rather than leaning left (#72 feedback).
+  // All rows run between inL and contentR, so columns line up whether or not a reset shows.
+  const G=RS+8, inL=x+pad+G, contentR=x+w-pad-G, resetX=x+w-pad-RS, rowW=contentR-inL;
   let c=y+TOP;
   const headers: { label:string; icon:string; x:number; y:number }[] = [];
-  const hdr=(label:string, icon:string)=>{ headers.push({ label, icon, x:x+pad, y:c+16 }); c+=HDR; };
+  const hdr=(label:string, icon:string)=>{ headers.push({ label, icon, x:inL, y:c+16 }); c+=HDR; };
   const mkSlider=(key: NumericSettingKey, label: string, min: number, max: number)=>{
-    const track={ x:x+pad, y:c+22, w:contentR-(x+pad), h:6 };
+    const track={ x:inL, y:c+22, w:rowW, h:6 };
     const s={ key, label, min, max, track, reset:{ x:resetX, y:track.y-25, w:RS, h:RS } };
     c+=SLIDER; return s;
   };
-  const mkToggle=()=>{ const t={ x:x+pad, y:c, w:trackW, h:26, reset:{ x:resetX, y:c+5, w:RS, h:RS } };
+  const mkToggle=()=>{ const t={ x:inL, y:c, w:rowW, h:26, reset:{ x:resetX, y:c+5, w:RS, h:RS } };
     c+=TOGGLE; return t; };
 
   hdr('DISPLAY','display');
@@ -365,10 +366,10 @@ export function settingsRects(){
   const binds = KEY_ACTIONS.map((a,i)=>{ const ry=c+i*rowH;
     // both slot boxes end at contentR too, so the keybind column lines up with the sliders
     const slots=[ {x:contentR-bw*2-gap, y:ry, w:bw, h:bh}, {x:contentR-bw, y:ry, w:bw, h:bh} ];
-    return { action:a, labelX:x+pad, labelY:ry+16, slots,
+    return { action:a, labelX:inL, labelY:ry+16, slots,
       reset:{ x:resetX, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // in the shared right gutter
   const close = { x:x+w/2-98, y:y+h-52, w:196, h:38 };   // wide enough for icon + "Close  [Esc]" (#76)
-  return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close, RS };
+  return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close };
 }
 // map a fraction (0..1 along the track) to/from a slider's [min,max] value range
 export const sliderFrac = (v: number, min: number, max: number) => (v-min)/(max-min);
@@ -386,7 +387,6 @@ function drawSettings(){
   ctx.fillStyle='rgba(6,6,11,.82)'; ctx.fillRect(0,0,W,H);
   panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
   center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
-  const RS=r.RS;
   // section headers (DISPLAY / SOUND / CONTROLS) with a game-icon glyph (#72/#76)
   ctx.textAlign='left'; ctx.font='11px ui-monospace,monospace'; ctx.fillStyle='#8a5cff';
   for(const hd of r.headers){ drawUpgradeIcon(hd.icon, hd.x, hd.y-11, 13, '#8a5cff'); ctx.fillText(hd.label, hd.x+20, hd.y); }
@@ -404,12 +404,12 @@ function drawSettings(){
   }
   const on=!isMuted(), soundDiff=isMuted();   // default is unmuted, so a reset shows only when muted (#72)
   ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Sound', r.sound.x, r.sound.y+18);
-  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w-(RS+8), r.sound.y+18);
+  ctx.textAlign='right'; ctx.fillStyle=on?'#7cf7ff':'#ff4d6d'; ctx.fillText(on?'ON':'OFF', r.sound.x+r.sound.w, r.sound.y+18);
   if(soundDiff) drawResetBtn(r.sound.reset);
   // CONTROLS section (#71): auto-shoot toggle (#70) + a rebind row per action
   const auto=settings.autoShoot, autoDiff=auto!==SETTINGS_DEFAULTS.autoShoot;
   ctx.textAlign='left'; ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText('Auto-shoot', r.autoShoot.x, r.autoShoot.y+16);
-  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w-(RS+8), r.autoShoot.y+16);
+  ctx.textAlign='right'; ctx.fillStyle=auto?'#7cf7ff':'#ff4d6d'; ctx.fillText(auto?'ON':'OFF', r.autoShoot.x+r.autoShoot.w, r.autoShoot.y+16);
   if(autoDiff) drawResetBtn(r.autoShoot.reset);
   for(const bd of r.binds){
     ctx.textAlign='left'; ctx.font='12px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0';
