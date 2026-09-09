@@ -314,13 +314,18 @@ function drawPauseStats(x: number,y: number,w: number){
 // clickable pause-menu buttons (#36) — left column, hit-tested in the pointer handlers too
 export function pauseButtons(){ const w=230,h=46, x=Math.max(40,W*0.10), y0=Math.max(120,H*0.30);
   return { resume:{x,y:y0,w,h}, settings:{x,y:y0+60,w,h}, quit:{x,y:y0+120,w,h} }; }
-function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean,iconId?: string){
+function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover: boolean,iconId?: string,centered=false){
   ctx.fillStyle=hover?'#1e1e3a':'#12122a'; roundRect(r.x,r.y,r.w,r.h,8); ctx.fill();
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
-  let tx=r.x+18;
-  if(iconId){ const sz=20; drawUpgradeIcon(iconId, r.x+16, r.y+r.h/2-sz/2, sz, hover?'#c9b4ff':'#8a5cff'); tx=r.x+16+sz+12; }
-  ctx.textAlign='left'; ctx.fillStyle='#e8e8f0'; ctx.font='bold 16px ui-monospace,monospace';
-  ctx.fillText(label, tx, r.y+r.h/2+6);
+  const sz=20, gap=12;
+  ctx.font='bold 16px ui-monospace,monospace';
+  const iconW = iconId ? sz+gap : 0;
+  // left-aligned by default (pause column); centered = icon+label as a group in the middle
+  // (used by the settings Close button so its content sits centered in the wide button, #76).
+  const ix = centered ? r.x + r.w/2 - (iconW+ctx.measureText(label).width)/2 : r.x+16;
+  if(iconId) drawUpgradeIcon(iconId, ix, r.y+r.h/2-sz/2, sz, hover?'#c9b4ff':'#8a5cff');
+  ctx.textAlign='left'; ctx.fillStyle='#e8e8f0';
+  ctx.fillText(label, ix+iconW, r.y+r.h/2+6);
 }
 
 // ---- settings menu (#28) ----
@@ -426,7 +431,7 @@ function drawSettings(){
       ctx.fillText(capturing ? '…' : keyLabel(keybinds[bd.action][si]), sl.x+sl.w/2, sl.y+15);
     });
   }
-  drawButton(r.close, 'Close  [Esc]', false, 'close');
+  drawButton(r.close, 'Close  [Esc]', false, 'close', true);
   // capture-mode prompt as a centered text-box overlay (#71)
   if(game.rebind){
     const bw=320, bh=126, bx=W/2-bw/2, by=H/2-bh/2;
