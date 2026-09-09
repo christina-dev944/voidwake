@@ -33,7 +33,7 @@ let sliderGrab = -1;   // index into settingsRects().sliders, or -1
 function setSliderFromX(i: number, mx: number){
   const s=settingsRects().sliders[i]; if(!s) return;
   const key=s.key, frac=(mx-s.track.x)/s.track.w;
-  settings[key]=sliderValue(frac); applySettings(); saveSettings();
+  settings[key]=sliderValue(frac, s.min, s.max); applySettings(); saveSettings();
 }
 
 // ---- input ----

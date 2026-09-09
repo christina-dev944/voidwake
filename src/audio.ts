@@ -5,13 +5,16 @@
 
 let ctx: AudioContext | null = null, master: GainNode | null = null, muted = false;
 try { muted = localStorage.getItem('voidwake.muted')==='1'; } catch {}
+// master output level (0..1), driven by the settings slider (#65). Persistence lives in
+// settings.ts; this module just holds the live value and pushes it onto the gain node.
+let volume = 0.5;
 
 function ensure(){
   if(ctx) return ctx;
   const AC = window.AudioContext || (window as any).webkitAudioContext;
   if(!AC) return null;
   ctx = new AC();
-  master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = volume; master.connect(ctx.destination);
   return ctx;
 }
 
@@ -19,6 +22,9 @@ function ensure(){
 export function resumeAudio(){ const c=ensure(); if(c && c.state==='suspended') c.resume(); }
 export function toggleMute(){ muted=!muted; try{ localStorage.setItem('voidwake.muted', muted?'1':'0'); }catch{} return muted; }
 export function isMuted(){ return muted; }
+// master volume (#65) — clamp, store, and apply live to the running gain node.
+export function setVolume(v: number){ volume=Math.max(0,Math.min(1,v)); if(master) master.gain.value=volume; }
+export function getVolume(){ return volume; }
 
 // a pitched blip with a quick attack + exponential decay; optional pitch slide
 function tone(freq: number, dur: number, {type='triangle', gain=0.2, slideTo=null, attack=0.005}: {type?: OscillatorType; gain?: number; slideTo?: number|null; attack?: number} = {}){

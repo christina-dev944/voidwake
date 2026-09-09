@@ -4,12 +4,14 @@
 // keep enemy fire readable (#29/#48) — their game.* fields now default from here.
 import { clamp } from './util.js';
 import { game } from './state.js';
+import { setVolume } from './audio.js';
 
-export interface Settings { bulletOpacity: number; autoShoot: boolean; }
+export interface Settings { bulletOpacity: number; volume: number; autoShoot: boolean; }
 
 // Defaults mirror the historical game.* starting values so a fresh player is unchanged.
-// autoShoot on by default = the original always-on firing (#70).
-const DEFAULTS: Settings = { bulletOpacity: 0.25, autoShoot: true };
+// autoShoot on by default = the original always-on firing (#70); volume 0.5 = the old
+// fixed master gain (#65).
+export const SETTINGS_DEFAULTS: Settings = { bulletOpacity: 0.25, volume: 0.5, autoShoot: true };
 export const OPACITY_MIN = 0.05;   // never let projectiles go fully invisible
 // The Lancer beam is always-on, so it reads quieter than discrete bullets: its opacity
 // tracks the bullet setting at a fixed 0.64 ratio (25% -> 16%, 100% -> 64%). One slider.
@@ -20,11 +22,12 @@ const SKY_RATIO = 1.0;
 const KEY = 'voidwake.settings';
 
 function load(): Settings {
-  const out: Settings = { ...DEFAULTS };
+  const out: Settings = { ...SETTINGS_DEFAULTS };
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (s) {
       if (typeof s.bulletOpacity === 'number') out.bulletOpacity = clamp(s.bulletOpacity, OPACITY_MIN, 1);
+      if (typeof s.volume === 'number') out.volume = clamp(s.volume, 0, 1);
       if (typeof s.autoShoot === 'boolean') out.autoShoot = s.autoShoot;
     }
   } catch {}
@@ -40,6 +43,7 @@ export function applySettings(){
   game.pBulletAlpha = settings.bulletOpacity;
   game.beamAlpha = settings.bulletOpacity * BEAM_RATIO;   // beam derived from the one slider
   game.skyAlpha = settings.bulletOpacity * SKY_RATIO;     // Skylance a touch brighter than the beam (#60)
+  setVolume(settings.volume);                              // master output level (#65)
 }
 
 applySettings();   // sync saved values into game state at module load

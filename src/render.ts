@@ -326,8 +326,11 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
 // maps straight to a numeric Settings field; the toggles + close are separate rects.
 // Sliders only ever drive numeric settings, so the key type excludes boolean fields.
 type NumericSettingKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
-const SETTINGS_SLIDERS: { key: NumericSettingKey; label: string }[] = [
-  { key:'bulletOpacity', label:'Player bullet opacity' },
+// Each slider carries its own value range so options with different scales share the
+// one UI: bullet opacity clamps to OPACITY_MIN (never fully invisible), volume is 0..1.
+const SETTINGS_SLIDERS: { key: NumericSettingKey; label: string; min: number; max: number }[] = [
+  { key:'bulletOpacity', label:'Player bullet opacity', min:OPACITY_MIN, max:1 },
+  { key:'volume',        label:'Master volume',         min:0,          max:1 },
 ];
 // geometry shared by drawSettings() and the pointer hit-testing in main.ts. Layout
 // runs top-down from below the sliders: sound toggle, a CONTROLS subheading, the
@@ -343,7 +346,7 @@ export function settingsRects(){
   const rowH=30;
   const bottom=bindsTop + nB*rowH;
   const h=bottom + 60, y=H/2-h/2;
-  const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label,
+  const sliders = SETTINGS_SLIDERS.map((s,i)=>({ key:s.key, label:s.label, min:s.min, max:s.max,
     track:{ x:x+pad, y:y+slidersTop+i*64, w:w-pad*2, h:6 } }));
   const sound = { x:x+pad, y:y+soundOff, w:w-pad*2, h:26 };
   const autoShoot = { x:x+pad, y:y+autoOff, w:w-pad*2, h:26 };
@@ -354,16 +357,16 @@ export function settingsRects(){
   const close = { x:x+w/2-75, y:y+h-52, w:150, h:38 };
   return { panel:{x,y,w,h}, sliders, sound, ctrlHdrY:y+ctrlHdrOff, autoShoot, binds, close };
 }
-// map a fraction (0..1 along the track) to/from the OPACITY_MIN..1 value range
-export const sliderFrac = (v: number) => (v-OPACITY_MIN)/(1-OPACITY_MIN);
-export const sliderValue = (f: number) => OPACITY_MIN + clamp(f,0,1)*(1-OPACITY_MIN);
+// map a fraction (0..1 along the track) to/from a slider's [min,max] value range
+export const sliderFrac = (v: number, min: number, max: number) => (v-min)/(max-min);
+export const sliderValue = (f: number, min: number, max: number) => min + clamp(f,0,1)*(max-min);
 function drawSettings(){
   const r=settingsRects();
   ctx.fillStyle='rgba(6,6,11,.82)'; ctx.fillRect(0,0,W,H);
   panelBox(r.panel.x,r.panel.y,r.panel.w,r.panel.h);
   center('SETTINGS', 30, '#8a5cff', r.panel.y+50);
   for(const s of r.sliders){
-    const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val),0,1);
+    const val=settings[s.key], t=s.track, fw=t.w*clamp(sliderFrac(val,s.min,s.max),0,1);
     ctx.textAlign='left';  ctx.font='13px ui-monospace,monospace'; ctx.fillStyle='#c8c8e0'; ctx.fillText(s.label, t.x, t.y-12);
     ctx.textAlign='right'; ctx.fillStyle='#8a8aa6'; ctx.fillText(Math.round(val*100)+'%', t.x+t.w, t.y-12);
     ctx.fillStyle='#26264a'; roundRect(t.x,t.y,t.w,t.h,3); ctx.fill();                         // track
