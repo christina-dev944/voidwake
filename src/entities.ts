@@ -61,7 +61,7 @@ export function startWave(n: number) {
 // the bullet formation it fires (aimed/spread/ring; specials use telegraph/zone/spinner
 // instead). `shape`/`bulletR`/`bulletSpdMul` (#68) give the bolts a distinct look/feel;
 // `fireMul` (>1 = slower) tunes cadence. `minWave` gates entry, `weight` biases spawns.
-interface EnemyType { r:number; hpMul:number; spd:number; pattern:string; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; spinner?:boolean; shape?:string; bulletR?:number; bulletSpdMul?:number; bulletCount?:number; }
+interface EnemyType { r:number; hpMul:number; spd:number; pattern:string; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; spinner?:boolean; shape?:string; bulletR?:number; bulletSpdMul?:number; bulletCount?:number; burst?:number; burstGap?:number; }
 const ENEMY_TYPES: Record<string, EnemyType> = {
   // grunt — the baseline: plain AIMED round bolts, cyan. fireMul 0.87 = ~50% faster
   // than its old 1.3 cadence (#79 follow-up).
@@ -86,9 +86,9 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // TANGENTIALLY, biased horizontal, so they sweep sideways as it rotates. `spinner`
   // routes it to spinnerShoot. Fast cadence (fireMul 1.0) + 25% faster bullets.
   spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:7, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.1 },
-  // striker (#79): a deliberate sniper that fires fast, elongated diamond-less "stick"
-  // bolts drawn as short laser beams (violet). Aimed, slow cadence, quick bolts.
-  striker:{ r:15, hpMul:0.9,  spd:0.7,  pattern:'aimed', move:'drift', fireMul:1.2,  hue:()=>rand(248,262), minWave:1, weight:2, shape:'stick', bulletR:5, bulletSpdMul:1.3 },  // minWave 1 = TEMP for testing (revert to ~5)
+  // striker (#79): a sniper that fires a BURST of 3 fast, elongated "stick" bolts drawn as
+  // short laser beams (violet), then a brief cooldown. Aimed.
+  striker:{ r:15, hpMul:0.9,  spd:0.7,  pattern:'aimed', move:'drift', fireMul:1.2,  hue:()=>rand(248,262), minWave:1, weight:2, shape:'stick', bulletR:5, bulletSpdMul:1.6, burst:3, burstGap:7 },  // minWave 1 = TEMP for testing (revert to ~5)
   // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
   // creeping wall to weave. Big orbs = big hitboxes.
   warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
@@ -116,6 +116,7 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     zone: !!d.zone,             // mortar zone AoE (#61)
     spinner: !!d.spinner,       // spinner tangential emitter (#79)
     shape: d.shape, bulletR: d.bulletR, bulletSpdMul: d.bulletSpdMul, bulletCount: d.bulletCount,  // bullet look/feel/count overrides (#68/#79)
+    burst: d.burst, burstGap: d.burstGap, burstLeft: d.burst,   // burst-fire (striker, #79)
     aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),

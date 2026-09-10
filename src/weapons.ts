@@ -124,7 +124,7 @@ export const CURVE_MAX = 1.2, CURVE_D = 256;    // rad max tilt; px to reach hal
 export const TH_CAP = 1.5;                       // clamp heading below vertical-flip (~86°)
 // striker "short beam" bolt geometry (#79), as multiples of the bullet radius — shared by
 // render (draw) and update (segment hitbox) so the visible beam and its hitbox match.
-export const STICK_LEN = 2.4, STICK_HALFW = 0.65;
+export const STICK_LEN = 3.6, STICK_HALFW = 0.65;
 const SPIN_LAUNCH = [0, 0.4];                    // per-side launch tilts (rad): inner straight-down + outer angled
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);

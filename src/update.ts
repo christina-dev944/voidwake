@@ -134,7 +134,15 @@ export function update(){
         if(e.y < e.targetY){ e.fireCd = 10; }               // wind up until settled
         else { spinnerShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*(e.fireMul||1)); }
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
-      else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
+      else {
+        enemyShoot(e);
+        const full = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1));
+        if(e.burst && e.burst>1){                            // burst-fire (striker #79): quick shots, then a full cooldown
+          e.burstLeft = (e.burstLeft ?? e.burst) - 1;
+          if(e.burstLeft > 0){ e.fireCd = e.burstGap ?? 7; }
+          else { e.burstLeft = e.burst; e.fireCd = full; }
+        } else e.fireCd = full;
+      }
     }
     } else { e.mvx=0; e.mvy=0; }   // frozen: no displacement, so auto-aim leading doesn't chase a still target
     // death still resolves while frozen — the player can freely damage/kill enemies during the stop

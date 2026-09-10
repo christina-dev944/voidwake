@@ -80,6 +80,9 @@ interface EnemyBase {
   bulletR?: number;             // enemy bullet radius override (#68)
   bulletSpdMul?: number;        // enemy bullet speed scale (#68)
   bulletCount?: number;         // enemy volley size override, e.g. weaver spread (#79)
+  burst?: number;               // shots per burst; burstGap between them, full cooldown after (#79)
+  burstGap?: number;            // ticks between shots within a burst (#79)
+  burstLeft?: number;           // shots remaining in the current burst (runtime, #79)
   mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading), set each tick
 }
 export interface NormalEnemy extends EnemyBase { boss: false; }
