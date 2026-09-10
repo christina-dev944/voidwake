@@ -115,21 +115,21 @@ export function updateLaser(p: Player){
 }
 
 // spinner (#79): fires diamond bolts on a CURVING trajectory — they fly straight down
-// until they reach the player's depth, then their velocity rotates (`spin` rad/tick,
-// handled in the sim) until it flattens to horizontal, hooking in to hit the player from
-// the sides. Each volley sends a mirrored pair that hook opposite ways; the flatten point
-// is set ~70px above the player so the horizontal leg sweeps across their row.
-const SPIN_RATE = 0.032, SPIN_SPLAY = 0.20;
+// toward the player's depth, then their velocity rotates a GENTLE partial turn (SPIN_TURN
+// rad, ~46°) at a slow rate, easing sideways so they end diagonal (NOT flat) and hook in
+// toward the player from the sides. Each volley sends a mirrored pair that hook opposite
+// ways; curving starts above the player so the eased arc crosses their row.
+const SPIN_RATE = 0.018, SPIN_TURN = 0.8, SPIN_SPLAY = 0.20;
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
   const py = game.player?.y ?? H*0.7;
-  const atY = Math.max(e.y+40, Math.min(H-70, py-70));         // start curving here → flat leg near the player row
+  const atY = Math.max(e.y+40, Math.min(H-70, py-140));        // start curving above the player row
   const wob = Math.sin(e.ang)*0.12;                            // small per-volley variation
   for(const dir of [-1, 1] as const){
     const a = Math.PI/2 + dir*SPIN_SPLAY + wob;                // mostly straight down, slight splay
-    // spin sign: <0 hooks right (+x), >0 hooks left (−x). Curve each bolt to its own side.
+    // spin sign: <0 hooks right (+x), >0 hooks left. Curve each bolt to its own side.
     game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
-      r:e.bulletR??6, hue:e.hue, shape:'diamond', spin: dir*SPIN_RATE, spinAtY: atY });
+      r:e.bulletR??6, hue:e.hue, shape:'diamond', spin: dir*SPIN_RATE, spinAtY: atY, spinLeft: SPIN_TURN });
   }
   e.ang += 0.5;
 }

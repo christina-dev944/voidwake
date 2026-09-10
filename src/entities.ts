@@ -85,7 +85,7 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // spinner (#79 rework): a spinning emitter that slings fast diamond bolts off
   // TANGENTIALLY, biased horizontal, so they sweep sideways as it rotates. `spinner`
   // routes it to spinnerShoot. Fast cadence (fireMul 1.0) + 25% faster bullets.
-  spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:7, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.25 },
+  spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:1, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.1 },  // minWave 1 = TEMP for testing (revert to 7)
   // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
   // creeping wall to weave. Big orbs = big hitboxes.
   warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },

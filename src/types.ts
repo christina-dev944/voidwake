@@ -102,6 +102,7 @@ export interface PBullet {
 export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string;
   spin?: number;        // rad/tick to rotate the velocity (spinner curve, #79) — 0/undefined = straight
   spinAtY?: number;     // fly straight down until y reaches this, then start curving (#79)
+  spinLeft?: number;    // radians of turn left to spend — stops curving (mid-arc, diagonal) when spent (#79)
 }
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).
