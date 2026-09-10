@@ -36,6 +36,50 @@ function setSliderFromX(i: number, mx: number){
   settings[key]=sliderValue(frac, s.min, s.max); applySettings(); saveSettings();
 }
 
+// Pause/settings buttons fire on RELEASE, not on press: pointerdown arms the target the
+// cursor is over, pointerup fires it only if the cursor is still over the SAME target — so
+// a press can be cancelled by dragging off before releasing. Sliders stay press+drag.
+let pressTarget: string | null = null;
+// id of the pause/settings button under (mx,my), or null. Sliders are excluded (they drag).
+function menuTargetAt(mx: number, my: number): string | null {
+  if(game.settingsOpen){
+    const s=settingsRects();
+    for(let i=0;i<s.sliders.length;i++){ const sl=s.sliders[i];
+      if(settings[sl.key]!==SETTINGS_DEFAULTS[sl.key] && inRect(mx,my,sl.reset)) return 'reset:slider:'+i; }
+    if(isMuted() && inRect(mx,my,s.sound.reset)) return 'reset:sound';
+    if(settings.autoShoot!==SETTINGS_DEFAULTS.autoShoot && inRect(mx,my,s.autoShoot.reset)) return 'reset:auto';
+    for(const bd of s.binds){ if(!bindIsDefault(bd.action) && inRect(mx,my,bd.reset)) return 'reset:bind:'+bd.action; }
+    if(inRect(mx,my,s.close)) return 'close';
+    if(inRect(mx,my,s.sound)) return 'sound';
+    if(inRect(mx,my,s.autoShoot)) return 'auto';
+    for(const bd of s.binds){ for(let sl=0;sl<2;sl++){ if(inRect(mx,my,bd.slots[sl])) return 'bind:'+bd.action+':'+sl; } }
+    if(!inRect(mx,my,s.panel)) return 'close-outside';   // click-away dismiss (also on release)
+    return null;
+  }
+  if(game.paused){
+    const b=pauseButtons();
+    if(inRect(mx,my,b.resume)) return 'resume';
+    if(inRect(mx,my,b.settings)) return 'settings';
+    if(inRect(mx,my,b.quit)) return 'quit';
+  }
+  return null;
+}
+// perform the action for an armed pause/settings target (called from pointerup)
+function fireMenuTarget(id: string){
+  if(id==='resume'){ game.paused=false; game.pauseHover=null; cv.style.cursor='default'; }
+  else if(id==='settings') openSettings();
+  else if(id==='quit') quitRun();
+  else if(id==='close' || id==='close-outside') closeSettings();
+  else if(id==='sound') toggleMute();
+  else if(id==='auto'){ settings.autoShoot=!settings.autoShoot; saveSettings(); }
+  else if(id==='reset:sound') setMuted(false);
+  else if(id==='reset:auto'){ settings.autoShoot=SETTINGS_DEFAULTS.autoShoot; saveSettings(); }
+  else if(id.startsWith('reset:slider:')){ const sl=settingsRects().sliders[+id.slice(13)];
+    if(sl){ settings[sl.key]=SETTINGS_DEFAULTS[sl.key]; applySettings(); saveSettings(); } }
+  else if(id.startsWith('reset:bind:')) resetBind(id.slice(11) as any);
+  else if(id.startsWith('bind:')){ const p=id.split(':'); game.rebind={action:p[1], slot:+p[2]}; }
+}
+
 // ---- input ----
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
@@ -113,28 +157,15 @@ cv.addEventListener('pointerdown', e=>{
   const [mx,my]=canvasXY(e);
   if(consumeRebind('mouse'+e.button)) return;        // capturing a rebind → this button becomes the bind (#71)
   if(game.settingsOpen){                             // settings overlay: sliders / sound / binds / close (#28)
-    const s=settingsRects();
-    // reset-to-default buttons (#72) take priority — they sit within/over their rows
-    for(const sl of s.sliders){ if(settings[sl.key]!==SETTINGS_DEFAULTS[sl.key] && inRect(mx,my,sl.reset)){
-      settings[sl.key]=SETTINGS_DEFAULTS[sl.key]; applySettings(); saveSettings(); return; } }
-    if(isMuted() && inRect(mx,my,s.sound.reset)){ setMuted(false); return; }
-    if(settings.autoShoot!==SETTINGS_DEFAULTS.autoShoot && inRect(mx,my,s.autoShoot.reset)){ settings.autoShoot=SETTINGS_DEFAULTS.autoShoot; saveSettings(); return; }
-    for(const bd of s.binds){ if(!bindIsDefault(bd.action) && inRect(mx,my,bd.reset)){ resetBind(bd.action); return; } }
-    if(inRect(mx,my,s.close)){ closeSettings(); return; }
+    const t=menuTargetAt(mx,my);
+    if(t){ pressTarget=t; return; }                  // a button — arm it; it fires on release
+    const s=settingsRects();                         // otherwise: a slider is press+drag (jump on grab)
     const si=s.sliders.findIndex(sl=>inRect(mx,my,{x:sl.track.x,y:sl.track.y-14,w:sl.track.w,h:sl.track.h+28}));
-    if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); return; }   // grab to drag, and jump to the click point
-    if(inRect(mx,my,s.sound)){ toggleMute(); return; }
-    if(inRect(mx,my,s.autoShoot)){ settings.autoShoot=!settings.autoShoot; saveSettings(); return; }   // (#70)
-    for(const bd of s.binds){ for(let sl=0;sl<2;sl++){ if(inRect(mx,my,bd.slots[sl])){ game.rebind={action:bd.action, slot:sl}; return; } } }  // start capture (#71)
-    if(!inRect(mx,my,s.panel)) closeSettings();      // click outside the panel closes
+    if(si>=0){ sliderGrab=si; setSliderFromX(si, mx); }
     return;
   }
-  if(game.paused){                                   // clickable pause menu (#36)
-    const b=pauseButtons();
-    if(inRect(mx,my,b.resume)) game.paused=false;
-    else if(inRect(mx,my,b.settings)) openSettings();
-    else if(inRect(mx,my,b.quit)) quitRun();
-    game.pauseHover=null; cv.style.cursor='default';
+  if(game.paused){                                   // clickable pause menu (#36) — arms on press, fires on release
+    const t=menuTargetAt(mx,my); if(t) pressTarget=t;
     return;
   }
   if(game.state==='playing'){   // shoot is read live from the held-map (#70); a mouse-bound ability fires here (#71)
@@ -151,8 +182,18 @@ cv.addEventListener('pointerdown', e=>{
   }
 });
 
-// release a settings slider drag anywhere the pointer comes up (incl. off-canvas) (#28)
-addEventListener('pointerup', e=>{ sliderGrab=-1; keys['mouse'+e.button]=false; });
+// pointerup: end a slider drag, and fire an armed pause/settings button if the cursor is
+// still over the same target it was pressed on (release-to-activate) (#28/#36)
+addEventListener('pointerup', e=>{
+  const wasGrab = sliderGrab>=0;
+  sliderGrab=-1; keys['mouse'+e.button]=false;
+  if(wasGrab){ pressTarget=null; return; }           // that was a slider drag, not a button press
+  if(pressTarget){
+    const [mx,my]=canvasXY(e);
+    if(menuTargetAt(mx,my)===pressTarget) fireMenuTarget(pressTarget);
+    pressTarget=null;
+  }
+});
 
 // starting the loop (its own module) kicks off the fixed-timestep heartbeat
 import './loop.js';
