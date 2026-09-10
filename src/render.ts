@@ -373,7 +373,12 @@ export function settingsRects(){
     const slots=[ {x:contentR-bw*2-gap, y:ry, w:bw, h:bh}, {x:contentR-bw, y:ry, w:bw, h:bh} ];
     return { action:a, labelX:inL, labelY:ry+16, slots,
       reset:{ x:resetX, y:ry+(bh-RS)/2, w:RS, h:RS } }; });   // in the shared right gutter
-  const close = { x:x+w/2-98, y:y+h-52, w:196, h:38 };   // wide enough for icon + "Close  [Esc]" (#76)
+  // Close button: size it snugly around the icon + label (measured) with symmetric padding,
+  // then centre it. A fixed-wide button left the group-centred label floating right of the
+  // middle and looked off-centre; a snug button frames it like a normal labelled button (#76).
+  ctx.font='bold 16px ui-monospace,monospace';
+  const closeW = Math.ceil(20 + 12 + ctx.measureText('Close  [Esc]').width + 36);  // icon+gap+label + 18px each side
+  const close = { x:Math.round(x+w/2-closeW/2), y:y+h-52, w:closeW, h:38 };
   return { panel:{x,y,w,h}, headers, sliders, sound, autoShoot, binds, close };
 }
 // map a fraction (0..1 along the track) to/from a slider's [min,max] value range
