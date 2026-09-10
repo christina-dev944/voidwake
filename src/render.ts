@@ -533,6 +533,7 @@ function drawXpBar(p: Player){
 const el = (id: string) => document.getElementById(id) as HTMLElement;
 const HUD2 = {
   root:   el('hud2'),
+  top:    el('hud'),          // WAVE/LVL/SCORE strip above the canvas — in-game only
   hpfill: el('hpfill'),
   hptext: el('hptext'),
   statlbl:el('statlbl'),
@@ -547,6 +548,8 @@ function syncBottomHud(){
   const p=game.player;
   const show = p && (game.state==='playing'||game.state==='dying');
   HUD2.root.style.visibility = show ? 'visible' : 'hidden';
+  HUD2.top.style.visibility = show ? 'visible' : 'hidden';   // hide WAVE/LVL/SCORE on title + class select
+
   // statbar carries an explicit visibility:visible during play, which overrides the
   // root's inherited hidden when the run ends — so clear it here too (#59).
   if(!show){ HUD2.statbar.style.visibility='hidden'; HUD2.statwrap2.style.display='none'; return; }
