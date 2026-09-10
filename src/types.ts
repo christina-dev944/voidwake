@@ -102,8 +102,9 @@ export interface PBullet {
 export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string;
   // spinner curve (#79): CONSTANT-speed arc. The bolt keeps speed `curveSpd`; only its
   // heading turns, as a smooth function of how far it has fallen (see spinnerShoot). No
-  // acceleration, no kink. curveDir (±1) picks the side; curveY0 = launch depth origin.
-  curveDir?: number; curveSpd?: number; curveY0?: number;
+  // acceleration, no kink. curveDir (±1) picks the side; curveA0 = launch tilt from
+  // straight-down (the stream's initial angle); curveY0 = launch depth origin.
+  curveDir?: number; curveSpd?: number; curveY0?: number; curveA0?: number;
 }
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).

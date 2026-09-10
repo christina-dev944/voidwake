@@ -113,18 +113,22 @@ export function updateLaser(p: Player){
   }
 }
 
-// spinner (#79): fires diamond bolts on a smooth, CONSTANT-SPEED arc. The bolt keeps a
-// fixed speed the whole flight — only its heading turns. The turn angle is a pure
-// function of how far it has fallen: 0 (straight down) at the muzzle, easing toward a
-// max tilt CURVE_MAX it never exceeds, half-reached after falling CURVE_D px. So it's one
-// predictable curve (same shape every time), no acceleration, no kink. A mirrored pair
-// curves to each side to threaten from the sides. The sim recomputes vx/vy each tick.
-export const CURVE_MAX = 1.05, CURVE_D = 200;   // rad (~60°); px to reach half the tilt
+// spinner (#79): fires diamond bolts on a smooth, CONSTANT-SPEED arc. Each bolt keeps a
+// fixed speed the whole flight — only its heading turns. The heading = its launch tilt
+// (curveA0) plus a curve term that eases from 0 (at the muzzle) toward CURVE_MAX, half
+// reached after falling CURVE_D px. So it's one predictable curve (same shape every time),
+// no acceleration, no kink; TH_CAP keeps it from ever curling back upward.
+// It fires 4 streams — SPIN_LAUNCH tilts (0 = straight down, then a wider one) mirrored to
+// each side — so two arcs sweep in from the left and two from the right.
+export const CURVE_MAX = 1.2, CURVE_D = 256;    // rad max tilt; px to reach half the tilt
+export const TH_CAP = 1.5;                       // clamp heading below vertical-flip (~86°)
+const SPIN_LAUNCH = [0, 0.4];                    // per-side launch tilts (rad): inner straight-down + outer angled
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
-  for(const dir of [-1, 1] as const){
-    game.eBullets.push({ x:e.x, y:e.y, vx:0, vy:spd, r:e.bulletR??6, hue:e.hue, shape:'diamond',
-      curveDir: dir, curveSpd: spd, curveY0: e.y });
+  for(const dir of [-1, 1] as const) for(const la of SPIN_LAUNCH){
+    const a0 = dir*la;
+    game.eBullets.push({ x:e.x, y:e.y, vx:Math.sin(a0)*spd, vy:Math.cos(a0)*spd, r:e.bulletR??6, hue:e.hue,
+      shape:'diamond', curveDir: dir, curveSpd: spd, curveY0: e.y, curveA0: a0 });
   }
 }
 

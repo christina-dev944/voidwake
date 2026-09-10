@@ -9,7 +9,7 @@ import { held } from './keybinds.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
-import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser, CURVE_MAX, CURVE_D } from './weapons.js';
+import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser, CURVE_MAX, CURVE_D, TH_CAP } from './weapons.js';
 import { hurtPlayer, hazardHitsPlayer, telegraphLine, telegraphCircle } from './combat.js';
 import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
@@ -167,7 +167,7 @@ export function update(){
     if(frozen) continue;
     if(b.curveDir!=null){                         // spinner curve (#79): constant speed, heading turns with fall depth — one smooth curve, no accel
       const depth=Math.max(0,b.y-(b.curveY0??b.y)), sp=b.curveSpd??Math.hypot(b.vx,b.vy);
-      const th=b.curveDir*CURVE_MAX*(depth/(depth+CURVE_D));   // 0 at muzzle → eases toward ±CURVE_MAX
+      const th=clamp((b.curveA0??0)+b.curveDir*CURVE_MAX*(depth/(depth+CURVE_D)), -TH_CAP, TH_CAP);   // launch tilt + curve, eased; capped short of vertical-flip
       b.vx=sp*Math.sin(th); b.vy=sp*Math.cos(th);
     }
     b.x+=b.vx;b.y+=b.vy;
