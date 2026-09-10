@@ -9,7 +9,7 @@ import { held } from './keybinds.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
-import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser, CURVE_MAX, CURVE_D, TH_CAP } from './weapons.js';
+import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser, CURVE_MAX, CURVE_D, TH_CAP, STICK_LEN, STICK_HALFW } from './weapons.js';
 import { hurtPlayer, hazardHitsPlayer, telegraphLine, telegraphCircle } from './combat.js';
 import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
@@ -172,7 +172,13 @@ export function update(){
     }
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
-    if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
+    let hit: boolean;
+    if(b.shape==='stick'){                        // elongated beam-bolt: hit-test the whole segment, not just the center (#79)
+      const sp=Math.hypot(b.vx,b.vy)||1, ux=b.vx/sp, uy=b.vy/sp, hl=b.r*STICK_LEN;
+      const t=Math.max(-hl,Math.min(hl,(p.x-b.x)*ux+(p.y-b.y)*uy));   // project player onto the beam axis, clamp to its length
+      hit = dist2(b.x+ux*t, b.y+uy*t, p.x, p.y) < (hitR+b.r*STICK_HALFW)**2;
+    } else hit = dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2;
+    if(p.iframes<=0 && hit){
       game.eBullets.splice(i,1); hurtPlayer(8);
     }
   }

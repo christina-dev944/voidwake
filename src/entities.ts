@@ -85,7 +85,10 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // spinner (#79 rework): a spinning emitter that slings fast diamond bolts off
   // TANGENTIALLY, biased horizontal, so they sweep sideways as it rotates. `spinner`
   // routes it to spinnerShoot. Fast cadence (fireMul 1.0) + 25% faster bullets.
-  spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:1, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.1 },  // minWave 1 = TEMP for testing (revert to 7)
+  spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:7, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.1 },
+  // striker (#79): a deliberate sniper that fires fast, elongated diamond-less "stick"
+  // bolts drawn as short laser beams (violet). Aimed, slow cadence, quick bolts.
+  striker:{ r:15, hpMul:0.9,  spd:0.7,  pattern:'aimed', move:'drift', fireMul:1.2,  hue:()=>rand(248,262), minWave:1, weight:2, shape:'stick', bulletR:5, bulletSpdMul:1.3 },  // minWave 1 = TEMP for testing (revert to ~5)
   // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
   // creeping wall to weave. Big orbs = big hitboxes.
   warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },

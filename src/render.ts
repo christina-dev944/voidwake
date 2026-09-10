@@ -6,6 +6,7 @@ import { ctx, W, H } from './canvas.js';
 import { game, best, UP_NAME, UP_TAG } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.js';
 import { AIM_MODES } from './targeting.js';
+import { STICK_LEN } from './weapons.js';
 import { isMuted } from './audio.js';
 import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS, bindIsDefault } from './keybinds.js';
 import type { KeyAction } from './keybinds.js';
@@ -131,6 +132,14 @@ export function draw(){
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();
       ctx.strokeStyle=frozen ? 'hsl(200,70%,90%)' : `hsl(${b.hue},95%,86%)`; ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(b.x,b.y,b.r*0.5,0,TAU);ctx.stroke();
+    } else if(b.shape==='stick'){             // an elongated bolt drawn as a short laser beam along its heading (#79)
+      const a=Math.atan2(b.vy,b.vx), hl=b.r*STICK_LEN;
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(a); ctx.lineCap='round';
+      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=b.r*1.3;                       // beam body
+      ctx.beginPath(); ctx.moveTo(-hl,0); ctx.lineTo(hl,0); ctx.stroke();
+      ctx.strokeStyle=frozen ? 'hsl(200,80%,92%)' : `hsl(${b.hue},100%,88%)`; ctx.lineWidth=b.r*0.5;  // bright core
+      ctx.beginPath(); ctx.moveTo(-hl*0.82,0); ctx.lineTo(hl*0.82,0); ctx.stroke();
+      ctx.restore();
     } else {
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();
     } }
