@@ -12,7 +12,7 @@ import type { KeyAction } from './keybinds.js';
 import * as D from './difficulty.js';
 import type { Player } from './types.js';
 import { settings, OPACITY_MIN, SETTINGS_DEFAULTS } from './settings.js';
-import { iconSvg, iconPath, iconViewBox } from './icons.js';
+import { iconSvg, iconPath, iconViewBox, iconBoundsX } from './icons.js';
 import type { Settings } from './settings.js';
 import { pickUpgrade } from './flow.js';
 
@@ -319,12 +319,20 @@ function drawButton(r: {x:number;y:number;w:number;h:number},label: string,hover
   ctx.strokeStyle=hover?'#8a5cff':'#3a3a5c'; ctx.lineWidth=2; roundRect(r.x,r.y,r.w,r.h,8); ctx.stroke();
   const sz=20, gap=12;
   ctx.font='bold 16px ui-monospace,monospace';
-  const iconW = iconId ? sz+gap : 0;
-  // left-aligned by default (pause column); centered = icon+label as a group in the middle
-  // (used by the settings Close button so its content sits centered in the wide button, #76).
-  const ix = centered ? r.x + r.w/2 - (iconW+ctx.measureText(label).width)/2 : r.x+16;
-  if(iconId) drawUpgradeIcon(iconId, ix, r.y+r.h/2-sz/2, sz, hover?'#c9b4ff':'#8a5cff');
-  ctx.textAlign='left'; ctx.fillStyle='#e8e8f0';
+  const iconW = iconId ? sz+gap : 0, tw=ctx.measureText(label).width;
+  const col = hover?'#c9b4ff':'#8a5cff';
+  ctx.fillStyle='#e8e8f0'; ctx.textAlign='left';
+  let ix;
+  if(centered){
+    // Centre by the icon's VISIBLE glyph, not its box: the glyph has built-in left padding
+    // inside its viewBox while the text sits flush right, which otherwise leaves the left
+    // padding larger than the right (#76). glyphL = that inset in px within the icon box.
+    const b = iconId ? iconBoundsX(iconId) : {l:0,r:1};
+    const glyphL = iconId ? b.l*sz : 0;
+    const visW = iconW + tw - glyphL;                 // visible span: glyph-left → text-right
+    ix = r.x + r.w/2 - visW/2 - glyphL;               // so the visible span is centred
+  } else ix = r.x+16;
+  if(iconId) drawUpgradeIcon(iconId, ix, r.y+r.h/2-sz/2, sz, col);
   ctx.fillText(label, ix+iconW, r.y+r.h/2+6);
 }
 

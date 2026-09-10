@@ -66,3 +66,27 @@ function build(id: string){
 }
 export function iconPath(id: string): Path2D | null { return build(id)?.path ?? null; }
 export function iconViewBox(id: string): number { return build(id)?.vb ?? 512; }
+
+// Visible horizontal extent of an icon as fractions (0..1) of its box, found once by
+// rasterising the path and scanning columns for opaque pixels. game-icons/Phosphor glyphs
+// carry built-in padding inside their viewBox, so centring an icon+label by the icon BOX
+// leaves the visible glyph off — this lets callers centre by the VISIBLE glyph instead (#76).
+const _boundsX: Record<string, { l: number; r: number }> = {};
+export function iconBoundsX(id: string): { l: number; r: number } {
+  if (id in _boundsX) return _boundsX[id];
+  const def = { l: 0, r: 1 };
+  try {
+    const p = iconPath(id); if (!p) return (_boundsX[id] = def);
+    const vb = iconViewBox(id), N = 64;
+    const cv = document.createElement('canvas'); cv.width = N; cv.height = N;
+    const c = cv.getContext('2d'); if (!c) return (_boundsX[id] = def);
+    c.scale(N / vb, N / vb); c.fill(p);
+    const d = c.getImageData(0, 0, N, N).data;
+    let lo = N, hi = -1;
+    for (let px = 0; px < N; px++) for (let py = 0; py < N; py++) {
+      if (d[(py * N + px) * 4 + 3] > 10) { if (px < lo) lo = px; if (px > hi) hi = px; break; }
+    }
+    if (hi < lo) return (_boundsX[id] = def);
+    return (_boundsX[id] = { l: lo / N, r: (hi + 1) / N });
+  } catch { return (_boundsX[id] = def); }
+}
