@@ -9,7 +9,7 @@ import { held } from './keybinds.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
-import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser } from './weapons.js';
+import { playerShoot, updateLaser, enemyShoot, spinnerShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser, CURVE_MAX, CURVE_D } from './weapons.js';
 import { hurtPlayer, hazardHitsPlayer, telegraphLine, telegraphCircle } from './combat.js';
 import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
@@ -165,7 +165,11 @@ export function update(){
   // during Time-stop (#25), so the stop is a safe reposition window.
   for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
     if(frozen) continue;
-    if(b.curveK!=null) b.vx = b.curveK*(b.y-(b.curveY0??b.y));   // spinner parabola (#79): sideways speed grows with fall depth — one smooth curve
+    if(b.curveDir!=null){                         // spinner curve (#79): constant speed, heading turns with fall depth — one smooth curve, no accel
+      const depth=Math.max(0,b.y-(b.curveY0??b.y)), sp=b.curveSpd??Math.hypot(b.vx,b.vy);
+      const th=b.curveDir*CURVE_MAX*(depth/(depth+CURVE_D));   // 0 at muzzle → eases toward ±CURVE_MAX
+      b.vx=sp*Math.sin(th); b.vy=sp*Math.cos(th);
+    }
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){

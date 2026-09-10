@@ -113,17 +113,18 @@ export function updateLaser(p: Player){
   }
 }
 
-// spinner (#79): fires diamond bolts on a single smooth PARABOLA. They launch straight
-// down; the sim grows their horizontal speed in proportion to how far they've fallen
-// (vx = curveK·depth), so the bolt eases continuously from vertical toward horizontal
-// with no kink. CURVE_D = the fall depth at which vx reaches launch speed (~45°); bigger
-// = gentler. A mirrored pair curves to each side to threaten from the sides.
-const CURVE_D = 380;
+// spinner (#79): fires diamond bolts on a smooth, CONSTANT-SPEED arc. The bolt keeps a
+// fixed speed the whole flight — only its heading turns. The turn angle is a pure
+// function of how far it has fallen: 0 (straight down) at the muzzle, easing toward a
+// max tilt CURVE_MAX it never exceeds, half-reached after falling CURVE_D px. So it's one
+// predictable curve (same shape every time), no acceleration, no kink. A mirrored pair
+// curves to each side to threaten from the sides. The sim recomputes vx/vy each tick.
+export const CURVE_MAX = 1.05, CURVE_D = 200;   // rad (~60°); px to reach half the tilt
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
   for(const dir of [-1, 1] as const){
     game.eBullets.push({ x:e.x, y:e.y, vx:0, vy:spd, r:e.bulletR??6, hue:e.hue, shape:'diamond',
-      curveK: dir*spd/CURVE_D, curveY0: e.y });
+      curveDir: dir, curveSpd: spd, curveY0: e.y });
   }
 }
 

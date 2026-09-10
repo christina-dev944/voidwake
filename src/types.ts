@@ -100,10 +100,10 @@ export interface PBullet {
 // Enemy projectile. `shape` (arrow/diamond/orb) lets a threat read at a glance (#68);
 // undefined = the default round bolt.
 export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string;
-  // spinner parabola (#79): a single smooth curve — horizontal speed grows with how far
-  // the bolt has fallen. vx = curveK * (y - curveY0); vy stays constant. curveK's sign
-  // picks the side. Speed-independent arc shape, no kink.
-  curveK?: number; curveY0?: number;
+  // spinner curve (#79): CONSTANT-speed arc. The bolt keeps speed `curveSpd`; only its
+  // heading turns, as a smooth function of how far it has fallen (see spinnerShoot). No
+  // acceleration, no kink. curveDir (±1) picks the side; curveY0 = launch depth origin.
+  curveDir?: number; curveSpd?: number; curveY0?: number;
 }
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).
