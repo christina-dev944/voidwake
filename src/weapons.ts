@@ -7,6 +7,7 @@ import { settings } from './settings.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
+import { SPINNER_SHARDS, spinnerShard } from './entities.js';
 import { held } from './keybinds.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
@@ -111,6 +112,15 @@ export function updateLaser(p: Player){
     p.heat = Math.max(0, p.heat - p.coolRate);
     if(p.depleted && p.heat<=0) p.depleted = false;
   }
+}
+
+// spinner fling (#79): hurl each orbiting shard straight outward from its current
+// position, so the shield visibly "lets go" as a diamond ring. The shield itself
+// persists (redrawn from shieldAng) and keeps orbiting after the burst.
+export function spinnerBurst(e: Enemy) {
+  const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
+  for(let k=0;k<SPINNER_SHARDS;k++){ const s = spinnerShard(e, k);
+    game.eBullets.push({ x:s.x, y:s.y, vx:Math.cos(s.a)*spd, vy:Math.sin(s.a)*spd, r:e.bulletR??6, hue:e.hue, shape:'diamond' }); }
 }
 
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds

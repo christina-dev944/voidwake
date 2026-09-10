@@ -9,7 +9,8 @@ import { held } from './keybinds.js';
 import { sfx } from './audio.js';
 import { burst, addShake, hitStop, animateParticles } from './effects.js';
 import { nearestEnemy } from './targeting.js';
-import { playerShoot, updateLaser, enemyShoot, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser } from './weapons.js';
+import { playerShoot, updateLaser, enemyShoot, spinnerBurst, bossAttackFast, bossAttackSlow, enterBossPhase, bossLaser } from './weapons.js';
+import { SPINNER_SHARDS, SPINNER_SHARD_R, spinnerShard } from './entities.js';
 import { hurtPlayer, hazardHitsPlayer, telegraphLine, telegraphCircle } from './combat.js';
 import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
@@ -98,7 +99,7 @@ export function update(){
     if(!frozen){                               // Time-stop (#25): enemies neither move nor fire while frozen
     if(e.aimCd>0){ e.aimCd--; }                // hold still while telegraphing so the beam stays attached (#46)
     else if(e.y<e.targetY){ e.y+=e.vy; }       // dive-in phase (all types descend to their slot)
-    else if(e.move==='dart'){                  // darter: chase the player's x, creep downward, hover low
+    else if(e.move==='dart'){                  // archer: chase the player's x, creep downward, hover low
       const pl=game.player; if(pl) e.x+=clamp((pl.x-e.x)*0.045,-2.8,2.8);
       if(e.y<H*0.72) e.y+=0.5; e.x=clamp(e.x,20,W-20);
     } else if(e.move==='weave'){               // weaver: wide horizontal sweep, gentle bob
@@ -106,6 +107,7 @@ export function update(){
     } else {                                    // drift: original settle-and-strafe (grunt, brute, boss)
       e.x+=e.vx; e.y+=Math.sin(game.time*0.02+i)*0.4; if(e.x<40||e.x>W-40)e.vx*=-1;
     }
+    if(e.spinner) e.shieldAng=(e.shieldAng||0)+0.045;   // spinner shield keeps orbiting (#79)
     e.mvx=e.x-ox; e.mvy=e.y-oy;   // actual displacement this tick — used for auto-aim leading (#35)
     if(e.boss){ const ph = e.hp>e.maxhp*0.66 ? 1 : e.hp>e.maxhp*0.33 ? 2 : 3; if(ph>e.phase) enterBossPhase(e, ph); // HP-gated phases (#3)
       if(e.phase>=2 && e.y>=e.targetY){ e.laserCd--; if(e.laserCd<=0) bossLaser(e); }      // telegraphed lasers from phase 2
@@ -130,6 +132,9 @@ export function update(){
           telegraphCircle(p.x, p.y, radius, { tele, active:14, dmg:18, track: game.wave>=LATE, owner:e.id }); // later waves: the zone chases the player, then locks; owner ties it to the caster so it vanishes on death (#61)
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.6); // slow, readable cadence
         }
+      } else if(e.spinner){                                 // spinner: fling the orbiting shard shield outward (#79)
+        if(e.y < e.targetY){ e.fireCd = 10; }               // wind up until settled
+        else { spinnerBurst(e); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*(e.fireMul||1)); }
       } else if(e.boss){ bossAttackFast(e); }                // fast attack track (slow track runs in the boss block above) (#3)
       else { enemyShoot(e); e.fireCd = Math.round(D.fireCooldown(game.wave, e.boss)*(e.fireMul||1)); }
     }
@@ -166,6 +171,16 @@ export function update(){
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
       game.eBullets.splice(i,1); hurtPlayer(8);
+    }
+  }
+
+  // spinner shield contact damage (#79): touching an orbiting shard hurts — don't hug a
+  // spinner. iframes (set by hurtPlayer) stop this re-hitting every tick.
+  if(!frozen && p.iframes<=0){
+    for(const e of game.enemies){ if(!e.spinner || e.y<=0) continue;
+      for(let k=0;k<SPINNER_SHARDS;k++){ const s=spinnerShard(e,k);
+        if(dist2(s.x,s.y,p.x,p.y)<(hitR+SPINNER_SHARD_R)**2){ hurtPlayer(8); break; } }
+      if(p.iframes>0) break;   // already hit this tick
     }
   }
 

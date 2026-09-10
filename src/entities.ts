@@ -1,7 +1,7 @@
 // entities.ts — factories and spawning: the player, per-wave upgrade rolls, enemy
 // archetypes, and wave/enemy/boss construction. Owns ENEMY_TYPES and the spawn
 // weighting; the sim just calls startWave / rollUpgrades and reads game.enemies.
-import { rand } from './util.js';
+import { rand, TAU } from './util.js';
 import { BASE, DEFAULT_CLASS } from './classes.js';
 import { UPGRADES } from './upgrades.js';
 import { game, WEAPON_UPGRADES } from './state.js';
@@ -56,34 +56,45 @@ export function startWave(n: number) {
   for (let i=0;i<count;i++) game.enemies.push(makeEnemy(D.enemyHp(n), n, false));
 }
 
-// Enemy archetypes (#2). Each tweaks size, bulk (hpMul), speed, fire pattern pool,
-// fire cadence (fireMul, <1 = faster), colour and movement style. `minWave` gates
-// when a type starts appearing; `weight` biases the random pick, so grunts stay the
-// backbone while tougher/faster types trickle in as a run deepens.
-// `shape`/`bulletR`/`bulletSpdMul` (#68) let a type's projectiles read distinctly:
-// arrows are small+fast, orbs are big+slow, diamonds are the spinner's shards.
-interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; shape?:string; bulletR?:number; bulletSpdMul?:number; }
+// Spinner shield geometry (#79) — shared by render (draw), update (rotate + contact
+// damage) and weapons (the fling burst) so all three agree on where the shards are.
+export const SPINNER_SHARDS = 6, SPINNER_PAD = 24, SPINNER_SHARD_R = 6;
+export function spinnerShard(e: Enemy, k: number){
+  const a = (e.shieldAng||0) + k/SPINNER_SHARDS*TAU, rad = e.r + SPINNER_PAD;
+  return { x: e.x + Math.cos(a)*rad, y: e.y + Math.sin(a)*rad, a };
+}
+
+// Enemy archetypes. Each type owns ONE signature attack + a distinct colour, so a
+// threat reads at a glance (#79) — no more shared random pattern pool. `pattern` names
+// the bullet formation it fires (aimed/spread/ring; specials use telegraph/zone/spinner
+// instead). `shape`/`bulletR`/`bulletSpdMul` (#68) give the bolts a distinct look/feel;
+// `fireMul` (>1 = slower) tunes cadence. `minWave` gates entry, `weight` biases spawns.
+interface EnemyType { r:number; hpMul:number; spd:number; pattern:string; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; spinner?:boolean; shape?:string; bulletR?:number; bulletSpdMul?:number; }
 const ENEMY_TYPES: Record<string, EnemyType> = {
-  grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
-  weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
-  darter: { r:12, hpMul:0.45, spd:1.6,  patterns:['aimed'],                          move:'dart',  fireMul:0.7, hue:()=>rand(40,62),  minWave:4, weight:2 },
-  brute:  { r:26, hpMul:2.6,  spd:0.55, patterns:['ring','spiral'],                  move:'drift', fireMul:1.3, hue:()=>rand(344,360), minWave:6, weight:1 },
+  // grunt — the baseline: plain AIMED round bolts, cyan. Thinned cadence (#79) so it's
+  // light pressure rather than a firehose.
+  grunt:  { r:16, hpMul:1.0,  spd:1.0,  pattern:'aimed',  move:'drift', fireMul:1.3,  hue:()=>rand(185,205), minWave:1, weight:3 },
+  // weaver — the SPREAD type, green: sweeps sideways and fans a wide arc.
+  weaver: { r:14, hpMul:0.8,  spd:1.15, pattern:'spread', move:'weave', fireMul:1.0,  hue:()=>rand(110,140), minWave:2, weight:2 },
+  // brute — slow, beefy AIMED tank, red. Shares the aimed formation with the grunt but
+  // reads totally differently: big, red, sluggish (#79 — keeps its normal aimed fire).
+  brute:  { r:26, hpMul:2.6,  spd:0.55, pattern:'aimed',  move:'drift', fireMul:1.3,  hue:()=>rand(348,360), minWave:6, weight:1 },
   // marksman telegraphs a laser line at the player, then fires an instant hitscan
   // beam (#46). `telegraph` routes it to the hazard system instead of enemyShoot.
-  marksman:{ r:15, hpMul:0.9, spd:0.7,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(300,318), minWave:4, weight:2, telegraph:true },
+  marksman:{ r:15, hpMul:0.9, spd:0.7,  pattern:'aimed', move:'drift', fireMul:1, hue:()=>rand(300,318), minWave:4, weight:2, telegraph:true },
   // mortar lobs a telegraphed circular zone at the player's position, forcing a
   // reposition rather than a bullet-dodge (#61). Slow + a bit beefy so the zone
   // pressure is the threat; `zone` routes it to telegraphCircle instead of a shot.
-  mortar: { r:18, hpMul:1.4, spd:0.6,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:8, weight:2, zone:true },
-  // archer (#68): fragile darter-kin that snipes a fast, tight fan of ARROW bolts —
-  // arrows are small + quick, so the threat is precise dodging, not screen clutter.
-  archer: { r:13, hpMul:0.55, spd:1.25, patterns:['aimed'], move:'dart',  fireMul:0.85, hue:()=>rand(64,86),  minWave:5, weight:2, shape:'arrow', bulletR:4, bulletSpdMul:1.55 },
-  // spinner (#68): weaves while pumping a spiral of DIAMOND shards — a rotating mesh
-  // you thread. Medium bulk, medium shots; the shape reads as the swirling type.
-  spinner:{ r:15, hpMul:1.0,  spd:0.9,  patterns:['spiral'], move:'weave', fireMul:0.9,  hue:()=>rand(190,225), minWave:7, weight:2, shape:'diamond', bulletR:6 },
-  // warden (#68): slow tank that rolls out slow rings of big ORB bullets — a creeping
-  // wall to weave, distinct from the brute's faster fire. Big orbs = big hitboxes.
-  warden: { r:24, hpMul:2.2,  spd:0.45, patterns:['ring'],  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
+  mortar: { r:18, hpMul:1.4, spd:0.6,  pattern:'aimed', move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:8, weight:2, zone:true },
+  // archer (#68): fragile chaser that snipes fast ARROW bolts, yellow — the "fast" niche
+  // (replaces the retired darter). Arrows read as precise threats, not clutter.
+  archer: { r:13, hpMul:0.55, spd:1.25, pattern:'aimed', move:'dart',  fireMul:0.85, hue:()=>rand(48,64),  minWave:4, weight:2, shape:'arrow', bulletR:4, bulletSpdMul:1.55 },
+  // spinner (#79): orbits a SHIELD of diamond shards (contact-damaging), then flings
+  // them outward in a burst. `spinner` routes it to spinnerBurst instead of enemyShoot.
+  spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.4,  hue:()=>rand(212,232), minWave:7, weight:2, spinner:true, shape:'diamond', bulletR:6 },
+  // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
+  // creeping wall to weave. Big orbs = big hitboxes.
+  warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
 };
 function pickEnemyType(wave: number): string {
   const pool: string[]=[];
@@ -106,12 +117,14 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
     telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
     zone: !!d.zone,             // mortar zone AoE (#61)
+    spinner: !!d.spinner,       // spinner shield/fling (#79)
     shape: d.shape, bulletR: d.bulletR, bulletSpdMul: d.bulletSpdMul,  // bullet look/feel overrides (#68)
+    shieldAng: d.spinner ? rand(0, TAU) : undefined,  // spinner shield starts at a random spin (#79)
     aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
-    fireCd: (d.telegraph||d.zone) ? rand(80,130) : rand(30,90), // marksman/mortar wind up before their first attack
-    pattern: d.patterns[Math.floor(rand(0,d.patterns.length))],
+    fireCd: (d.telegraph||d.zone||d.spinner) ? rand(80,130) : rand(30,90), // marksman/mortar/spinner wind up before their first attack
+    pattern: d.pattern,         // each type has one signature formation now (#79)
     ang: 0, wave, hue: d.hue(),
   };
 }
