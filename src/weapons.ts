@@ -9,6 +9,7 @@ import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
 import { held } from './keybinds.js';
 import { telegraphLine } from './combat.js';
+import { H } from './canvas.js';
 import * as D from './difficulty.js';
 import type { Player, Enemy, BossEnemy } from './types.js';
 
@@ -113,19 +114,24 @@ export function updateLaser(p: Player){
   }
 }
 
-// spinner (#79 rework): a spinning emitter that slings diamond bolts off tangentially.
-// Two opposing arms rotate (e.ang), and each launch angle is squashed toward horizontal
-// (SPIN_FLATTEN < 1 pulls the vertical component down) so the bolts sweep sideways —
-// they mostly travel horizontally, fanning up/down as the emitter turns.
-const SPIN_FLATTEN = 0.45, SPIN_ARMS = 2, SPIN_STEP = 0.42;
+// spinner (#79): fires diamond bolts on a CURVING trajectory — they fly straight down
+// until they reach the player's depth, then their velocity rotates (`spin` rad/tick,
+// handled in the sim) until it flattens to horizontal, hooking in to hit the player from
+// the sides. Each volley sends a mirrored pair that hook opposite ways; the flatten point
+// is set ~70px above the player so the horizontal leg sweeps across their row.
+const SPIN_RATE = 0.032, SPIN_SPLAY = 0.20;
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
-  for(let k=0;k<SPIN_ARMS;k++){
-    const a = e.ang + k/SPIN_ARMS*TAU;
-    const fa = Math.atan2(Math.sin(a)*SPIN_FLATTEN, Math.cos(a));   // bias toward horizontal
-    game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(fa)*spd, vy:Math.sin(fa)*spd, r:e.bulletR??6, hue:e.hue, shape:'diamond' });
+  const py = game.player?.y ?? H*0.7;
+  const atY = Math.max(e.y+40, Math.min(H-70, py-70));         // start curving here → flat leg near the player row
+  const wob = Math.sin(e.ang)*0.12;                            // small per-volley variation
+  for(const dir of [-1, 1] as const){
+    const a = Math.PI/2 + dir*SPIN_SPLAY + wob;                // mostly straight down, slight splay
+    // spin sign: <0 hooks right (+x), >0 hooks left (−x). Curve each bolt to its own side.
+    game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
+      r:e.bulletR??6, hue:e.hue, shape:'diamond', spin: dir*SPIN_RATE, spinAtY: atY });
   }
-  e.ang += SPIN_STEP;
+  e.ang += 0.5;
 }
 
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds

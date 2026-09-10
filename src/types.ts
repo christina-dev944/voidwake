@@ -99,7 +99,10 @@ export interface PBullet {
 
 // Enemy projectile. `shape` (arrow/diamond/orb) lets a threat read at a glance (#68);
 // undefined = the default round bolt.
-export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string; }
+export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string;
+  spin?: number;        // rad/tick to rotate the velocity (spinner curve, #79) — 0/undefined = straight
+  spinAtY?: number;     // fly straight down until y reaches this, then start curving (#79)
+}
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).
 export interface Hazard {

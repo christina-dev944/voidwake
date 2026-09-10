@@ -165,6 +165,15 @@ export function update(){
   // during Time-stop (#25), so the stop is a safe reposition window.
   for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
     if(frozen) continue;
+    if(b.spin){                                   // spinner curve (#79): fall straight to the player's depth, then rotate velocity to horizontal
+      if(b.spinAtY!=null && b.y < b.spinAtY){ /* still descending — fly straight */ }
+      else {
+        const c=Math.cos(b.spin), s=Math.sin(b.spin);
+        const nvx=b.vx*c-b.vy*s, nvy=b.vx*s+b.vy*c; b.vx=nvx; b.vy=nvy;
+        const sp=Math.hypot(b.vx,b.vy)||1;
+        if(Math.abs(b.vy) < 0.09*sp){ b.vy=0; b.vx=Math.sign(b.vx||1)*sp; b.spin=0; }  // lock to horizontal once flattened
+      }
+    }
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
