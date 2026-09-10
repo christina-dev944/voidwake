@@ -9,7 +9,6 @@ import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
 import { held } from './keybinds.js';
 import { telegraphLine } from './combat.js';
-import { H } from './canvas.js';
 import * as D from './difficulty.js';
 import type { Player, Enemy, BossEnemy } from './types.js';
 
@@ -114,24 +113,18 @@ export function updateLaser(p: Player){
   }
 }
 
-// spinner (#79): fires diamond bolts on a CURVING trajectory — they fly straight down
-// toward the player's depth, then their velocity rotates a GENTLE partial turn (SPIN_TURN
-// rad, ~46°) at a slow rate, easing sideways so they end diagonal (NOT flat) and hook in
-// toward the player from the sides. Each volley sends a mirrored pair that hook opposite
-// ways; curving starts above the player so the eased arc crosses their row.
-const SPIN_RATE = 0.018, SPIN_TURN = 0.8, SPIN_SPLAY = 0.20;
+// spinner (#79): fires diamond bolts on a single smooth PARABOLA. They launch straight
+// down; the sim grows their horizontal speed in proportion to how far they've fallen
+// (vx = curveK·depth), so the bolt eases continuously from vertical toward horizontal
+// with no kink. CURVE_D = the fall depth at which vx reaches launch speed (~45°); bigger
+// = gentler. A mirrored pair curves to each side to threaten from the sides.
+const CURVE_D = 380;
 export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
-  const py = game.player?.y ?? H*0.7;
-  const atY = Math.max(e.y+40, Math.min(H-70, py-140));        // start curving above the player row
-  const wob = Math.sin(e.ang)*0.12;                            // small per-volley variation
   for(const dir of [-1, 1] as const){
-    const a = Math.PI/2 + dir*SPIN_SPLAY + wob;                // mostly straight down, slight splay
-    // spin sign: <0 hooks right (+x), >0 hooks left. Curve each bolt to its own side.
-    game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
-      r:e.bulletR??6, hue:e.hue, shape:'diamond', spin: dir*SPIN_RATE, spinAtY: atY, spinLeft: SPIN_TURN });
+    game.eBullets.push({ x:e.x, y:e.y, vx:0, vy:spd, r:e.bulletR??6, hue:e.hue, shape:'diamond',
+      curveK: dir*spd/CURVE_D, curveY0: e.y });
   }
-  e.ang += 0.5;
 }
 
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds

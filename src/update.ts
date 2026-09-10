@@ -165,15 +165,7 @@ export function update(){
   // during Time-stop (#25), so the stop is a safe reposition window.
   for(let i=game.eBullets.length-1;i>=0;i--){ const b=game.eBullets[i];
     if(frozen) continue;
-    if(b.spin){                                   // spinner curve (#79): fall to the player's depth, then ease a gentle partial turn
-      if(b.spinAtY!=null && b.y < b.spinAtY){ /* still descending — fly straight */ }
-      else {
-        const c=Math.cos(b.spin), s=Math.sin(b.spin);
-        const nvx=b.vx*c-b.vy*s, nvy=b.vx*s+b.vy*c; b.vx=nvx; b.vy=nvy;
-        b.spinLeft=(b.spinLeft??0)-Math.abs(b.spin);
-        if(b.spinLeft<=0) b.spin=0;               // turn budget spent — keep the gentle diagonal heading
-      }
-    }
+    if(b.curveK!=null) b.vx = b.curveK*(b.y-(b.curveY0??b.y));   // spinner parabola (#79): sideways speed grows with fall depth — one smooth curve
     b.x+=b.vx;b.y+=b.vy;
     if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){game.eBullets.splice(i,1);continue;}
     if(p.iframes<=0 && dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2){
