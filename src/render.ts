@@ -6,7 +6,6 @@ import { ctx, W, H } from './canvas.js';
 import { game, best, UP_NAME, UP_TAG } from './state.js';
 import { CLASSES, classStatBars, classActiveLabel, classById } from './classes.js';
 import { AIM_MODES } from './targeting.js';
-import { SPINNER_SHARDS, SPINNER_SHARD_R, spinnerShard } from './entities.js';
 import { isMuted } from './audio.js';
 import { held, keybinds, keyLabel, ACTION_LABELS, KEY_ACTIONS, bindIsDefault } from './keybinds.js';
 import type { KeyAction } from './keybinds.js';
@@ -111,13 +110,6 @@ export function draw(){
   for(const e of game.enemies){ const c=`hsl(${e.hue},70%,${e.boss?60:55}%)`;
     ctx.fillStyle=c; ctx.strokeStyle='#000'; ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.fill();ctx.stroke();
-    // spinner shield (#79): a rotating ring of diamond shards orbiting the body — a
-    // contact hazard that it periodically flings outward.
-    if(e.spinner){ ctx.fillStyle=`hsl(${e.hue},95%,72%)`; ctx.shadowBlur=6; ctx.shadowColor=ctx.fillStyle;
-      for(let k=0;k<SPINNER_SHARDS;k++){ const s=spinnerShard(e,k), sr=SPINNER_SHARD_R;
-        ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(s.a+Math.PI/4);
-        ctx.beginPath(); ctx.rect(-sr,-sr,sr*2,sr*2); ctx.fill(); ctx.restore(); }
-      ctx.shadowBlur=0; ctx.fillStyle=c; }
     // per-body hp bar (bosses use the big top-of-screen bar instead, #3)
     if(!e.boss){ const w=e.r*2; ctx.fillStyle='#000'; ctx.fillRect(e.x-w/2,e.y-e.r-8,w,3);
       ctx.fillStyle=c; ctx.fillRect(e.x-w/2,e.y-e.r-8,w*clamp(e.hp/e.maxhp,0,1),3); } }

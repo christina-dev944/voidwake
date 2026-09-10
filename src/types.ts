@@ -75,11 +75,11 @@ interface EnemyBase {
   aimCd: number;                // marksman telegraph freeze (0 = free to act)
   telegraph?: boolean;
   zone?: boolean;               // mortar: lobs a circular zone AoE instead of bullets (#61)
-  spinner?: boolean;            // spinner: orbiting shard shield + fling burst (#79)
+  spinner?: boolean;            // spinner: tangential horizontal-biased emitter (#79)
   shape?: string;               // enemy bullet shape override: arrow/diamond/orb (#68)
   bulletR?: number;             // enemy bullet radius override (#68)
   bulletSpdMul?: number;        // enemy bullet speed scale (#68)
-  shieldAng?: number;           // spinner: rotation of its orbiting shard shield (#79)
+  bulletCount?: number;         // enemy volley size override, e.g. weaver spread (#79)
   mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading), set each tick
 }
 export interface NormalEnemy extends EnemyBase { boss: false; }

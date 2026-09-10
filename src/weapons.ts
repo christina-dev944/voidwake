@@ -7,7 +7,6 @@ import { settings } from './settings.js';
 import { sfx } from './audio.js';
 import { addShake, hitStop, burst } from './effects.js';
 import { pickTarget, manualAim, nearestN } from './targeting.js';
-import { SPINNER_SHARDS, spinnerShard } from './entities.js';
 import { held } from './keybinds.js';
 import { telegraphLine } from './combat.js';
 import * as D from './difficulty.js';
@@ -114,13 +113,19 @@ export function updateLaser(p: Player){
   }
 }
 
-// spinner fling (#79): hurl each orbiting shard straight outward from its current
-// position, so the shield visibly "lets go" as a diamond ring. The shield itself
-// persists (redrawn from shieldAng) and keeps orbiting after the burst.
-export function spinnerBurst(e: Enemy) {
+// spinner (#79 rework): a spinning emitter that slings diamond bolts off tangentially.
+// Two opposing arms rotate (e.ang), and each launch angle is squashed toward horizontal
+// (SPIN_FLATTEN < 1 pulls the vertical component down) so the bolts sweep sideways —
+// they mostly travel horizontally, fanning up/down as the emitter turns.
+const SPIN_FLATTEN = 0.45, SPIN_ARMS = 2, SPIN_STEP = 0.42;
+export function spinnerShoot(e: Enemy) {
   const spd = D.bulletSpeed(game.wave) * (e.bulletSpdMul??1);
-  for(let k=0;k<SPINNER_SHARDS;k++){ const s = spinnerShard(e, k);
-    game.eBullets.push({ x:s.x, y:s.y, vx:Math.cos(s.a)*spd, vy:Math.sin(s.a)*spd, r:e.bulletR??6, hue:e.hue, shape:'diamond' }); }
+  for(let k=0;k<SPIN_ARMS;k++){
+    const a = e.ang + k/SPIN_ARMS*TAU;
+    const fa = Math.atan2(Math.sin(a)*SPIN_FLATTEN, Math.cos(a));   // bias toward horizontal
+    game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(fa)*spd, vy:Math.sin(fa)*spd, r:e.bulletR??6, hue:e.hue, shape:'diamond' });
+  }
+  e.ang += SPIN_STEP;
 }
 
 // pattern/spdMul/hue overrides let the boss fire two layers at once at different speeds
@@ -138,7 +143,7 @@ export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: n
       for(let i=1;i<=flank;i++){ push(aim - i*0.15); push(aim + i*0.15); }
       break;
     }
-    case 'spread': { const k=D.spreadCount(game.wave)+(e.boss?4:0), half=(k-1)/2;
+    case 'spread': { const k=(e.bulletCount ?? D.spreadCount(game.wave))+(e.boss?4:0), half=(k-1)/2;  // weaver caps its arc via bulletCount (#79)
       for(let i=-half;i<=half;i++) push(aim+i*0.18); break; }
     case 'ring': { const k=D.ringCount(game.wave, e.boss); for(let i=0;i<k;i++) push(i/k*TAU); break; }
     case 'spiral': { const arms=e.boss?6:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
