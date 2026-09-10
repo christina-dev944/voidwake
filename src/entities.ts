@@ -60,7 +60,9 @@ export function startWave(n: number) {
 // fire cadence (fireMul, <1 = faster), colour and movement style. `minWave` gates
 // when a type starts appearing; `weight` biases the random pick, so grunts stay the
 // backbone while tougher/faster types trickle in as a run deepens.
-interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; }
+// `shape`/`bulletR`/`bulletSpdMul` (#68) let a type's projectiles read distinctly:
+// arrows are small+fast, orbs are big+slow, diamonds are the spinner's shards.
+interface EnemyType { r:number; hpMul:number; spd:number; patterns:string[]; move:string; fireMul:number; hue:()=>number; minWave:number; weight:number; telegraph?:boolean; zone?:boolean; shape?:string; bulletR?:number; bulletSpdMul?:number; }
 const ENEMY_TYPES: Record<string, EnemyType> = {
   grunt:  { r:16, hpMul:1.0,  spd:1.0,  patterns:['aimed','spread','spiral','ring'], move:'drift', fireMul:1.0, hue:()=>rand(180,320), minWave:1, weight:3 },
   weaver: { r:14, hpMul:0.8,  spd:1.15, patterns:['spread','aimed'],                 move:'weave', fireMul:1.0, hue:()=>rand(150,190), minWave:2, weight:2 },
@@ -73,6 +75,15 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // reposition rather than a bullet-dodge (#61). Slow + a bit beefy so the zone
   // pressure is the threat; `zone` routes it to telegraphCircle instead of a shot.
   mortar: { r:18, hpMul:1.4, spd:0.6,  patterns:['aimed'], move:'drift', fireMul:1, hue:()=>rand(24,40),  minWave:8, weight:2, zone:true },
+  // archer (#68): fragile darter-kin that snipes a fast, tight fan of ARROW bolts —
+  // arrows are small + quick, so the threat is precise dodging, not screen clutter.
+  archer: { r:13, hpMul:0.55, spd:1.25, patterns:['aimed'], move:'dart',  fireMul:0.85, hue:()=>rand(64,86),  minWave:5, weight:2, shape:'arrow', bulletR:4, bulletSpdMul:1.55 },
+  // spinner (#68): weaves while pumping a spiral of DIAMOND shards — a rotating mesh
+  // you thread. Medium bulk, medium shots; the shape reads as the swirling type.
+  spinner:{ r:15, hpMul:1.0,  spd:0.9,  patterns:['spiral'], move:'weave', fireMul:0.9,  hue:()=>rand(190,225), minWave:7, weight:2, shape:'diamond', bulletR:6 },
+  // warden (#68): slow tank that rolls out slow rings of big ORB bullets — a creeping
+  // wall to weave, distinct from the brute's faster fire. Big orbs = big hitboxes.
+  warden: { r:24, hpMul:2.2,  spd:0.45, patterns:['ring'],  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
 };
 function pickEnemyType(wave: number): string {
   const pool: string[]=[];
@@ -95,6 +106,7 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     x, y, r: d.r, hp:HP, maxhp:HP, boss:false, kind:t, move:d.move, fireMul:d.fireMul,
     telegraph: !!d.telegraph,   // carry the type flag onto the instance (marksman laser, #46)
     zone: !!d.zone,             // mortar zone AoE (#61)
+    shape: d.shape, bulletR: d.bulletR, bulletSpdMul: d.bulletSpdMul,  // bullet look/feel overrides (#68)
     aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),

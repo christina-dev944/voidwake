@@ -118,8 +118,9 @@ export function updateLaser(p: Player){
 export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: number=e.hue) {
   const p = game.player; if(!p) return;
   const aim = Math.atan2(p.y-e.y, p.x-e.x);
-  const spd = D.bulletSpeed(game.wave) * (e.boss?1.0:1) * spdMul;   // boss bullets no longer get a speed premium (#55): was 1.2, now same as normal enemies
-  const push = (a: number,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:5, hue });
+  const spd = D.bulletSpeed(game.wave) * (e.boss?1.0:1) * spdMul * (e.bulletSpdMul??1);   // boss bullets no longer get a speed premium (#55); bulletSpdMul = per-type feel (#68)
+  const br = e.bulletR ?? 5, shape = e.shape;   // per-type bullet radius + shape (#68)
+  const push = (a: number,s=spd) => game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, r:br, hue, shape });
   switch(pattern) {
     case 'aimed': {
       push(aim);

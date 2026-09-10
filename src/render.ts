@@ -118,7 +118,22 @@ export function draw(){
   const frozen = game.timeStop>0;
   for(const b of game.eBullets){ ctx.fillStyle = frozen ? 'hsl(200,60%,78%)' : `hsl(${b.hue},95%,68%)`;
     ctx.shadowBlur=6; ctx.shadowColor=ctx.fillStyle;
-    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill(); }
+    if(b.shape==='arrow'){                    // a dart pointing along its velocity — reads as a fast, aimed shot (#68)
+      const a=Math.atan2(b.vy,b.vx), L=b.r*2.6, Wd=b.r*1.5;
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(L,0); ctx.lineTo(-L*0.5,Wd); ctx.lineTo(-L*0.2,0); ctx.lineTo(-L*0.5,-Wd); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if(b.shape==='diamond'){           // a rhombus (square on its point) — the spinner's shard (#68)
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(Math.atan2(b.vy,b.vx)+Math.PI/4); const s=b.r*1.15;
+      ctx.beginPath(); ctx.rect(-s,-s,s*2,s*2); ctx.fill();
+      ctx.restore();
+    } else if(b.shape==='orb'){               // a big slow bolt with a bright core ring — a wall to weave (#68)
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();
+      ctx.strokeStyle=frozen ? 'hsl(200,70%,90%)' : `hsl(${b.hue},95%,86%)`; ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r*0.5,0,TAU);ctx.stroke();
+    } else {
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();
+    } }
   ctx.shadowBlur=0;
 
   // nova rings — shared by the Mage Nova (purple) and the mortar detonation shockwave

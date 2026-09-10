@@ -75,6 +75,9 @@ interface EnemyBase {
   aimCd: number;                // marksman telegraph freeze (0 = free to act)
   telegraph?: boolean;
   zone?: boolean;               // mortar: lobs a circular zone AoE instead of bullets (#61)
+  shape?: string;               // enemy bullet shape override: arrow/diamond/orb (#68)
+  bulletR?: number;             // enemy bullet radius override (#68)
+  bulletSpdMul?: number;        // enemy bullet speed scale (#68)
   mvx?: number; mvy?: number;   // per-tick displacement (auto-aim leading), set each tick
 }
 export interface NormalEnemy extends EnemyBase { boss: false; }
@@ -92,8 +95,9 @@ export interface PBullet {
   hits?: Set<number>;
 }
 
-// Enemy projectile.
-export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; }
+// Enemy projectile. `shape` (arrow/diamond/orb) lets a threat read at a glance (#68);
+// undefined = the default round bolt.
+export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string; }
 
 // A telegraphed danger zone (marksman/boss laser line; circle stub).
 export interface Hazard {
