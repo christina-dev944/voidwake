@@ -140,6 +140,13 @@ export function draw(){
       ctx.strokeStyle=frozen ? 'hsl(200,80%,92%)' : `hsl(${b.hue},100%,88%)`; ctx.lineWidth=b.r*0.5;  // bright core
       ctx.beginPath(); ctx.moveTo(-hl*0.82,0); ctx.lineTo(hl*0.82,0); ctx.stroke();
       ctx.restore();
+    } else if(b.shape==='crescent'){          // a curved shockwave arc bulging toward the player (#80)
+      const aim=Math.atan2(b.vy,b.vx), arcR=b.arcR??66, half=b.arcHalf??0.44;
+      ctx.lineCap='round';
+      ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=b.r*2;                          // arc body
+      ctx.beginPath(); ctx.arc(b.x,b.y,arcR,aim-half,aim+half); ctx.stroke();
+      ctx.strokeStyle=frozen ? 'hsl(200,80%,92%)' : `hsl(${b.hue},100%,88%)`; ctx.lineWidth=b.r*0.8;  // bright leading edge
+      ctx.beginPath(); ctx.arc(b.x,b.y,arcR,aim-half*0.9,aim+half*0.9); ctx.stroke();
     } else {
       ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fill();
     } }

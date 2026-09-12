@@ -185,6 +185,10 @@ export function update(){
       const sp=Math.hypot(b.vx,b.vy)||1, ux=b.vx/sp, uy=b.vy/sp, hl=b.r*STICK_LEN;
       const t=Math.max(-hl,Math.min(hl,(p.x-b.x)*ux+(p.y-b.y)*uy));   // project player onto the beam axis, clamp to its length
       hit = dist2(b.x+ux*t, b.y+uy*t, p.x, p.y) < (hitR+b.r*STICK_HALFW)**2;
+    } else if(b.shape==='crescent'){              // curved shockwave arc: hit only if inside the band AND within its angular span (#80)
+      const dx=p.x-b.x, dy=p.y-b.y, d=Math.hypot(dx,dy), aim=Math.atan2(b.vy,b.vx);
+      let da=Math.atan2(dy,dx)-aim; da=Math.atan2(Math.sin(da),Math.cos(da));   // signed angle from the arc's heading, wrapped to [-π,π]
+      hit = Math.abs(da)<=(b.arcHalf??0.44) && Math.abs(d-(b.arcR??66))<=hitR+b.r;
     } else hit = dist2(b.x,b.y,p.x,p.y)<(hitR+b.r)**2;
     if(p.iframes<=0 && hit){
       game.eBullets.splice(i,1); hurtPlayer(8);

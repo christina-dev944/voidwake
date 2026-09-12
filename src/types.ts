@@ -100,9 +100,13 @@ export interface PBullet {
   hits?: Set<number>;
 }
 
-// Enemy projectile. `shape` (arrow/diamond/orb) lets a threat read at a glance (#68);
-// undefined = the default round bolt.
+// Enemy projectile. `shape` (arrow/diamond/orb/stick/crescent) lets a threat read at a
+// glance (#68); undefined = the default round bolt.
 export interface EBullet { x: number; y: number; vx: number; vy: number; r: number; hue: number; shape?: string;
+  // crescent shockwave (breaker, #80): a curved arc that sweeps toward the player. (x,y)
+  // is the CENTRE OF CURVATURE; the arc lives at radius `arcR` from it, spanning `aim ±
+  // arcHalf` (heading = velocity). r = band thickness. Hit-tests the arc band, not a disc.
+  arcR?: number; arcHalf?: number;
   // spinner curve (#79): CONSTANT-speed arc. The bolt keeps speed `curveSpd`; only its
   // heading turns, as a smooth function of how far it has fallen (see spinnerShoot). No
   // acceleration, no kink. curveDir (±1) picks the side; curveA0 = launch tilt from

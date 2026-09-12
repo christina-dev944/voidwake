@@ -154,6 +154,9 @@ export function enemyShoot(e: Enemy, pattern: string=e.pattern, spdMul=1, hue: n
       for(let i=-half;i<=half;i++) push(aim+i*0.18); break; }
     case 'ring': { const k=D.ringCount(game.wave, e.boss); for(let i=0;i<k;i++) push(i/k*TAU); break; }
     case 'spiral': { const arms=e.boss?6:2; for(let a=0;a<arms;a++) push(e.ang + a/arms*TAU); e.ang+=0.4; break; }
+    case 'crescent': {   // breaker (#80): one curved arc aimed at the player. arcR = curvature radius, arcHalf = half-span (~25° → ~50° crescent)
+      game.eBullets.push({ x:e.x, y:e.y, vx:Math.cos(aim)*spd, vy:Math.sin(aim)*spd, r:br, hue, shape, arcR:66, arcHalf:0.44 });
+      break; }
   }
 }
 
