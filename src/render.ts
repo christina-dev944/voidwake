@@ -141,7 +141,7 @@ export function draw(){
       ctx.beginPath(); ctx.moveTo(-hl*0.82,0); ctx.lineTo(hl*0.82,0); ctx.stroke();
       ctx.restore();
     } else if(b.shape==='crescent'){          // a curved shockwave arc bulging toward the player (#80)
-      const aim=Math.atan2(b.vy,b.vx), arcR=b.arcR??66, half=b.arcHalf??0.44;
+      const aim=Math.atan2(b.vy,b.vx), arcR=b.arcR??66, half=b.arcHalf??Math.PI/6;
       ctx.lineCap='round';
       ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=b.r*2;                          // arc body
       ctx.beginPath(); ctx.arc(b.x,b.y,arcR,aim-half,aim+half); ctx.stroke();

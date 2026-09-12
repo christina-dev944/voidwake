@@ -92,10 +92,10 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
   // creeping wall to weave. Big orbs = big hitboxes.
   warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
-  // breaker (#80): slow bruiser that lobs a CRESCENT shockwave — a ~50° curved arc that
+  // breaker (#80): slow bruiser that lobs a CRESCENT shockwave — a 60° curved arc that
   // sweeps toward the player, forcing a sideways dodge out of its span rather than a
   // straight back-pedal (the arc keeps pace). Teal. `crescent` pattern in enemyShoot.
-  breaker:{ r:20, hpMul:1.7,  spd:0.5,  pattern:'crescent', move:'drift', fireMul:1.7,  hue:()=>rand(166,186), minWave:1, weight:2, shape:'crescent', bulletR:7, bulletSpdMul:0.9 },  // minWave 1 = TEMP for testing (revert to ~7)
+  breaker:{ r:20, hpMul:1.7,  spd:0.5,  pattern:'crescent', move:'drift', fireMul:2.0,  hue:()=>rand(166,186), minWave:8, weight:2, shape:'crescent', bulletR:7, bulletSpdMul:0.9 },
 };
 function pickEnemyType(wave: number): string {
   const pool: string[]=[];
