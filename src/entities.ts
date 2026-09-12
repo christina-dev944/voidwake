@@ -88,7 +88,7 @@ const ENEMY_TYPES: Record<string, EnemyType> = {
   spinner:{ r:15, hpMul:1.1,  spd:0.9,  pattern:'aimed', move:'weave', fireMul:1.0,  hue:()=>rand(212,232), minWave:7, weight:2, spinner:true, shape:'diamond', bulletR:6, bulletSpdMul:1.1 },
   // striker (#79): a sniper that fires a BURST of 3 fast, elongated "stick" bolts drawn as
   // short laser beams (violet), then a brief cooldown. Aimed.
-  striker:{ r:15, hpMul:0.9,  spd:0.7,  pattern:'aimed', move:'drift', fireMul:1.2,  hue:()=>rand(248,262), minWave:1, weight:2, shape:'stick', bulletR:5, bulletSpdMul:1.6, burst:3, burstGap:7 },  // minWave 1 = TEMP for testing (revert to ~5)
+  striker:{ r:15, hpMul:0.9,  spd:0.7,  pattern:'aimed', move:'drift', fireMul:1.5,  hue:()=>rand(248,262), minWave:1, weight:2, shape:'stick', bulletR:5, bulletSpdMul:1.6, burst:3, burstGap:12 },  // minWave 1 = TEMP for testing (revert to ~5)
   // warden (#68): slow tank that rolls out slow RINGS of big ORB bullets, purple — a
   // creeping wall to weave. Big orbs = big hitboxes.
   warden: { r:24, hpMul:2.2,  spd:0.45, pattern:'ring',  move:'drift', fireMul:1.5,  hue:()=>rand(280,300), minWave:9, weight:1, shape:'orb', bulletR:9, bulletSpdMul:0.6 },
