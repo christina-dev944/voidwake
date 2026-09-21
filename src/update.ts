@@ -17,15 +17,15 @@ import { SCYTHE_BOOST_MULT } from './abilities.js';
 import * as D from './difficulty.js';
 import type { Enemy } from './types.js';
 
-// A laser owner freezes once its beam commits (#73): a non-tracking line is locked from
-// the instant it fires (its angle never re-aims), a tracking line locks at 2/3 of the
-// wind-up (where re-aiming stops, see the hazard loop), and any live beam stays frozen.
-// Before that it may reposition while it re-aims. Covers marksman and boss-1 lasers alike.
+// A laser owner freezes only once its beam LOCKS (#73): the lock is the flashing period at
+// 2/3 of the wind-up, where re-aiming stops (see the hazard loop) — same threshold for
+// tracking and non-tracking lines. It keeps moving through the earlier steady/aiming phase
+// and holds still from lock through the live discharge. Covers marksman and boss-1 lasers.
 function laserLocked(e: Enemy): boolean {
   for(const h of game.hazards){
     if(h.kind!=='line' || h.owner!==e.id) continue;
-    if(h.active>0) return true;                                    // beam is live
-    if(h.tele>0 && (!h.track || (h.maxTele-h.tele)/h.maxTele >= 2/3)) return true; // locked
+    if(h.active>0) return true;                                    // beam is live (firing)
+    if(h.tele>0 && (h.maxTele-h.tele)/h.maxTele >= 2/3) return true; // locked (flashing)
   }
   return false;
 }
