@@ -15,6 +15,20 @@ import { startWave } from './entities.js';
 import { gainXp } from './flow.js';
 import { SCYTHE_BOOST_MULT } from './abilities.js';
 import * as D from './difficulty.js';
+import type { Enemy } from './types.js';
+
+// A laser owner freezes once its beam commits (#73): a non-tracking line is locked from
+// the instant it fires (its angle never re-aims), a tracking line locks at 2/3 of the
+// wind-up (where re-aiming stops, see the hazard loop), and any live beam stays frozen.
+// Before that it may reposition while it re-aims. Covers marksman and boss-1 lasers alike.
+function laserLocked(e: Enemy): boolean {
+  for(const h of game.hazards){
+    if(h.kind!=='line' || h.owner!==e.id) continue;
+    if(h.active>0) return true;                                    // beam is live
+    if(h.tele>0 && (!h.track || (h.maxTele-h.tele)/h.maxTele >= 2/3)) return true; // locked
+  }
+  return false;
+}
 
 // ---- update ----
 export function update(){
@@ -96,7 +110,7 @@ export function update(){
   for(let i=game.enemies.length-1;i>=0;i--){ const e=game.enemies[i];
     const ox=e.x, oy=e.y;
     if(!frozen){                               // Time-stop (#25): enemies neither move nor fire while frozen
-    if(e.aimCd>0){ e.aimCd--; }                // hold still while telegraphing so the beam stays attached (#46)
+    if(laserLocked(e)){ /* beam committed: hold position from lock through discharge so it doesn't drift (#73) */ }
     else if(e.y<e.targetY){ e.y+=e.vy; }       // dive-in phase (all types descend to their slot)
     else if(e.move==='dart'){                  // archer: chase the player's x, creep downward, hover low
       const pl=game.player; if(pl) e.x+=clamp((pl.x-e.x)*0.045,-2.8,2.8);
@@ -117,7 +131,8 @@ export function update(){
           const ang=Math.atan2(p.y-e.y, p.x-e.x);
           const trk = game.wave>=10, teleFrames = trk?120:90; // harder variant winds up ~2s and tracks
           telegraphLine(e.x, e.y, ang, { width:5, tele:teleFrames, active:9, dmg:14, owner:e.id, track:trk });
-          e.aimCd = teleFrames + 12;  // frozen through the warning + brief beam so the line stays on the enemy
+          // movement freeze is driven by the beam's commit state (laserLocked, #73): the
+          // tracking variant may reposition while it re-aims, then holds still once locked.
           sfx.telegraph(); e.fireCd = Math.round(D.fireCooldown(game.wave,false)*3.2); // slow, readable cadence
         }
       } else if(e.zone){                                    // mortar: lob a telegraphed circular zone at the player (#61)

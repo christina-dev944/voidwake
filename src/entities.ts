@@ -107,7 +107,7 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
   const x = rand(60, W-60), y = rand(-140,-40);
   if(boss){
     return { id:game.eid++, x:W/2, y:-100, r:34, hp, maxhp:hp, boss:true, kind:'boss', move:'drift', // enter from top-center (#3)
-      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130, aimCd:0,
+      vx:rand(-0.6,0.6), vy:rand(0.5,1.1), targetY:130,
       fireCd:rand(30,90), pattern:'spiral', ang:0, wave, hue:350, fireMul:1,
       atkIdx:0, atkIdx2:0, fireCd2:70, phase:1, laserCd:220 };  // two attack-track cursors/timers + phase + laser timer (#3)
   }
@@ -121,7 +121,6 @@ function makeEnemy(hp: number, wave: number, boss: boolean): Enemy {
     spinner: !!d.spinner,       // spinner tangential emitter (#79)
     shape: d.shape, bulletR: d.bulletR, bulletSpdMul: d.bulletSpdMul, bulletCount: d.bulletCount,  // bullet look/feel/count overrides (#68/#79)
     burst: d.burst, burstGap: d.burstGap, burstLeft: d.burst,   // burst-fire (striker, #79)
-    aimCd: 0,
     vx: rand(-0.6,0.6)*d.spd, vy: rand(0.5,1.1)*d.spd,
     targetY: rand(60, H*0.42),
     fireCd: (d.telegraph||d.zone||d.spinner) ? rand(80,130) : rand(30,90), // marksman/mortar/spinner wind up before their first attack

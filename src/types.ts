@@ -72,7 +72,6 @@ interface EnemyBase {
   kind: string; move: string; fireMul: number;
   vx: number; vy: number; targetY: number; fireCd: number;
   pattern: string; ang: number; wave: number; hue: number;
-  aimCd: number;                // marksman telegraph freeze (0 = free to act)
   telegraph?: boolean;
   zone?: boolean;               // mortar: lobs a circular zone AoE instead of bullets (#61)
   spinner?: boolean;            // spinner: tangential horizontal-biased emitter (#79)
