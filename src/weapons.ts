@@ -186,9 +186,10 @@ export function enterBossPhase(e: BossEnemy, ph: number){
   burst(e.x,e.y,e.hue,44,6); addShake(16); hitStop(6); sfx.bossKill();
   game.novaFx.push({ x:e.x, y:e.y, r:12, max:280, life:1 });
 }
-// Boss telegraphed lasers (#3, reusing #46): the boss doesn't freeze — the hazard
-// origin follows it. The center beam tracks the player; phase 3 adds fixed flankers
-// you must weave between. Beams emanate from the boss and hit on the instant frames.
+// Boss telegraphed lasers (#3, reusing #46): the hazard origin follows the boss while it
+// re-aims, then it holds still from the flash-lock through the beam (#73). The center beam
+// tracks the player; phase 3 adds fixed flankers you must weave between. Beams emanate from
+// the boss and hit on the instant frames.
 export function bossLaser(e: BossEnemy){
   const p=game.player; if(!p) return; const base=Math.atan2(p.y-e.y, p.x-e.x);
   const n = e.phase>=3 ? 3 : 1;

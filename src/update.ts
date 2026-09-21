@@ -24,8 +24,10 @@ import type { Enemy } from './types.js';
 function laserLocked(e: Enemy): boolean {
   for(const h of game.hazards){
     if(h.kind!=='line' || h.owner!==e.id) continue;
-    if(h.active>0) return true;                                    // beam is live (firing)
-    if(h.tele>0 && (h.maxTele-h.tele)/h.maxTele >= 2/3) return true; // locked (flashing)
+    // `active` is pre-loaded at creation (the beam's lifetime), so it's non-zero all
+    // through the wind-up — a live beam is only one whose `tele` has already run out.
+    if(h.tele>0){ if((h.maxTele-h.tele)/h.maxTele >= 2/3) return true; } // locked (flashing)
+    else if(h.active>0) return true;                                     // beam is live (firing)
   }
   return false;
 }
